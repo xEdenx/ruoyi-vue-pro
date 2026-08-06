@@ -1,6 +1,18 @@
 server:
   port: 48080
 
+--- #################### 本地可选服务裁剪 ####################
+
+# 当前通过前端调用接口，不需要本地 OpenAPI/Knife4j 页面；需要排查接口时可临时改为 true。
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+knife4j:
+  enable: false
+
 --- #################### 数据库相关配置 ####################
 spring:
   autoconfigure:
@@ -26,9 +38,9 @@ spring:
   datasource:
     druid: # Druid 【监控】相关的全局配置
       web-stat-filter:
-        enabled: true
+        enabled: false
       stat-view-servlet:
-        enabled: true
+        enabled: false
         allow: # 设置白名单，不填则允许所有访问
         url-pattern: /druid/*
         login-username: # 控制台管理用户名和密码
@@ -133,23 +145,6 @@ spring:
     jdbc: # 使用 JDBC 的 JobStore 的时候，JDBC 的配置
       initialize-schema: NEVER # 是否自动使用 SQL 初始化 Quartz 表结构。这里设置成 never ，我们手动创建表结构。
 
---- #################### 消息队列相关 ####################
-
-# rocketmq 配置项，对应 RocketMQProperties 配置类
-rocketmq:
-  name-server: 127.0.0.1:9876 # RocketMQ Namesrv
-
-spring:
-  # RabbitMQ 配置项，对应 RabbitProperties 配置类
-  rabbitmq:
-    host: 127.0.0.1 # RabbitMQ 服务的地址
-    port: 5672 # RabbitMQ 服务的端口
-    username: rabbit # RabbitMQ 服务的账号
-    password: rabbit # RabbitMQ 服务的密码
-  # Kafka 配置项，对应 KafkaProperties 配置类
-  kafka:
-    bootstrap-servers: 127.0.0.1:9092 # 指定 Kafka Broker 地址，可以设置多个，以逗号分隔
-
 --- #################### 服务保障相关配置 ####################
 
 # Lock4j 配置项
@@ -165,23 +160,14 @@ management:
     web:
       base-path: /actuator # Actuator 提供的 API 接口的根目录。默认为 /actuator
       exposure:
-        include: '*' # 需要开放的端点。默认值只打开 health 和 info 两个端点。通过设置 * ，可以开放所有端点。
+        include: health,info # 本地仅开放存活与版本检查；需要排障时再临时放开。
 
-# Spring Boot Admin 配置项
+# 不启动 Spring Boot Admin Server/Client，当前单体开发不需要独立监控后台。
 spring:
   boot:
     admin:
-      # Spring Boot Admin Client 客户端的相关配置
       client:
-        url: http://127.0.0.1:${server.port}/${spring.boot.admin.context-path} # 设置 Spring Boot Admin Server 地址
-        instance:
-          service-host-type: IP # 注册实例时，优先使用 IP [IP, HOST_NAME, CANONICAL_HOST_NAME]
-        username: admin
-        password: admin
-      # Spring Boot Admin Server 服务端的相关配置
-      context-path: /admin # 配置 Spring
-      # 允许嵌入 iframe 的域名（支持通配符），实际部署时，可以改为 "'self' [你的公网域名]"
-      frame-ancestors: "'self' localhost localhost:48080 127.0.0.1 127.0.0.1:48080"
+        enabled: false
 
 # 日志文件配置
 logging:
@@ -248,6 +234,13 @@ wx:
 
 # 芋道配置项，设置当前项目所有自定义的配置
 yudao:
+  monitor:
+    admin-server:
+      enable: false
+  metrics:
+    enable: false
+  tracer:
+    enable: false
   captcha:
     enable: false # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；
   security:

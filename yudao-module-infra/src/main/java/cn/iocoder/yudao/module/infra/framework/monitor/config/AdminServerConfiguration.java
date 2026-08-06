@@ -4,6 +4,7 @@ import de.codecentric.boot.admin.server.config.EnableAdminServer;
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -30,6 +31,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @Configuration(proxyBeanMethods = false)
 @EnableAdminServer
 @ConditionalOnClass(name = "de.codecentric.boot.admin.server.config.AdminServerProperties") // 目的：按需启动 spring boot admin 监控服务
+@ConditionalOnProperty(prefix = "yudao.monitor.admin-server", name = "enable", havingValue = "true", matchIfMissing = true)
 public class AdminServerConfiguration {
 
     @Value("${spring.boot.admin.context-path:''}")
