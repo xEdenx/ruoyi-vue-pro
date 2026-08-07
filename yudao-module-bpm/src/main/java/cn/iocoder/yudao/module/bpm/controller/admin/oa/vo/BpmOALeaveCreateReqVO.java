@@ -32,8 +32,8 @@ public class BpmOALeaveCreateReqVO {
     @Schema(description = "原因", requiredMode = Schema.RequiredMode.REQUIRED, example = "阅读芋道源码")
     private String reason;
 
-    @Schema(description = "发起人自选审批人 Map", example = "{taskKey1: [1, 2]}")
-    private Map<String, List<Long>> startUserSelectAssignees;
+    @Schema(description = "发起人自选审批人 Map", example = "{taskKey1: ['1', '2']}")
+    private Map<String, List<Object>> startUserSelectAssignees;
 
     @AssertTrue(message = "结束时间，需要在开始时间之后")
     public boolean isEndTimeValid() {

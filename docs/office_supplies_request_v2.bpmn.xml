@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:flowable="http://flowable.org/bpmn"
+             typeLanguage="http://www.w3.org/2001/XMLSchema"
+             expressionLanguage="http://www.w3.org/1999/XPath"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="office_supplies_request_v2" name="办公用品申请流程 V2" isExecutable="true">
+    
+    <!-- 开始节点 -->
+    <startEvent id="StartEvent_1" name="发起申请" />
+
+    <!-- 连线：发起 -> 排他网关 -->
+    <sequenceFlow id="Flow_start_to_gw" sourceRef="StartEvent_1" targetRef="ExclusiveGateway_1" />
+
+    <!-- 排他网关 -->
+    <exclusiveGateway id="ExclusiveGateway_1" name="总价金额判断" />
+
+    <!-- 分支 1：总价 <= 1000 元 (直达办公室管理员审批) -->
+    <sequenceFlow id="Flow_low_amount" name="总价 <= 1000元" sourceRef="ExclusiveGateway_1" targetRef="Activity_Admin">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${totalAmount <= 1000}]]></conditionExpression>
+    </sequenceFlow>
+
+    <!-- 分支 2：总价 > 1000 元 (先走部门经理审批) -->
+    <sequenceFlow id="Flow_high_amount" name="总价 > 1000元" sourceRef="ExclusiveGateway_1" targetRef="Activity_Manager">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${totalAmount > 1000}]]></conditionExpression>
+    </sequenceFlow>
+
+    <!-- 节点 1：部门经理审批 (单人审批，发起人自选 START_USER_SELECT) -->
+    <userTask id="Activity_Manager" name="部门经理审批" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${officeSuppliesListeners_deptManagerApproval}" />
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+      </extensionElements>
+    </userTask>
+
+    <!-- 连线：部门经理审批 -> 办公室管理员审批 -->
+    <sequenceFlow id="Flow_manager_to_admin" sourceRef="Activity_Manager" targetRef="Activity_Admin" />
+
+    <!-- 节点 2：办公室管理员审批 (角色/抢办或签，任意一人通过即可) -->
+    <userTask id="Activity_Admin" name="办公室管理员审批" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${officeSuppliesListeners_officeAdminApproval}" />
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+      </extensionElements>
+    </userTask>
+
+    <!-- 连线：办公室管理员审批 -> 供应商收单与派送 -->
+    <sequenceFlow id="Flow_admin_to_supplier" sourceRef="Activity_Admin" targetRef="Activity_Supplier" />
+
+    <!-- 节点 3：供应商收单与派送 (多实例/会签，要求所有供应商成员均确认完成) -->
+    <userTask id="Activity_Supplier" name="供应商收单与派送" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${officeSuppliesListeners_supplierApproval}" />
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+      </extensionElements>
+      <!-- 并行多实例会签定义：所有人完成才算节点通过 -->
+      <multiInstanceLoopCharacteristics isSequential="false">
+        <completionCondition>${nrOfCompletedInstances == nrOfInstances}</completionCondition>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+
+    <!-- 连线：供应商收单与派送 -> 结束节点 -->
+    <sequenceFlow id="Flow_supplier_to_end" sourceRef="Activity_Supplier" targetRef="EndEvent_1" />
+
+    <!-- 结束节点 -->
+    <endEvent id="EndEvent_1" name="流程结束" />
+
+  </process>
+
+  <!-- 图形布局定义 (bpmn-js 渲染视图) -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_office_supplies_request_v2">
+    <bpmndi:BPMNPlane id="BPMNPlane_office_supplies_request_v2" bpmnElement="office_supplies_request_v2">
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="200" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="144" y="243" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_ExclusiveGateway_1" bpmnElement="ExclusiveGateway_1" isMarkerVisible="true">
+        <omgdc:Bounds x="240" y="193" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="230" y="163" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Activity_Manager" bpmnElement="Activity_Manager">
+        <omgdc:Bounds x="360" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Activity_Admin" bpmnElement="Activity_Admin">
+        <omgdc:Bounds x="520" y="193" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Activity_Supplier" bpmnElement="Activity_Supplier">
+        <omgdc:Bounds x="680" y="193" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="840" y="215" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="834" y="258" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_start_to_gw" bpmnElement="Flow_start_to_gw">
+        <omgdi:waypoint x="186" y="218" />
+        <omgdi:waypoint x="240" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_low_amount" bpmnElement="Flow_low_amount">
+        <omgdi:waypoint x="290" y="218" />
+        <omgdi:waypoint x="520" y="233" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_high_amount" bpmnElement="Flow_high_amount">
+        <omgdi:waypoint x="265" y="193" />
+        <omgdi:waypoint x="265" y="140" />
+        <omgdi:waypoint x="360" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_manager_to_admin" bpmnElement="Flow_manager_to_admin">
+        <omgdi:waypoint x="460" y="140" />
+        <omgdi:waypoint x="490" y="140" />
+        <omgdi:waypoint x="490" y="233" />
+        <omgdi:waypoint x="520" y="233" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_admin_to_supplier" bpmnElement="Flow_admin_to_supplier">
+        <omgdi:waypoint x="620" y="233" />
+        <omgdi:waypoint x="680" y="233" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_supplier_to_end" bpmnElement="Flow_supplier_to_end">
+        <omgdi:waypoint x="780" y="233" />
+        <omgdi:waypoint x="840" y="233" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

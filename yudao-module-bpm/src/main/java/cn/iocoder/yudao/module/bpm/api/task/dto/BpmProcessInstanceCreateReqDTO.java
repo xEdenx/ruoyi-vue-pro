@@ -39,6 +39,6 @@ public class BpmProcessInstanceCreateReqDTO {
      * value：审批人的数组
      * 例如：{ taskKey1 :[1, 2] }，则表示 taskKey1 这个任务，提前设定了，由 userId 为 1,2 的用户进行审批
      */
-    private Map<String, List<Long>> startUserSelectAssignees;
+    private Map<String, List<Object>> startUserSelectAssignees;
 
 }

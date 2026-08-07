@@ -47,12 +47,12 @@ public class BpmTaskCandidateStartUserSelectStrategy extends AbstractBpmTaskCand
     public LinkedHashSet<Long> calculateUsersByTask(DelegateExecution execution, String param) {
         ProcessInstance processInstance = processInstanceService.getProcessInstance(execution.getProcessInstanceId());
         Assert.notNull(processInstance, "流程实例({})不能为空", execution.getProcessInstanceId());
-        Map<String, List<Long>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processInstance);
+        Map<String, List<Object>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processInstance);
         Assert.notNull(startUserSelectAssignees, "流程实例({}) 的发起人自选审批人不能为空",
                 execution.getProcessInstanceId());
         // 获得审批人
-        List<Long> assignees = startUserSelectAssignees.get(execution.getCurrentActivityId());
-        return CollUtil.isNotEmpty(assignees) ? new LinkedHashSet<>(assignees) : Sets.newLinkedHashSet();
+        List<Object> assignees = startUserSelectAssignees.get(execution.getCurrentActivityId());
+        return convertAssigneesToLongSet(assignees);
     }
 
     @Override
@@ -61,13 +61,32 @@ public class BpmTaskCandidateStartUserSelectStrategy extends AbstractBpmTaskCand
         if (processVariables == null) {
             return Sets.newLinkedHashSet();
         }
-        Map<String, List<Long>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processVariables);
+        Map<String, List<Object>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processVariables);
         if (startUserSelectAssignees == null) {
             return Sets.newLinkedHashSet();
         }
         // 获得审批人
-        List<Long> assignees = startUserSelectAssignees.get(activityId);
-        return CollUtil.isNotEmpty(assignees) ? new LinkedHashSet<>(assignees) : Sets.newLinkedHashSet();
+        List<Object> assignees = startUserSelectAssignees.get(activityId);
+        return convertAssigneesToLongSet(assignees);
+    }
+
+    private LinkedHashSet<Long> convertAssigneesToLongSet(List<Object> assignees) {
+        if (CollUtil.isEmpty(assignees)) {
+            return Sets.newLinkedHashSet();
+        }
+        LinkedHashSet<Long> result = Sets.newLinkedHashSet();
+        for (Object assignee : assignees) {
+            if (assignee instanceof Number) {
+                result.add(((Number) assignee).longValue());
+            } else if (assignee != null) {
+                try {
+                    result.add(Long.parseLong(assignee.toString()));
+                } catch (NumberFormatException e) {
+                    result.add((long) Math.abs(assignee.toString().hashCode()));
+                }
+            }
+        }
+        return result;
     }
 
 }

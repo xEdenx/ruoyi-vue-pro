@@ -7,10 +7,10 @@
 ## 1. 项目与环境概览 (Project & Environment Setup)
 
 - **后端工程 (Java / Spring Boot 4 / Flowable 7)**:
-  - 绝对路径: `/Users/eden/Documents/coding/ruoyi-vue-pro`
+  - 绝对路径: `/Users/John Doe/Documents/coding/ruoyi-vue-pro`
   - 关键模块: `yudao-module-bpm` (工作流模块), `yudao-server` (应用容器)
 - **前端工程 (Vue3 / Vite / Element Plus / bpmn-js)**:
-  - 绝对路径: `/Users/eden/Documents/coding/yudao-ui-admin-vue3`
+  - 绝对路径: `/Users/John Doe/Documents/coding/yudao-ui-admin-vue3`
 - **云端数据库 (Supabase PostgreSQL)**:
   - Schema: `bpm` (包含 97 张精简后的核心业务与工作流表)
   - 环境变量: `SUPABASE_DB_HOST`, `SUPABASE_DB_PASSWORD`
@@ -60,6 +60,5 @@
 
 ## 5. 项目核心文档索引 (Project Docs Index)
 
-- [docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md): Portal 对接无头 BPM 架构设计与 API 规范
-- [docs/DATABASE_TABLES_DICTIONARY.md](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/DATABASE_TABLES_DICTIONARY.md): 数据库 97 张全量表字典
-- [docs/LEARNING_PROGRESS.md](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/LEARNING_PROGRESS.md): BPM 数据库精简与备份策略
+- [docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md](file:///Users/John Doe/Documents/coding/ruoyi-vue-pro/docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md): Portal 对接无头 BPM 架构设计与 API 规范
+- [docs/DATABASE_TABLES_DICTIONARY.md](file:///Users/John Doe/Documents/coding/ruoyi-vue-pro/docs/DATABASE_TABLES_DICTIONARY.md): 数据库 97 张全量表字典

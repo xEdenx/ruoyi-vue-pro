@@ -688,7 +688,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
             // 2.1 情况一：如果节点中的审批人策略为 发起人自选
             if (ObjUtil.equals(candidateStrategy, BpmTaskCandidateStrategyEnum.START_USER_SELECT.getStrategy())) {
                 // 特殊：如果当前节点已经存在审批人，则不允许覆盖
-                Map<String, List<Long>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processInstance.getProcessVariables());
+                Map<String, List<Object>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processInstance.getProcessVariables());
                 if (startUserSelectAssignees != null && CollUtil.isNotEmpty(startUserSelectAssignees.get(nextFlowNode.getId()))) {
                     continue;
                 }
@@ -702,7 +702,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                 if (startUserSelectAssignees == null) {
                     startUserSelectAssignees = new HashMap<>();
                 }
-                startUserSelectAssignees.put(nextFlowNode.getId(), assignees);
+                startUserSelectAssignees.put(nextFlowNode.getId(), new ArrayList<>(assignees));
                 variables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_SELECT_ASSIGNEES, startUserSelectAssignees);
                 continue;
             }
