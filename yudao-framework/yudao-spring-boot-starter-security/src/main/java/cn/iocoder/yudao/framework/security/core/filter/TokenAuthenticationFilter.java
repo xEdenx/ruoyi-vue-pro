@@ -69,6 +69,13 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private LoginUser buildLoginUserByToken(String token, Integer userType) {
+        // 1. 尝试直接解包 Portal 传入的 Bearer JWT Token (Payload 包含 userId 与 role 声明)
+        LoginUser jwtLoginUser = parseLoginUserFromJwt(token, userType);
+        if (jwtLoginUser != null) {
+            return jwtLoginUser;
+        }
+
+        // 2. 尝试基于系统表中的 OAuth2 AccessToken 校验
         try {
             OAuth2AccessTokenCheckRespDTO accessToken = oauth2TokenApi.checkAccessToken(token);
             if (accessToken == null) {
@@ -88,6 +95,86 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                     .setExpiresTime(accessToken.getExpiresTime());
         } catch (ServiceException serviceException) {
             // 校验 Token 不通过时，考虑到一些接口是无需登录的，所以直接返回 null 即可
+            return null;
+        }
+    }
+
+    /**
+     * 从 Bearer JWT Token 中直接解包 Payload，提取 userId 和 role 声明构建 LoginUser。
+     *
+     * @param token Bearer Token 文本 (Format: Header.Payload.Signature)
+     * @param userType 用户类型
+     * @return 解析成功返回 LoginUser，否则返回 null
+     */
+    LoginUser parseLoginUserFromJwt(String token, Integer userType) {
+        if (StrUtil.isEmpty(token)) {
+            return null;
+        }
+        String[] parts = token.split("\\.");
+        if (parts.length < 2) {
+            return null;
+        }
+        try {
+            byte[] payloadBytes;
+            try {
+                payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+            } catch (Throwable e) {
+                payloadBytes = cn.hutool.core.codec.Base64.decode(parts[1]);
+            }
+            String payloadJsonStr = StrUtil.utf8Str(payloadBytes);
+            if (!cn.hutool.json.JSONUtil.isTypeJSON(payloadJsonStr)) {
+                return null;
+            }
+            cn.hutool.json.JSONObject payload = cn.hutool.json.JSONUtil.parseObj(payloadJsonStr);
+
+            // 1. 提取 userId 声明（兼容 userId, user_id, sub, id）
+            String userIdStr = payload.getStr("userId");
+            if (StrUtil.isEmpty(userIdStr)) {
+                userIdStr = payload.getStr("user_id");
+            }
+            if (StrUtil.isEmpty(userIdStr)) {
+                userIdStr = payload.getStr("sub");
+            }
+            if (StrUtil.isEmpty(userIdStr)) {
+                userIdStr = payload.getStr("id");
+            }
+            if (StrUtil.isEmpty(userIdStr)) {
+                return null;
+            }
+
+            // 2. 提取 role 声明（兼容 role, roles）
+            String roleStr = payload.getStr("role");
+            if (StrUtil.isEmpty(roleStr)) {
+                roleStr = payload.getStr("roles");
+            }
+
+            // 3. 构造 LoginUser 的 info 存储结构
+            java.util.Map<String, String> info = new java.util.HashMap<>();
+            payload.forEach((k, v) -> {
+                if (v != null) {
+                    info.put(k, String.valueOf(v));
+                }
+            });
+            info.put("portalUserId", userIdStr);
+            if (StrUtil.isNotBlank(roleStr)) {
+                info.put("role", roleStr);
+            }
+
+            Long numericUserId = null;
+            try {
+                numericUserId = Long.parseLong(userIdStr);
+            } catch (NumberFormatException ignored) {
+                numericUserId = (long) Math.abs(userIdStr.hashCode());
+            }
+
+            Integer resolvedUserType = userType != null ? userType : cn.iocoder.yudao.framework.common.enums.UserTypeEnum.ADMIN.getValue();
+            Long tenantId = payload.getLong("tenantId");
+            return new LoginUser()
+                    .setId(numericUserId)
+                    .setUserType(resolvedUserType)
+                    .setInfo(info)
+                    .setTenantId(tenantId);
+        } catch (Throwable ex) {
             return null;
         }
     }

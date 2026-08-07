@@ -2,6 +2,10 @@
 
 本文档针对**“外部门户/Portal 系统作为全量用户 UI 入口，BPM 平台作为无头工作流中台 (Headless BPM Engine)”**的场景，提供完整的技术架构解法与 API 对接规范。
 
+文档索引:
+- [基础架构决策: ADR-000 无头工作流中台与零用户同步架构](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/adr/ADR_000_HEADLESS_BPM_ZERO_USER_SYNC_ARCHITECTURE.md)
+- [演进架构决策: ADR-001 远程候选人解算策略](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/adr/ADR_001_HEADLESS_REMOTE_CANDIDATE_STRATEGY.md)
+
 ---
 
 ## 一、 业务场景与架构定位

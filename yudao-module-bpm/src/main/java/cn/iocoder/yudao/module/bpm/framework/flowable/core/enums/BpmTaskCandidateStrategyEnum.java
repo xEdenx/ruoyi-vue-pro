@@ -29,6 +29,8 @@ public enum BpmTaskCandidateStrategyEnum implements ArrayValuable<Integer> {
     START_USER(36, "发起人自己"), // 申请人自己, 一般紧挨开始节点，常用于发起人信息审核场景
     START_USER_DEPT_LEADER(37, "发起人部门负责人"),
     START_USER_DEPT_LEADER_MULTI(38, "发起人连续多级部门的负责人"),
+    START_USER_DEPT_ROLE(39, "发起人部门角色"),
+    HEADLESS_REMOTE(70, "无头 Portal 远程候选人解算"),
     USER_GROUP(40, "用户组"),
     FORM_USER(50, "表单内用户字段"),
     FORM_DEPT_LEADER(51, "表单内部门负责人"),
