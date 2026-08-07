@@ -37,8 +37,9 @@ public class BpmProcessInstanceCreateReqDTO {
      *
      * key：taskKey 任务编码
      * value：审批人的数组
-     * 例如：{ taskKey1 :[1, 2] }，则表示 taskKey1 这个任务，提前设定了，由 userId 为 1,2 的用户进行审批
+     * 例如：{ taskKey1 :["portal-user-001", "portal-user-002"] }，则表示 taskKey1 这个任务，
+     * 提前设定由这两个 Portal 用户进行审批。ID 会原样写入 Flowable 任务，不会转换为本地用户 ID。
      */
-    private Map<String, List<Object>> startUserSelectAssignees;
+    private Map<String, List<String>> startUserSelectAssignees;
 
 }

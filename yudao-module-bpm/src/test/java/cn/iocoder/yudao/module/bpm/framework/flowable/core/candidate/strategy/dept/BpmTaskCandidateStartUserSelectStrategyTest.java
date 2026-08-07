@@ -65,4 +65,20 @@ public class BpmTaskCandidateStartUserSelectStrategyTest extends BaseMockitoUnit
         assertEquals(Sets.newLinkedHashSet(1L, 2L), userIds);
     }
 
+    @Test
+    public void testCalculateAssigneeIdsByTask_preservesUuid() {
+        ProcessInstance processInstance = mock(ProcessInstance.class);
+        DelegateExecution execution = mock(DelegateExecution.class);
+        when(processInstanceService.getProcessInstance(eq(execution.getProcessInstanceId()))).thenReturn(processInstance);
+        when(execution.getCurrentActivityId()).thenReturn("activity_001");
+        Map<String, Object> processVariables = new HashMap<>();
+        processVariables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_SELECT_ASSIGNEES,
+                MapUtil.of("activity_001", ListUtil.of("b943f25d-4064-4f5f-8b8f-70437e4d6fd3")));
+        when(processInstance.getProcessVariables()).thenReturn(processVariables);
+
+        Set<String> assigneeIds = strategy.calculateAssigneeIdsByTask(execution, null);
+
+        assertEquals(Sets.newLinkedHashSet("b943f25d-4064-4f5f-8b8f-70437e4d6fd3"), assigneeIds);
+    }
+
 }

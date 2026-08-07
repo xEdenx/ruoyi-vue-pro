@@ -44,23 +44,23 @@ public class BpmUserTaskActivityBehavior extends UserTaskActivityBehavior {
         List<String> candidateUsers, List<String> candidateGroups, TaskEntity task, ExpressionManager expressionManager,
         DelegateExecution execution, ProcessEngineConfigurationImpl processEngineConfiguration) {
         // 第一步，获得任务的候选用户
-        Long assigneeUserId = calculateTaskCandidateUsers(execution);
+        String assigneeUserId = calculateTaskCandidateUsers(execution);
         // 第二步，设置作为负责人
         if (assigneeUserId != null) {
-            TaskHelper.changeTaskAssignee(task, String.valueOf(assigneeUserId));
+            TaskHelper.changeTaskAssignee(task, assigneeUserId);
         }
     }
 
-    private Long calculateTaskCandidateUsers(DelegateExecution execution) {
+    private String calculateTaskCandidateUsers(DelegateExecution execution) {
         // 情况一，如果是多实例的任务，例如说会签、或签等情况，则从 Variable 中获取。
         // 顺序审批可见 BpmSequentialMultiInstanceBehavior，并发审批可见 BpmSequentialMultiInstanceBehavior
         if (super.multiInstanceActivityBehavior != null) {
-            return execution.getVariable(super.multiInstanceActivityBehavior.getCollectionElementVariable(), Long.class);
+            return execution.getVariable(super.multiInstanceActivityBehavior.getCollectionElementVariable(), String.class);
         }
 
         // 情况二，如果非多实例的任务，则计算任务处理人
         // 第一步，先计算可处理该任务的处理人们
-        Set<Long> candidateUserIds = taskCandidateInvoker.calculateUsersByTask(execution);
+        Set<String> candidateUserIds = taskCandidateInvoker.calculateAssigneeIdsByTask(execution);
         if (CollUtil.isEmpty(candidateUserIds)) {
             return null;
         }

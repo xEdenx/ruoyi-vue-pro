@@ -5,6 +5,7 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.engine.delegate.DelegateExecution;
 
 import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -80,6 +81,29 @@ public interface BpmTaskCandidateStrategy {
     default Set<Long> calculateUsersByActivity(BpmnModel bpmnModel, String activityId, String param,
                                                Long startUserId, String processDefinitionId, Map<String, Object> processVariables) {
         return calculateUsers(param);
+    }
+
+    /**
+     * 计算写入 Flowable 任务的处理人 ID。
+     *
+     * 内置策略仍基于本地 Long 用户；Portal 动态选人可覆写此方法以保留外部 String ID。
+     */
+    default Set<String> calculateAssigneeIdsByTask(DelegateExecution execution, String param) {
+        Set<String> result = new LinkedHashSet<>();
+        calculateUsersByTask(execution, param).forEach(userId -> result.add(String.valueOf(userId)));
+        return result;
+    }
+
+    /**
+     * 计算审批详情中展示的处理人 ID。
+     */
+    default Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId, String param,
+                                                        Long startUserId, String processDefinitionId,
+                                                        Map<String, Object> processVariables) {
+        Set<String> result = new LinkedHashSet<>();
+        calculateUsersByActivity(bpmnModel, activityId, param, startUserId, processDefinitionId, processVariables)
+                .forEach(userId -> result.add(String.valueOf(userId)));
+        return result;
     }
 
 }

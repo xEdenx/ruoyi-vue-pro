@@ -125,6 +125,22 @@ public class BpmTaskCandidateInvoker {
         });
     }
 
+    /**
+     * 计算写入 Flowable 任务的处理人 ID。
+     *
+     * 发起人自选的 ID 由 Portal 管理，必须原样保留；其余内置策略仍使用本地 Long 用户 ID。
+     */
+    public Set<String> calculateAssigneeIdsByTask(DelegateExecution execution) {
+        Integer strategy = BpmnModelUtils.parseCandidateStrategy(execution.getCurrentFlowElement());
+        BpmTaskCandidateStrategy candidateStrategy = getCandidateStrategy(strategy);
+        Set<String> assigneeIds = candidateStrategy.calculateAssigneeIdsByTask(execution,
+                BpmnModelUtils.parseCandidateParam(execution.getCurrentFlowElement()));
+        if (CollUtil.isNotEmpty(assigneeIds)) {
+            return assigneeIds;
+        }
+        return convertToStringSet(calculateUsersByTask(execution));
+    }
+
     @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致找不到候选人
     public Set<Long> calculateUsersByActivity(BpmnModel bpmnModel, String activityId,
                                               Long startUserId, String processDefinitionId, Map<String, Object> processVariables) {
@@ -159,6 +175,33 @@ public class BpmTaskCandidateInvoker {
         // 3. 移除发起人的用户
         removeStartUserIfSkip(userIds, flowElement, startUserId);
         return userIds;
+    }
+
+    /**
+     * 计算审批详情中展示的处理人 ID，保留 Portal 传入的 String ID。
+     */
+    public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId,
+                                                       Long startUserId, String processDefinitionId,
+                                                       Map<String, Object> processVariables) {
+        FlowElement flowElement = BpmnModelUtils.getFlowElementById(bpmnModel, activityId);
+        if (flowElement instanceof UserTask) {
+            BpmTaskCandidateStrategy strategy = getCandidateStrategy(BpmnModelUtils.parseCandidateStrategy(flowElement));
+            Set<String> assigneeIds = strategy.calculateAssigneeIdsByActivity(bpmnModel, activityId,
+                    BpmnModelUtils.parseCandidateParam(flowElement), startUserId, processDefinitionId, processVariables);
+            if (CollUtil.isNotEmpty(assigneeIds)) {
+                return assigneeIds;
+            }
+        }
+        return convertToStringSet(calculateUsersByActivity(bpmnModel, activityId, startUserId,
+                processDefinitionId, processVariables));
+    }
+
+    private Set<String> convertToStringSet(Collection<Long> userIds) {
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        if (CollUtil.isNotEmpty(userIds)) {
+            userIds.forEach(userId -> result.add(String.valueOf(userId)));
+        }
+        return result;
     }
 
     @VisibleForTesting

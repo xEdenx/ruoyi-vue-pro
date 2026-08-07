@@ -784,7 +784,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
 
     private String createProcessInstance0(Long userId, ProcessDefinition definition,
                                           Map<String, Object> variables, String businessKey,
-                                          Map<String, List<Object>> startUserSelectAssignees) {
+                                          Map<String, List<String>> startUserSelectAssignees) {
         // 1.1 校验流程定义
         if (definition == null) {
             throw exception(PROCESS_DEFINITION_NOT_EXISTS);
@@ -837,7 +837,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
     }
 
     private void validateStartUserSelectAssignees(Long userId, ProcessDefinition definition,
-                                                  Map<String, List<Object>> startUserSelectAssignees,
+                                                  Map<String, List<String>> startUserSelectAssignees,
                                                   Map<String, Object> variables) {
         // 1. 获取预测的节点信息
         BpmApprovalDetailRespVO detailRespVO = getApprovalDetail(userId, new BpmApprovalDetailReqVO()
@@ -853,8 +853,8 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
                 ObjectUtil.notEqual(BpmTaskCandidateStrategyEnum.START_USER_SELECT.getStrategy(), task.getCandidateStrategy()));
         // 2.2 流程发起时要先获取当前流程的预测走向节点，发起时只校验预测的节点发起人自选审批人的审批人和抄送人是否都配置了
         activityNodes.forEach(task -> {
-            List<Object> assignees = startUserSelectAssignees != null ? startUserSelectAssignees.get(task.getId()) : null;
-            if (CollUtil.isEmpty(assignees)) {
+            List<String> assignees = startUserSelectAssignees != null ? startUserSelectAssignees.get(task.getId()) : null;
+            if (CollUtil.isEmpty(assignees) || assignees.stream().anyMatch(StrUtil::isBlank)) {
                 throw exception(PROCESS_INSTANCE_START_USER_SELECT_ASSIGNEES_NOT_CONFIG, task.getName());
             }
         });

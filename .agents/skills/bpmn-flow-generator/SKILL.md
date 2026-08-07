@@ -224,9 +224,9 @@ public class <ProcessName>Listeners {
     "totalAmount": 1500.0
   },
   "startUserSelectAssignees": {
-    "Activity_Manager": ["102"],
-    "Activity_Admin": ["ROLE_OFFICE_ADMIN"],
-    "Activity_Supplier": ["SUPPLIER_001", "SUPPLIER_002"]
+    "Activity_Manager": ["portal-user-102"],
+    "Activity_Admin": ["portal-user-office-admin"],
+    "Activity_Supplier": ["supplier-001", "supplier-002"]
   }
 }
 ```

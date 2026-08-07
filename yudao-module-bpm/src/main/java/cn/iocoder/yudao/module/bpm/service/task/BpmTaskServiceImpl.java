@@ -117,8 +117,13 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     public PageResult<Task> getTaskTodoPage(Long userId, BpmTaskPageReqVO pageVO) {
+        return getTaskTodoPage(userId == null ? null : String.valueOf(userId), pageVO);
+    }
+
+    @Override
+    public PageResult<Task> getTaskTodoPage(String userId, BpmTaskPageReqVO pageVO) {
         TaskQuery taskQuery = taskService.createTaskQuery()
-                .taskAssignee(String.valueOf(userId)) // 分配给自己
+                .taskAssignee(userId) // 分配给自己
                 .active()
                 .includeProcessVariables()
                 .taskTenantId(FlowableUtils.getTenantId())
@@ -315,11 +320,15 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     public Task validateTask(Long userId, String taskId) {
+        return validateTask(userId == null ? null : String.valueOf(userId), taskId);
+    }
+
+    @Override
+    public Task validateTask(String userId, String taskId) {
         Task task = validateTaskExists(taskId);
         // 为什么判断 assignee 非空的情况下？
         // 例如说：在审批人为空时，我们会有“自动审批通过”的策略，此时 userId 为 null，允许通过
-        if (StrUtil.isNotBlank(task.getAssignee())
-                && ObjectUtil.notEqual(userId, NumberUtils.parseLong(task.getAssignee()))) {
+        if (StrUtil.isNotBlank(task.getAssignee()) && !StrUtil.equals(userId, task.getAssignee())) {
             throw exception(TASK_OPERATE_FAIL_ASSIGN_NOT_SELF);
         }
         return task;
@@ -539,8 +548,11 @@ public class BpmTaskServiceImpl implements BpmTaskService {
      * @return 是否
      */
     private boolean isAssignUserTask(Long userId, Task task) {
-        Long assignee = NumberUtil.parseLong(task.getAssignee(), null);
-        return ObjectUtil.equals(userId, assignee);
+        return isAssignUserTask(userId == null ? null : String.valueOf(userId), task);
+    }
+
+    private boolean isAssignUserTask(String userId, Task task) {
+        return StrUtil.equals(userId, task.getAssignee());
     }
 
     /**
@@ -573,6 +585,13 @@ public class BpmTaskServiceImpl implements BpmTaskService {
     @Transactional(rollbackFor = Exception.class)
     @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void approveTask(Long userId, @Valid BpmTaskApproveReqVO reqVO) {
+        approveTask(userId == null ? null : String.valueOf(userId), reqVO);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
+    public void approveTask(String userId, @Valid BpmTaskApproveReqVO reqVO) {
         // 1.1 校验任务存在
         Task task = validateTask(userId, reqVO.getId());
         // 1.2 校验流程实例存在
@@ -688,7 +707,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
             // 2.1 情况一：如果节点中的审批人策略为 发起人自选
             if (ObjUtil.equals(candidateStrategy, BpmTaskCandidateStrategyEnum.START_USER_SELECT.getStrategy())) {
                 // 特殊：如果当前节点已经存在审批人，则不允许覆盖
-                Map<String, List<Object>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processInstance.getProcessVariables());
+                Map<String, List<String>> startUserSelectAssignees = FlowableUtils.getStartUserSelectAssignees(processInstance.getProcessVariables());
                 if (startUserSelectAssignees != null && CollUtil.isNotEmpty(startUserSelectAssignees.get(nextFlowNode.getId()))) {
                     continue;
                 }
@@ -702,7 +721,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                 if (startUserSelectAssignees == null) {
                     startUserSelectAssignees = new HashMap<>();
                 }
-                startUserSelectAssignees.put(nextFlowNode.getId(), new ArrayList<>(assignees));
+                startUserSelectAssignees.put(nextFlowNode.getId(), convertList(assignees, String::valueOf));
                 variables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_SELECT_ASSIGNEES, startUserSelectAssignees);
                 continue;
             }
@@ -835,6 +854,13 @@ public class BpmTaskServiceImpl implements BpmTaskService {
     @Transactional(rollbackFor = Exception.class)
     @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void rejectTask(Long userId, @Valid BpmTaskRejectReqVO reqVO) {
+        rejectTask(userId == null ? null : String.valueOf(userId), reqVO);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
+    public void rejectTask(String userId, @Valid BpmTaskRejectReqVO reqVO) {
         // 1.1 校验任务存在
         Task task = validateTask(userId, reqVO.getId());
         // 1.2 校验流程实例存在
@@ -909,6 +935,10 @@ public class BpmTaskServiceImpl implements BpmTaskService {
     @Transactional(rollbackFor = Exception.class)
     @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void returnTask(Long userId, BpmTaskReturnReqVO reqVO) {
+        returnTask(userId == null ? null : String.valueOf(userId), reqVO);
+    }
+
+    private void returnTask(String userId, BpmTaskReturnReqVO reqVO) {
         // 1.1 当前任务 task
         Task task = validateTask(userId, reqVO.getId());
         if (task.isSuspended()) {
@@ -958,6 +988,10 @@ public class BpmTaskServiceImpl implements BpmTaskService {
      * @param reqVO         前端参数封装
      */
     public void returnTask(Long userId, BpmnModel bpmnModel, Task currentTask, FlowElement targetElement, BpmTaskReturnReqVO reqVO) {
+        returnTask(userId == null ? null : String.valueOf(userId), bpmnModel, currentTask, targetElement, reqVO);
+    }
+
+    private void returnTask(String userId, BpmnModel bpmnModel, Task currentTask, FlowElement targetElement, BpmTaskReturnReqVO reqVO) {
         // 1. 获得所有需要回撤的任务 taskDefinitionKey，用于稍后的 moveActivityIdsToSingleActivityId 回撤
         // 1.1 获取所有正常进行的任务节点 Key
         List<Task> taskList = taskService.createTaskQuery().processInstanceId(currentTask.getProcessInstanceId()).list();
@@ -1433,19 +1467,19 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                         return;
                     }
                     if (ObjectUtil.equal(assignEmptyHandlerType, BpmUserTaskAssignEmptyHandlerTypeEnum.APPROVE.getType())) {
-                        getSelf().approveTask(null, new BpmTaskApproveReqVO()
+                        getSelf().approveTask((Long) null, new BpmTaskApproveReqVO()
                                 .setId(task.getId()).setReason(BpmReasonEnum.ASSIGN_EMPTY_APPROVE.getReason()));
                     } else if (ObjectUtil.equal(assignEmptyHandlerType, BpmUserTaskAssignEmptyHandlerTypeEnum.REJECT.getType())) {
-                        getSelf().rejectTask(null, new BpmTaskRejectReqVO()
+                        getSelf().rejectTask((Long) null, new BpmTaskRejectReqVO()
                                 .setId(task.getId()).setReason(BpmReasonEnum.ASSIGN_EMPTY_REJECT.getReason()));
                     }
                     // 特殊情况二：【自动审核】审批类型为自动通过、不通过
                 } else {
                     if (ObjectUtil.equal(approveType, BpmUserTaskApproveTypeEnum.AUTO_APPROVE.getType())) {
-                        getSelf().approveTask(null, new BpmTaskApproveReqVO()
+                        getSelf().approveTask((Long) null, new BpmTaskApproveReqVO()
                                 .setId(task.getId()).setReason(BpmReasonEnum.APPROVE_TYPE_AUTO_APPROVE.getReason()));
                     } else if (ObjectUtil.equal(approveType, BpmUserTaskApproveTypeEnum.AUTO_REJECT.getType())) {
-                        getSelf().rejectTask(null, new BpmTaskRejectReqVO()
+                        getSelf().rejectTask((Long) null, new BpmTaskRejectReqVO()
                                 .setId(task.getId()).setReason(BpmReasonEnum.APPROVE_TYPE_AUTO_REJECT.getReason()));
                     }
                 }

@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
 import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.module.bpm.controller.admin.task.BpmPortalUserIdUtils.getCurrentUserId;
 
 @Tag(name = "管理后台 - 流程任务实例")
 @RestController
@@ -67,7 +68,7 @@ public class BpmTaskController {
     @Operation(summary = "获取 Todo 待办任务分页")
     @PreAuthorize("@ss.hasPermission('bpm:task:query')")
     public CommonResult<PageResult<BpmTaskRespVO>> getTaskTodoPage(@Valid BpmTaskPageReqVO pageVO) {
-        PageResult<Task> pageResult = taskService.getTaskTodoPage(getLoginUserId(), pageVO);
+        PageResult<Task> pageResult = taskService.getTaskTodoPage(getCurrentUserId(), pageVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(PageResult.empty());
         }
@@ -157,7 +158,7 @@ public class BpmTaskController {
     @Operation(summary = "通过任务")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> approveTask(@Valid @RequestBody BpmTaskApproveReqVO reqVO) {
-        taskService.approveTask(getLoginUserId(), reqVO);
+        taskService.approveTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -165,7 +166,7 @@ public class BpmTaskController {
     @Operation(summary = "不通过任务")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> rejectTask(@Valid @RequestBody BpmTaskRejectReqVO reqVO) {
-        taskService.rejectTask(getLoginUserId(), reqVO);
+        taskService.rejectTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 

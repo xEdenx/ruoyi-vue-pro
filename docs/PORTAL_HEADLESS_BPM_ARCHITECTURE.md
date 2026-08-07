@@ -39,7 +39,7 @@
 ### 2.1 不维护与同步 `system_users` 机制
 在无头中台架构下，**BPM 平台侧完全不需要同步或维护 Portal 的用户信息**：
 - **Portal 是唯一数据源头 (Single Source of Truth)**：所有的用户、角色、部门维护完全在 Portal 端完成；
-- **BPM 平台仅处理数字 ID**：Flowable 引擎底层（`act_ru_task`、`act_hi_procinst`、`act_ru_variable`）只存储纯数字或字符串 ID（如 `assignee_ = "102"`）；
+- **BPM 平台仅处理透明 String ID**：Flowable 引擎底层（`act_ru_task`、`act_hi_procinst`、`act_ru_variable`）按原样存储 Portal 用户 ID（如 `assignee_ = "b943f25d-4064-4f5f-8b8f-70437e4d6fd3"`），不转换为本地用户 ID；
 - **免二次开发**：摒弃复杂的跨系统用户同步机制（如 ETL、MQ 同步、定时任务拉取），避免数据不一致隐患。
 
 ### 2.2 Portal 前端 UI 姓名渲染映射流程

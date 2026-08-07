@@ -38,6 +38,11 @@ public interface BpmTaskService {
     PageResult<Task> getTaskTodoPage(Long userId, BpmTaskPageReqVO pageReqVO);
 
     /**
+     * 获得外部 Portal 用户的待办任务。用户 ID 与 Flowable 的 assignee 字段一致。
+     */
+    PageResult<Task> getTaskTodoPage(String userId, BpmTaskPageReqVO pageReqVO);
+
+    /**
      * 获得用户（待办）的任务：
      * 1. 根据 taskId 查询待办任务
      * 2. 如果任务不存在（或者已审核），获取指定流程下，首个需要处理任务
@@ -102,6 +107,11 @@ public interface BpmTaskService {
      * @param taskId task id
      */
     Task validateTask(Long userId, String taskId);
+
+    /**
+     * 校验任务是否分配给指定的外部用户 ID。
+     */
+    Task validateTask(String userId, String taskId);
 
     /**
      * 校验任务是否存在
@@ -227,12 +237,22 @@ public interface BpmTaskService {
     void approveTask(Long userId, @Valid BpmTaskApproveReqVO reqVO);
 
     /**
+     * 外部 Portal 用户审批任务。
+     */
+    void approveTask(String userId, @Valid BpmTaskApproveReqVO reqVO);
+
+    /**
      * 不通过任务
      *
      * @param userId 用户编号
      * @param reqVO  不通过请求
      */
     void rejectTask(Long userId, @Valid BpmTaskRejectReqVO reqVO);
+
+    /**
+     * 外部 Portal 用户驳回任务。
+     */
+    void rejectTask(String userId, @Valid BpmTaskRejectReqVO reqVO);
 
     /**
      * 将流程任务分配给指定用户

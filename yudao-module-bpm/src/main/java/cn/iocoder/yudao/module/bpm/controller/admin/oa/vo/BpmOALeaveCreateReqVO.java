@@ -33,7 +33,7 @@ public class BpmOALeaveCreateReqVO {
     private String reason;
 
     @Schema(description = "发起人自选审批人 Map", example = "{taskKey1: ['1', '2']}")
-    private Map<String, List<Object>> startUserSelectAssignees;
+    private Map<String, List<String>> startUserSelectAssignees;
 
     @AssertTrue(message = "结束时间，需要在开始时间之后")
     public boolean isEndTimeValid() {
