@@ -216,3 +216,9 @@ Portal 前端拿此 JSON 匹配本地用户字典后，可直接渲染出带有�
 1. **解耦性极强**：Portal 拥有 100% 的 UI 自由度与业务控制权，BPM 平台只做流程维护与底层 Flowable 状态机运算。
 2. **零用户同步**：无需维护 `system_users`，Portal 独占用户数据源，BPM 仅按数字 ID 透明中转。
 3. **免二次开发**：利用 BPM 框架内置的 `startUserSelectAssignees` 机制，无需手写后端监听器，直接在 API 发起时传入动态选人字典。
+
+---
+
+## 七、 后续解耦路线图
+
+`system` / `infra` 的解耦目标、阶段门槛和数据库清理顺序见 [HEADLESS_BPM_DECOUPLING_ROADMAP.md](HEADLESS_BPM_DECOUPLING_ROADMAP.md)。在完成认证与本地组织依赖替换前，不得直接删除相关模块或数据库表。
