@@ -72,7 +72,7 @@ spring:
       primary: master
       datasource:
         master:
-          url: jdbc:postgresql://db.vtkxfvguokhvxztrbpvw.supabase.co:5432/postgres?currentSchema=bpm&sslmode=require
+          url: jdbc:postgresql://${SUPABASE_DB_HOST}/postgres?currentSchema=bpm&sslmode=require
           driver-class-name: org.postgresql.Driver
           username: postgres
           password: ${SUPABASE_DB_PASSWORD}
@@ -92,7 +92,7 @@ spring:
           #          password: 123456 # 瀚高 HighGo 连接的示例
         slave: # 模拟从库，可根据自己需要修改
           lazy: true # 开启懒加载，保证启动速度
-          url: jdbc:postgresql://db.vtkxfvguokhvxztrbpvw.supabase.co:5432/postgres?currentSchema=bpm&sslmode=require
+          url: jdbc:postgresql://${SUPABASE_DB_HOST}/postgres?currentSchema=bpm&sslmode=require
           driver-class-name: org.postgresql.Driver
           username: postgres
           password: ${SUPABASE_DB_PASSWORD}
