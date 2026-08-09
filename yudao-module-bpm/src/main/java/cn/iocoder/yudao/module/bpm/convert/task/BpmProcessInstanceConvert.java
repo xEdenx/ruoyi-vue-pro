@@ -82,7 +82,7 @@ public interface BpmProcessInstanceConvert {
                 }
                 if (CollUtil.isNotEmpty(respVO.getTasks())) {
                     respVO.getTasks().forEach(task -> {
-                        AdminUserRespDTO assigneeUser = userMap.get(task.getAssignee());
+                        AdminUserRespDTO assigneeUser = userMap.get(NumberUtils.parseLong(task.getAssignee()));
                         if (assigneeUser != null) {
                             task.setAssigneeUser(BeanUtils.toBean(assigneeUser, UserSimpleBaseVO.class));
                             MapUtils.findAndThen(deptMap, assigneeUser.getDeptId(), dept -> task.getAssigneeUser().setDeptName(dept.getName()));
@@ -219,16 +219,16 @@ public interface BpmProcessInstanceConvert {
             userIds.add(NumberUtils.parseLong(processInstance.getStartUserId()));
         }
         for (BpmApprovalDetailRespVO.ActivityNode activityNode : activityNodes) {
-            CollUtil.addAll(userIds, convertSet(activityNode.getTasks(), BpmApprovalDetailRespVO.ActivityNodeTask::getAssignee));
-            CollUtil.addAll(userIds, convertSet(activityNode.getTasks(), BpmApprovalDetailRespVO.ActivityNodeTask::getOwner));
+            CollUtil.addAll(userIds, convertSet(activityNode.getTasks(), task -> NumberUtils.parseLong(task.getAssignee())));
+            CollUtil.addAll(userIds, convertSet(activityNode.getTasks(), task -> NumberUtils.parseLong(task.getOwner())));
             CollUtil.addAll(userIds, activityNode.getCandidateUserIds());
         }
         if (todoTask != null) {
-            CollUtil.addIfAbsent(userIds, todoTask.getAssignee());
-            CollUtil.addIfAbsent(userIds, todoTask.getOwner());
+            CollUtil.addIfAbsent(userIds, NumberUtils.parseLong(todoTask.getAssignee()));
+            CollUtil.addIfAbsent(userIds, NumberUtils.parseLong(todoTask.getOwner()));
             if (CollUtil.isNotEmpty(todoTask.getChildren())) {
-                CollUtil.addAll(userIds, convertSet(todoTask.getChildren(), BpmTaskRespVO::getAssignee));
-                CollUtil.addAll(userIds, convertSet(todoTask.getChildren(), BpmTaskRespVO::getOwner));
+                CollUtil.addAll(userIds, convertSet(todoTask.getChildren(), task -> NumberUtils.parseLong(task.getAssignee())));
+                CollUtil.addAll(userIds, convertSet(todoTask.getChildren(), task -> NumberUtils.parseLong(task.getOwner())));
             }
         }
         return userIds;

@@ -50,11 +50,26 @@ public class FlowableUtils {
         Authentication.setAuthenticatedUserId(String.valueOf(userId));
     }
 
+    public static void setAuthenticatedUserId(String userId) {
+        Authentication.setAuthenticatedUserId(userId);
+    }
+
     public static void clearAuthenticatedUserId() {
         Authentication.setAuthenticatedUserId(null);
     }
 
     public static <V> V executeAuthenticatedUserId(Long userId, Callable<V> callable) {
+        setAuthenticatedUserId(userId);
+        try {
+            return callable.call();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            clearAuthenticatedUserId();
+        }
+    }
+
+    public static <V> V executeAuthenticatedUserId(String userId, Callable<V> callable) {
         setAuthenticatedUserId(userId);
         try {
             return callable.call();

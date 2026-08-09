@@ -158,8 +158,10 @@ public interface BpmTaskConvert {
                                                         Task task) {
         BpmMessageSendWhenTaskCreatedReqDTO reqDTO = new BpmMessageSendWhenTaskCreatedReqDTO();
         reqDTO.setProcessInstanceId(processInstance.getProcessInstanceId())
-                .setProcessInstanceName(processInstance.getName()).setStartUserId(startUser.getId())
-                .setStartUserNickname(startUser.getNickname()).setTaskId(task.getId()).setTaskName(task.getName())
+                .setProcessInstanceName(processInstance.getName())
+                .setStartUserId(startUser != null ? startUser.getId() : NumberUtils.parseLong(processInstance.getStartUserId()))
+                .setStartUserNickname(startUser != null ? startUser.getNickname() : processInstance.getStartUserId())
+                .setTaskId(task.getId()).setTaskName(task.getName())
                 .setAssigneeUserId(NumberUtils.parseLong(task.getAssignee()));
         return reqDTO;
     }

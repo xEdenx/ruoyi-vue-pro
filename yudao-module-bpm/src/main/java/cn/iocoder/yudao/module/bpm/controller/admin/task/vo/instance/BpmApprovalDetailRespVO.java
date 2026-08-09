@@ -85,15 +85,13 @@ public class BpmApprovalDetailRespVO {
         private String id;
 
         @Schema(description = "任务所属人编号", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "1818")
-        @JsonIgnore // 不返回，只是方便后续读取，赋值给 ownerUser
-        private Long owner;
+        private String owner;
 
         @Schema(description = "任务所属人", example = "1024")
         private UserSimpleBaseVO ownerUser;
 
         @Schema(description = "任务分配人编号", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "2048")
-        @JsonIgnore // 不返回，只是方便后续读取，赋值给 assigneeUser
-        private Long assignee;
+        private String assignee;
 
         @Schema(description = "任务分配人", example = "2048")
         private UserSimpleBaseVO assigneeUser;

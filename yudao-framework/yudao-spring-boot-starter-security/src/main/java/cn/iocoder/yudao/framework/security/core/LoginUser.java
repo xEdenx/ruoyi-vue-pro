@@ -22,9 +22,18 @@ public class LoginUser {
     public static final String INFO_KEY_DEPT_ID = "deptId";
 
     /**
-     * 用户编号
+     * 登录主体编号。
+     *
+     * Portal 是用户身份的唯一来源，因此必须保留其原始字符串值，不能转换为数值或哈希值。
      */
-    private Long id;
+    private String id;
+    /**
+     * 本地系统用户编号。
+     *
+     * 仅供尚未迁移的 system_user、审计等遗留链路使用；Portal 用户不设置该字段。
+     */
+    @JsonIgnore
+    private Long systemUserId;
     /**
      * 用户类型
      *

@@ -34,6 +34,8 @@
 4. **Portal 负责逻辑解算**：
    Portal 接收回调后，结合 Portal 本地的最新部门与角色数据，实时解算并返回目标审批人的字符串用户 ID 集合 `Set<String>`。
 
+当前代码仅定义 `PortalCandidateApi` SPI，Portal HTTP 适配器尚未接入。未配置适配器、调用失败或返回空候选人时，策略必须失败关闭，禁止回退到本地用户、角色或部门策略创建错误待办。
+
 ---
 
 ## 3. 架构序列图与数据流 (Sequence Diagram)

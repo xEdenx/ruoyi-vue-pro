@@ -5,6 +5,8 @@ import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmPro
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmFormDO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelMetaInfoVO;
+import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelSaveReqVO;
+import jakarta.validation.Valid;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.repository.Model;
@@ -48,12 +50,23 @@ public interface BpmProcessDefinitionService {
      * @param model 流程模型
      * @param modelMetaInfo 流程模型元信息
      * @param bpmnBytes BPMN XML 字节数组
-     * @param simpleJson SIMPLE Model JSON
-     * @param form 表单
-     * @return 流程编号
+     * @param simpleJson 仿钉钉/飞书精简模型 JSON
+     * @param form 动态表单
+     * @return 流程定义编号
      */
     String createProcessDefinition(Model model, BpmModelMetaInfoVO modelMetaInfo,
                                    byte[] bpmnBytes, String simpleJson, BpmFormDO form);
+
+    /**
+     * 一键保存并发布 BPMN 流程模型。
+     *
+     * 复用模型创建/更新与发布的既有校验，不引入独立部署分支。
+     *
+     * @param userId 当前维护用户编号
+     * @param modelReqVO 与模型保存接口一致的参数
+     * @return 流程定义编号
+     */
+    String deployProcessDefinitionXml(Long userId, @Valid BpmModelSaveReqVO modelReqVO);
 
     /**
      * 更新流程定义状态

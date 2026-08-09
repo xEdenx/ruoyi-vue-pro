@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskCre
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskTimeoutReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.SmsSendApi;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -32,8 +33,17 @@ public class BpmMessageServiceImpl implements BpmMessageService {
     @Resource
     private WebProperties webProperties;
 
+    /**
+     * 无头模式下，用户和通知渠道均由 Portal 负责，BPM 不调用本地 system SMS。
+     */
+    @Value("${yudao.bpm.headless.enabled:false}")
+    private boolean headlessEnabled;
+
     @Override
     public void sendMessageWhenProcessInstanceApprove(BpmMessageSendWhenProcessInstanceApproveReqDTO reqDTO) {
+        if (skipLocalNotification("流程通过", reqDTO.getProcessInstanceId())) {
+            return;
+        }
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("processInstanceName", reqDTO.getProcessInstanceName());
         templateParams.put("detailUrl", getProcessInstanceDetailUrl(reqDTO.getProcessInstanceId()));
@@ -43,6 +53,9 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     @Override
     public void sendMessageWhenProcessInstanceReject(BpmMessageSendWhenProcessInstanceRejectReqDTO reqDTO) {
+        if (skipLocalNotification("流程拒绝", reqDTO.getProcessInstanceId())) {
+            return;
+        }
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("processInstanceName", reqDTO.getProcessInstanceName());
         templateParams.put("reason", reqDTO.getReason());
@@ -53,6 +66,9 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     @Override
     public void sendMessageWhenTaskAssigned(BpmMessageSendWhenTaskCreatedReqDTO reqDTO) {
+        if (skipLocalNotification("任务分配", reqDTO.getProcessInstanceId())) {
+            return;
+        }
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("processInstanceName", reqDTO.getProcessInstanceName());
         templateParams.put("taskName", reqDTO.getTaskName());
@@ -64,6 +80,9 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     @Override
     public void sendMessageWhenTaskTimeout(BpmMessageSendWhenTaskTimeoutReqDTO reqDTO) {
+        if (skipLocalNotification("任务超时", reqDTO.getProcessInstanceId())) {
+            return;
+        }
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("processInstanceName", reqDTO.getProcessInstanceName());
         templateParams.put("taskName", reqDTO.getTaskName());
@@ -74,6 +93,14 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     private String getProcessInstanceDetailUrl(String taskId) {
         return webProperties.getAdminUi().getUrl() + "/bpm/process-instance/detail?id=" + taskId;
+    }
+
+    private boolean skipLocalNotification(String event, String processInstanceId) {
+        if (!headlessEnabled) {
+            return false;
+        }
+        log.debug("[{}][无头模式跳过本地短信通知][processInstanceId={}]", event, processInstanceId);
+        return true;
     }
 
 }

@@ -8,8 +8,8 @@
              typeLanguage="http://www.w3.org/2001/XMLSchema"
              expressionLanguage="http://www.w3.org/1999/XPath"
              targetNamespace="http://www.flowable.org/processdef">
-  <process id="office_supplies_request_v2" name="办公用品申请流程 V2" isExecutable="true">
-    
+  <process id="office_supplies_request_v5" name="办公用品申请流程 V5" isExecutable="true">
+
     <!-- 开始节点 -->
     <startEvent id="StartEvent_1" name="发起申请" />
 
@@ -40,7 +40,7 @@
     <!-- 连线：部门经理审批 -> 办公室管理员审批 -->
     <sequenceFlow id="Flow_manager_to_admin" sourceRef="Activity_Manager" targetRef="Activity_Admin" />
 
-    <!-- 节点 2：办公室管理员审批（节点到达时由 Portal 按 ROLE_ADMIN 实时解算） -->
+    <!-- 节点 2：办公室管理员审批（采用 Headless 70 远程解算策略：到达节点时由 Portal 按 ROLE_ADMIN 动态解算） -->
     <userTask id="Activity_Admin" name="办公室管理员审批"
               flowable:candidateStrategy="70" flowable:candidateParam="ROLE_ADMIN">
       <extensionElements>
@@ -53,7 +53,7 @@
     <!-- 连线：办公室管理员审批 -> 供应商收单与派送 -->
     <sequenceFlow id="Flow_admin_to_supplier" sourceRef="Activity_Admin" targetRef="Activity_Supplier" />
 
-    <!-- 节点 3：供应商收单与派送（节点到达时由 Portal 按 ROLE_SUPPLIER 实时解算） -->
+    <!-- 节点 3：供应商收单与派送（采用 Headless 70 远程解算策略：到达节点时由 Portal 按 ROLE_SUPPLIER 动态解算） -->
     <userTask id="Activity_Supplier" name="供应商收单与派送"
               flowable:candidateStrategy="70" flowable:candidateParam="ROLE_SUPPLIER">
       <extensionElements>
@@ -77,8 +77,8 @@
   </process>
 
   <!-- 图形布局定义 (bpmn-js 渲染视图) -->
-  <bpmndi:BPMNDiagram id="BPMNDiagram_office_supplies_request_v2">
-    <bpmndi:BPMNPlane id="BPMNPlane_office_supplies_request_v2" bpmnElement="office_supplies_request_v2">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_office_supplies_request_v5">
+    <bpmndi:BPMNPlane id="BPMNPlane_office_supplies_request_v5" bpmnElement="office_supplies_request_v5">
       <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
         <omgdc:Bounds x="150" y="200" width="36" height="36" />
         <bpmndi:BPMNLabel>

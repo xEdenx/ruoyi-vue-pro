@@ -76,11 +76,10 @@ public class BpmTaskController {
         // 拼接数据
         Map<String, ProcessInstance> processInstanceMap = processInstanceService.getProcessInstanceMap(
                 convertSet(pageResult.getList(), Task::getProcessInstanceId));
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
-                convertSet(processInstanceMap.values(), instance -> Long.valueOf(instance.getStartUserId())));
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), Task::getProcessDefinitionId));
-        return success(BpmTaskConvert.INSTANCE.buildTodoTaskPage(pageResult, processInstanceMap, userMap, processDefinitionInfoMap));
+        // Portal 负责由自身用户字典补全姓名与部门；BPM 不再将外部 ID 转成本地 Long 用户编号。
+        return success(BpmTaskConvert.INSTANCE.buildTodoTaskPage(pageResult, processInstanceMap, Map.of(), processDefinitionInfoMap));
     }
 
     @GetMapping("done-page")

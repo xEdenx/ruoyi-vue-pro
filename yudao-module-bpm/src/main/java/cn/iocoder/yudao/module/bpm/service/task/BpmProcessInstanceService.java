@@ -125,6 +125,11 @@ public interface BpmProcessInstanceService {
     String createProcessInstance(Long userId, @Valid BpmProcessInstanceCreateReqVO createReqVO);
 
     /**
+     * 创建 Portal 发起的流程实例。Portal 用户 ID 保留为原始字符串。
+     */
+    String createProcessInstance(String userId, @Valid BpmProcessInstanceCreateReqVO createReqVO);
+
+    /**
      * 创建流程实例（提供给内部）
      *
      * @param userId       用户编号

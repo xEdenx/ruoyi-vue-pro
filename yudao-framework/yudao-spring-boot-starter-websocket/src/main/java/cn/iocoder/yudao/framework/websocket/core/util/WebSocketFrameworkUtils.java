@@ -40,7 +40,7 @@ public class WebSocketFrameworkUtils {
      */
     public static Long getLoginUserId(WebSocketSession session) {
         LoginUser loginUser = getLoginUser(session);
-        return loginUser != null ? loginUser.getId() : null;
+        return loginUser != null ? loginUser.getSystemUserId() : null;
     }
 
     /**

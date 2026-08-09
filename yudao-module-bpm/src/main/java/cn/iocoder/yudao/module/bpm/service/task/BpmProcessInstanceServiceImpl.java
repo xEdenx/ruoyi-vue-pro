@@ -9,6 +9,7 @@ import cn.hutool.core.util.*;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
+import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
 import cn.iocoder.yudao.framework.common.util.object.PageUtils;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
@@ -179,7 +180,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
             if (historicProcessInstance == null) {
                 throw exception(ErrorCodeConstants.PROCESS_INSTANCE_NOT_EXISTS);
             }
-            startUserId = Long.valueOf(historicProcessInstance.getStartUserId());
+            startUserId = NumberUtils.parseLong(historicProcessInstance.getStartUserId());
             processInstanceStatus = FlowableUtils.getProcessInstanceStatus(historicProcessInstance);
             // 合并 DB 和前端传递的流量变量，以前端的为主
             if (CollUtil.isNotEmpty(historicProcessInstance.getProcessVariables())) {
@@ -437,7 +438,8 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
                     && !CollUtil.contains(activities, // 特殊：如果已经存在用户手动创建的 START_USER_NODE_ID 节点，则忽略 StartEvent
                     historicActivity -> historicActivity.getActivityId().equals(START_USER_NODE_ID))) {
                 ActivityNodeTask startTask = new ActivityNodeTask().setId(BpmnModelConstants.START_USER_NODE_ID)
-                        .setAssignee(startUserId).setStatus(BpmTaskStatusEnum.APPROVE.getStatus());
+                        .setAssignee(startUserId != null ? String.valueOf(startUserId) : null)
+                        .setStatus(BpmTaskStatusEnum.APPROVE.getStatus());
                 ActivityNode startNode = new ActivityNode().setId(startTask.getId())
                         .setName(BpmSimpleModelNodeTypeEnum.START_USER_NODE.getName())
                         .setNodeType(BpmSimpleModelNodeTypeEnum.START_USER_NODE.getType())
@@ -769,6 +771,52 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    @DataPermission(enable = false)
+    public String createProcessInstance(String userId, @Valid BpmProcessInstanceCreateReqVO createReqVO) {
+        return FlowableUtils.executeAuthenticatedUserId(userId, () -> {
+            ProcessDefinition definition = processDefinitionService
+                    .getProcessDefinition(createReqVO.getProcessDefinitionId());
+            if (definition == null) {
+                throw exception(PROCESS_DEFINITION_NOT_EXISTS);
+            }
+            if (definition.isSuspended()) {
+                throw exception(PROCESS_DEFINITION_IS_SUSPENDED);
+            }
+            BpmProcessDefinitionInfoDO processDefinitionInfo = processDefinitionService
+                    .getProcessDefinitionInfo(definition.getId());
+            if (processDefinitionInfo == null) {
+                throw exception(PROCESS_DEFINITION_NOT_EXISTS);
+            }
+
+            // Portal 负责发起权限；BPM 不查询或同步本地 system_user。
+            validateStartUserSelectAssignees(null, definition, createReqVO.getStartUserSelectAssignees(),
+                    createReqVO.getVariables());
+            Map<String, Object> variables = createReqVO.getVariables() != null
+                    ? new HashMap<>(createReqVO.getVariables()) : new HashMap<>();
+            FlowableUtils.filterProcessInstanceFormVariable(variables);
+            variables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_ID, userId);
+            variables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_STATUS,
+                    BpmProcessInstanceStatusEnum.RUNNING.getStatus());
+            variables.put(BpmnVariableConstants.PROCESS_INSTANCE_SKIP_EXPRESSION_ENABLED, true);
+            if (CollUtil.isNotEmpty(createReqVO.getStartUserSelectAssignees())) {
+                variables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_SELECT_ASSIGNEES,
+                        createReqVO.getStartUserSelectAssignees());
+            }
+
+            ProcessInstanceBuilder builder = runtimeService.createProcessInstanceBuilder()
+                    .processDefinitionId(definition.getId())
+                    .variables(variables);
+            BpmModelMetaInfoVO.ProcessIdRule processIdRule = processDefinitionInfo.getProcessIdRule();
+            if (processIdRule != null && Boolean.TRUE.equals(processIdRule.getEnable())) {
+                builder.predefineProcessInstanceId(processIdRedisDAO.generate(processIdRule));
+            }
+            builder.name(generatePortalProcessInstanceName(userId, definition, processDefinitionInfo, variables));
+            return builder.start().getId();
+        });
+    }
+
+    @Override
     @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public String createProcessInstance(Long userId, @Valid BpmProcessInstanceCreateReqDTO createReqDTO) {
         return FlowableUtils.executeAuthenticatedUserId(userId, () -> {
@@ -874,6 +922,21 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
         AdminUserRespDTO user = adminUserApi.getUser(userId);
         Map<String, Object> cloneVariables = new HashMap<>(variables);
         cloneVariables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_ID, user.getNickname());
+        cloneVariables.put(BpmnVariableConstants.PROCESS_START_TIME, DateUtil.now());
+        cloneVariables.put(BpmnVariableConstants.PROCESS_DEFINITION_NAME, definition.getName().trim());
+        return StrUtil.format(definitionInfo.getTitleSetting().getTitle(), cloneVariables);
+    }
+
+    private String generatePortalProcessInstanceName(String userId,
+                                                     ProcessDefinition definition,
+                                                     BpmProcessDefinitionInfoDO definitionInfo,
+                                                     Map<String, Object> variables) {
+        if (definition == null || definitionInfo == null || definitionInfo.getTitleSetting() == null
+                || !BooleanUtil.isTrue(definitionInfo.getTitleSetting().getEnable())) {
+            return definition != null ? definition.getName() : null;
+        }
+        Map<String, Object> cloneVariables = new HashMap<>(variables);
+        cloneVariables.put(BpmnVariableConstants.PROCESS_INSTANCE_VARIABLE_START_USER_ID, userId);
         cloneVariables.put(BpmnVariableConstants.PROCESS_START_TIME, DateUtil.now());
         cloneVariables.put(BpmnVariableConstants.PROCESS_DEFINITION_NAME, definition.getName().trim());
         return StrUtil.format(definitionInfo.getTitleSetting().getTitle(), cloneVariables);

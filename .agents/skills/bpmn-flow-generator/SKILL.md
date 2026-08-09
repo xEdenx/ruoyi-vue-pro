@@ -23,7 +23,7 @@ description: 根据自然语言业务流程描述，自动生成 Flowable BPMN 2
 
 ## 二、 核心遵循规范 (Architecture Rules)
 
-1. **零硬编码选人 (Rule 3.2)**：所有生成的人员审批节点，候选人策略统一配置为 **【发起人自选 (candidateStrategy="35")】**。
+1. **候选人解算边界 (Rule 3.2)**：若 Portal 在发起时已确定最终用户 ID，使用 **【发起人自选 (candidateStrategy="35")】** 并通过 `startUserSelectAssignees` 传入；若节点到达时才需按 Portal 角色/组织规则解算，使用 **【HEADLESS_REMOTE (candidateStrategy="70")】**，并以 `candidateParam` 传入 Portal 原生规则 Key。禁止使用 BPM 本地角色策略。
 2. **零用户数据同步 (Rule 3.1)**：Java 监听器中不依赖本地 `system_users` 表，审批人 ID 均作为透明字符串/数字在 Flowable `act_ru_task` 中流转。
 3. **Bean 表达式绑定监听器**：在 BPMN XML 的 `<extensionElements>` 中使用 `delegateExpression="${<beanName>.<methodName>}"` 或 `delegateExpression="${<beanName>}"` 进行解耦绑定。
 4. **监听器编写范式**：完全采用 `OfficeSuppliesListeners` 模式，每个流程独立一个以 `<ProcessName>Listeners` 命名的组件文件，内部定义静态内部类监听器并通过 `PREFIX` 区分 Bean 名称。
@@ -44,6 +44,7 @@ description: 根据自然语言业务流程描述，自动生成 Flowable BPMN 2
   - 单人审批节点（如 部门经理 `Activity_Manager`）
   - 角色或签/抢办节点（如 财务角色 `Activity_Finance`）
   - 会签/多实例节点（如 供应商全员签收 `Activity_Supplier`）
+- **解算时机**：发起时确定的节点使用策略 35；需在任务到达时读取 Portal 当前组织关系的角色/会签节点使用策略 70，并提供非空的 `candidateParam`。
 
 ---
 
@@ -121,10 +122,13 @@ INSERT INTO `bpm_form` (
       </extensionElements>
     </userTask>
 
-    <!-- 审批节点 2 (多实例会签节点) -->
-    <userTask id="Activity_Supplier" name="供应商全员签收" flowable:candidateStrategy="35">
+    <!-- 审批节点 2（Portal 在节点到达时按角色实时解算的多实例会签节点） -->
+    <userTask id="Activity_Supplier" name="供应商全员签收"
+              flowable:candidateStrategy="70" flowable:candidateParam="ROLE_SUPPLIER">
       <extensionElements>
         <flowable:executionListener event="end" delegateExpression="${<process_key>Listeners_supplierApproval}" />
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_SUPPLIER</flowable:candidateParam>
       </extensionElements>
       <multiInstanceLoopCharacteristics isSequential="false">
         <completionCondition>${nrOfCompletedInstances == nrOfInstances}</completionCondition>
@@ -224,12 +228,12 @@ public class <ProcessName>Listeners {
     "totalAmount": 1500.0
   },
   "startUserSelectAssignees": {
-    "Activity_Manager": ["portal-user-102"],
-    "Activity_Admin": ["portal-user-office-admin"],
-    "Activity_Supplier": ["supplier-001", "supplier-002"]
+    "Activity_Manager": ["portal-user-102"]
   }
 }
 ```
+
+策略 70 的节点不放入 `startUserSelectAssignees`；由 PortalCandidateApi 在任务到达时按 `candidateParam` 返回最终 String 用户 ID 集合。
 
 ---
 

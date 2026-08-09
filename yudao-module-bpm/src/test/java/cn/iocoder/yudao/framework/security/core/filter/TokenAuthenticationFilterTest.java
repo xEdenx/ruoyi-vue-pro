@@ -28,7 +28,10 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
 
         LoginUser loginUser = filter.parseLoginUserFromJwt(jwtToken, 1);
         assertNotNull(loginUser);
+        assertEquals("b943f25d-4064-4f5f-8b8f-70437e4d6fd3", loginUser.getId());
+        assertNull(loginUser.getSystemUserId());
         assertEquals("b943f25d-4064-4f5f-8b8f-70437e4d6fd3", loginUser.getInfo().get("portalUserId"));
+        assertEquals("true", loginUser.getInfo().get(TokenAuthenticationFilter.PORTAL_JWT_INFO_KEY));
         assertEquals("ROLE_ADMIN", loginUser.getInfo().get("role"));
         assertEquals("100", loginUser.getInfo().get("deptId"));
     }
@@ -48,7 +51,8 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
 
         LoginUser loginUser = filter.parseLoginUserFromJwt(jwtToken, 1);
         assertNotNull(loginUser);
-        assertEquals(102L, loginUser.getId());
+        assertEquals("102", loginUser.getId());
+        assertEquals(102L, loginUser.getSystemUserId());
         assertEquals("102", loginUser.getInfo().get("portalUserId"));
         assertEquals("ROLE_MANAGER", loginUser.getInfo().get("role"));
     }

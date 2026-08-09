@@ -50,15 +50,15 @@
 对于审批履历、待办列表的展示，数据与 UI 的渲染职责完全交给 Portal：
 
 ```text
-[ BPM 平台 API ] ➔ 返回结构化 JSON 数据（仅包含数字 ID）：
+[ BPM 平台 API ] ➔ 返回结构化 JSON 数据（保留 Portal 原始字符串 ID）：
 {
   "taskId": "99c71ce6",
-  "assignee": 102,       // 仅包含 Portal 的用户 ID
+  "assignee": "b943f25d-4064-4f5f-8b8f-70437e4d6fd3",
   "status": "RUNNING"
 }
        │
        ▼ (Portal 收到 JSON 数据)
-[ Portal 前端 ] ➔ 拿着 ID 102 匹配 Portal 本地用户字典 ➔ 渲染 UI："待张三审批 (研发部)"
+[ Portal 前端 ] ➔ 拿着该 ID 匹配 Portal 本地用户字典 ➔ 渲染 UI："待张三审批 (研发部)"
 ```
 
 ---
@@ -87,11 +87,12 @@
 
 ### 4.1 BPMN 流程图设计规范（零硬编码）
 在 BPM 平台拖拽流程图时：
-1. 每个审批节点（UserTask）的候选人策略设置为 **【发起人自选 (START_USER_SELECT)】**；
-2. 流程图节点无需绑定任何固定用户 ID 或角色 ID。
+1. 若 Portal 在发起时已确定最终用户 ID，使用 **【发起人自选 (START_USER_SELECT, 35)】**，由请求中的 `startUserSelectAssignees` 传入；
+2. 若节点到达时才需依据 Portal 当前角色、部门或业务规则解算，使用 **【HEADLESS_REMOTE (70)】**，并在节点 `candidateParam` 中填写 Portal 原生规则 Key；
+3. 流程图节点不绑定 BPM 本地用户 ID、角色 ID 或部门 ID。
 
 ### 4.2 Portal 发起流程时的动态 JSON 数据包
-当用户在 Portal 中填完表单，并拉出下拉框选好了**节点 1 找张三(ID:102)**、**节点 2 找 HR角色(ID:5)** 时，Portal 调用 BPM 发起接口：
+当用户在 Portal 中填完表单，并为策略 35 的节点选好最终人员后，Portal 调用 BPM 发起接口。策略 70 的节点不传具体用户 ID，而是在任务实际到达时由 Portal 解算：
 
 * **请求地址**：`POST /admin-api/bpm/process-instance/create`
 * **请求体 (JSON)**：
@@ -106,8 +107,7 @@
     "portal_form_id": "FORM_99812"
   },
   "startUserSelectAssignees": {
-    "Activity_Node1": [102],
-    "Activity_Node2": [5]
+    "Activity_Node1": ["102"]
   }
 }
 ```
@@ -118,7 +118,45 @@
 
 后端 `ruoyi-vue-pro` 已经内置了全套标准 API，Portal 只需要集成以下 4 个接口：
 
-### 1. 发起流程接口
+### 3.0 流程定义发布部署 API（无头 Headless 专用）
+- **接口路径**: `POST /admin-api/bpm/process-definition/deploy-xml`
+- **Content-Type**: `application/json`
+- **认证与授权**: 该入口不额外声明 BPM 菜单/角色权限；认证通过后即可调用。为保持与既有模型 API 一致，更新或发布已有模型仍会校验请求人的 `systemUserId` 是否在 `managerUserIds` 中，禁止伪造固定维护用户。
+- **说明**: 这是“一键保存并发布”组合 API，不是原生 XML 文件上传 API。它按现有生命周期执行：
+  `createModel`（无 `id`）或 `updateModel`（有 `id`）→ `deployModel`。
+  因此会保留 BPMN 合法性、表单配置、候选人策略和模型管理人校验，并自动挂起旧版本。
+- **请求参数**: 请求体与模型保存 API 完全一致，为 `BpmModelSaveReqVO`。`bpmnXml` 是 BPMN XML 文本；`type` 固定为 `10`（BPMN）；新建时不传 `id`，更新时传已有 Flowable model ID。
+- **最小可部署示例**（`formId` 必须是已存在的 `bpm_form` 主键，且 `managerUserIds` 包含当前认证用户的兼容本地 ID）：
+  ```json
+  {
+    "key": "office_supplies_request_v5",
+    "name": "办公用品申请流程 V5",
+    "category": "无",
+    "type": 10,
+    "formType": 10,
+    "formId": 1,
+    "visible": true,
+    "managerUserIds": [102],
+    "bpmnXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><definitions>...</definitions>"
+  }
+  ```
+- **调用示例**:
+  ```bash
+  curl -X POST 'http://127.0.0.1:48080/admin-api/bpm/process-definition/deploy-xml' \
+    -H 'Authorization: Bearer <Portal_JWT>' \
+    -H 'Content-Type: application/json' \
+    --data @deploy-office-supplies-v3.json
+  ```
+- **响应示例**:
+  ```json
+  {
+    "code": 0,
+    "data": "office_supplies_request_v5:1:1001",
+    "msg": "操作成功"
+  }
+  ```
+
+### 3.1 发起流程接口
 - **HTTP 方法**：`POST`
 - **接口路径**：`/admin-api/bpm/process-instance/create`
 - **Header 认证**：`Authorization: Bearer {token}`
@@ -131,6 +169,18 @@
 }
 ```
 Portal 将返回的 `processInstanceId` 保存到本地业务表中。
+
+### 3.1.1 临时 Portal JWT 授权边界
+
+本地 walkthrough 使用 JWT payload 中的 `role` 或 `roles` 模拟 Portal 角色。无头 BPM 的这条临时链路不查询 `system_user_role`：
+
+- JWT 必须包含非空角色声明；无角色声明直接拒绝。
+- 具备角色声明的 Portal JWT 仅可访问流程发起/详情和待办查询/办理所需的 BPM 权限：`bpm:process-instance:query`、`bpm:task:query`、`bpm:task:update`。
+- 它不能访问 `system:*` 或其他非 BPM 管理权限。
+
+真实 Portal 接入时，应替换为已验证 JWT 及 Portal 自己的权限策略；不得再绑定本地 `system_user`、`system_role` 或 `system_user_role`。
+
+本地无头配置还启用 `yudao.bpm.headless.enabled=true`：流程完成、拒绝、任务分配和超时不会调用本地 `system` 短信服务。Portal 负责接收状态变化并自行通知业务用户。
 
 ---
 

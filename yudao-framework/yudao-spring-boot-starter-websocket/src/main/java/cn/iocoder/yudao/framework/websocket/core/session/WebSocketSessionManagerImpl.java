@@ -53,11 +53,11 @@ public class WebSocketSessionManagerImpl implements WebSocketSessionManager {
                 userSessionsMap = userSessions.get(user.getUserType());
             }
         }
-        CopyOnWriteArrayList<WebSocketSession> sessions = userSessionsMap.get(user.getId());
+        CopyOnWriteArrayList<WebSocketSession> sessions = userSessionsMap.get(user.getSystemUserId());
         if (sessions == null) {
             sessions = new CopyOnWriteArrayList<>();
-            if (userSessionsMap.putIfAbsent(user.getId(), sessions) != null) {
-                sessions = userSessionsMap.get(user.getId());
+            if (userSessionsMap.putIfAbsent(user.getSystemUserId(), sessions) != null) {
+                sessions = userSessionsMap.get(user.getSystemUserId());
             }
         }
         sessions.add(session);
@@ -76,10 +76,10 @@ public class WebSocketSessionManagerImpl implements WebSocketSessionManager {
         if (userSessionsMap == null) {
             return;
         }
-        CopyOnWriteArrayList<WebSocketSession> sessions = userSessionsMap.get(user.getId());
+        CopyOnWriteArrayList<WebSocketSession> sessions = userSessionsMap.get(user.getSystemUserId());
         sessions.removeIf(session0 -> session0.getId().equals(session.getId()));
         if (CollUtil.isEmpty(sessions)) {
-            userSessionsMap.remove(user.getId(), sessions);
+            userSessionsMap.remove(user.getSystemUserId(), sessions);
         }
     }
 

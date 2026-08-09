@@ -1,5 +1,7 @@
 package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.headless;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.BpmTaskCandidateStrategy;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmTaskCandidateStrategyEnum;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
@@ -25,7 +27,7 @@ public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy
     private final BpmProcessInstanceService processInstanceService;
 
     public HeadlessRemoteCandidateStrategy(Optional<PortalCandidateApi> portalCandidateApi,
-                                           BpmProcessInstanceService processInstanceService) {
+                                           @org.springframework.context.annotation.Lazy BpmProcessInstanceService processInstanceService) {
         this.portalCandidateApi = portalCandidateApi.orElse(null);
         this.processInstanceService = processInstanceService;
     }
@@ -47,30 +49,35 @@ public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy
         String activityId = execution.getCurrentActivityId();
         String processInstanceId = execution.getProcessInstanceId();
 
-        if (portalCandidateApi != null) {
-            Set<String> assigneeIds = portalCandidateApi.resolveAssigneeIds(startUserId, activityId, param, processInstanceId);
-            if (assigneeIds != null) {
-                return assigneeIds;
-            }
-        }
-        return Collections.emptySet();
+        return resolveAssigneeIds(startUserId, activityId, param, processInstanceId);
     }
 
     @Override
     public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId, String param,
                                                         Long startUserId, String processDefinitionId, Map<String, Object> processVariables) {
-        if (portalCandidateApi != null) {
-            Set<String> assigneeIds = portalCandidateApi.resolveAssigneeIds(String.valueOf(startUserId), activityId, param, null);
-            if (assigneeIds != null) {
-                return assigneeIds;
-            }
-        }
-        return Collections.emptySet();
+        return resolveAssigneeIds(String.valueOf(startUserId), activityId, param, null);
     }
 
     @Override
     public Set<Long> calculateUsers(String param) {
         return Collections.emptySet();
+    }
+
+    /**
+     * 远程候选人是无头模式下的唯一权威来源。未接入 Portal 或 Portal 无法给出有效候选人时，
+     * 必须终止本次计算，不能回退到本地组织架构策略后产生错误待办。
+     */
+    private Set<String> resolveAssigneeIds(String startUserId, String activityId, String param,
+                                            String processInstanceId) {
+        if (portalCandidateApi == null) {
+            throw new IllegalStateException("未配置 PortalCandidateApi，无法解析 HEADLESS_REMOTE 候选人");
+        }
+        Set<String> assigneeIds = portalCandidateApi.resolveAssigneeIds(startUserId, activityId, param,
+                processInstanceId);
+        if (CollUtil.isEmpty(assigneeIds) || assigneeIds.stream().anyMatch(StrUtil::isBlank)) {
+            throw new IllegalStateException("Portal 未返回有效的 HEADLESS_REMOTE 候选人");
+        }
+        return new LinkedHashSet<>(assigneeIds);
     }
 
     /**

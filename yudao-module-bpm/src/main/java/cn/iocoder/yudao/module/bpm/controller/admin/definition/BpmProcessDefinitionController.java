@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.bpm.controller.admin.definition;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelSaveReqVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmProcessDefinitionPageReqVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmProcessDefinitionRespVO;
 import cn.iocoder.yudao.module.bpm.convert.definition.BpmProcessDefinitionConvert;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.common.engine.impl.db.SuspensionState;
 import org.flowable.engine.repository.Deployment;
@@ -23,6 +25,8 @@ import org.flowable.engine.repository.ProcessDefinition;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,9 +36,11 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 
 @Tag(name = "管理后台 - 流程定义")
 @RestController
@@ -128,6 +134,17 @@ public class BpmProcessDefinitionController {
         BpmnModel bpmnModel = processDefinitionService.getProcessDefinitionBpmnModel(processDefinition.getId());
         return success(BpmProcessDefinitionConvert.INSTANCE.buildProcessDefinition(
                 processDefinition, null, processDefinitionInfo, null, null, bpmnModel));
+    }
+
+    @PostMapping("/deploy-xml")
+    @Operation(summary = "一键保存并发布 BPMN 流程模型", description = "复用流程模型的保存与发布逻辑，不额外要求角色")
+    public CommonResult<String> deployProcessDefinitionXml(@Valid @RequestBody BpmModelSaveReqVO modelReqVO) {
+        Long userId = getLoginUserId();
+        if (userId == null) {
+            throw exception(UNAUTHORIZED);
+        }
+        String definitionId = processDefinitionService.deployProcessDefinitionXml(userId, modelReqVO);
+        return success(definitionId);
     }
 
 }

@@ -31,6 +31,9 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
+    public static final String PORTAL_JWT_INFO_KEY = "portalJwt";
+    public static final String PORTAL_ROLE_INFO_KEY = "role";
+
     private final SecurityProperties securityProperties;
 
     private final GlobalExceptionHandler globalExceptionHandler;
@@ -89,7 +92,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 throw new AccessDeniedException("错误的用户类型");
             }
             // 构建登录用户
-            return new LoginUser().setId(accessToken.getUserId()).setUserType(accessToken.getUserType())
+            return new LoginUser().setId(String.valueOf(accessToken.getUserId()))
+                    .setSystemUserId(accessToken.getUserId()).setUserType(accessToken.getUserType())
                     .setInfo(accessToken.getUserInfo()) // 额外的用户信息
                     .setTenantId(accessToken.getTenantId()).setScopes(accessToken.getScopes())
                     .setExpiresTime(accessToken.getExpiresTime());
@@ -156,21 +160,22 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 }
             });
             info.put("portalUserId", userIdStr);
+            info.put(PORTAL_JWT_INFO_KEY, Boolean.TRUE.toString());
             if (StrUtil.isNotBlank(roleStr)) {
-                info.put("role", roleStr);
-            }
-
-            Long numericUserId = null;
-            try {
-                numericUserId = Long.parseLong(userIdStr);
-            } catch (NumberFormatException ignored) {
-                numericUserId = (long) Math.abs(userIdStr.hashCode());
+                info.put(PORTAL_ROLE_INFO_KEY, roleStr);
             }
 
             Integer resolvedUserType = userType != null ? userType : cn.iocoder.yudao.framework.common.enums.UserTypeEnum.ADMIN.getValue();
             Long tenantId = payload.getLong("tenantId");
+            Long systemUserId = null;
+            try {
+                systemUserId = Long.valueOf(userIdStr);
+            } catch (NumberFormatException ignored) {
+                // Portal 用户 ID 可以是 UUID 等非数字字符串；此时不映射为本地 system_user ID。
+            }
             return new LoginUser()
-                    .setId(numericUserId)
+                    .setId(userIdStr)
+                    .setSystemUserId(systemUserId)
                     .setUserType(resolvedUserType)
                     .setInfo(info)
                     .setTenantId(tenantId);
@@ -198,8 +203,12 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             return null;
         }
         // 构建模拟用户
-        Long userId = Long.valueOf(token.substring(securityProperties.getMockSecret().length()));
+        String userId = token.substring(securityProperties.getMockSecret().length());
+        if (StrUtil.isBlank(userId)) {
+            return null;
+        }
         return new LoginUser().setId(userId).setUserType(userType)
+                .setInfo(java.util.Map.of("portalUserId", userId))
                 .setTenantId(WebFrameworkUtils.getTenantId(request));
     }
 

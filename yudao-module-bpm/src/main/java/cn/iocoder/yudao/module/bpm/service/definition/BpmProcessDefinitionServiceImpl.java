@@ -23,6 +23,8 @@ import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.repository.Model;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.repository.ProcessDefinitionQuery;
+import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelSaveReqVO;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -55,6 +57,10 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
     @Resource
     private AdminUserApi adminUserApi;
 
+    @Resource
+    @org.springframework.context.annotation.Lazy
+    private BpmModelService modelService;
+
     @Override
     public ProcessDefinition getProcessDefinition(String id) {
         return repositoryService.getProcessDefinition(id);
@@ -85,7 +91,8 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
     public ProcessDefinition getActiveProcessDefinition(String key) {
         return repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(FlowableUtils.getTenantId())
-                .processDefinitionKey(key).active().singleResult();
+                // 历史直接部署留下多个 active 版本时，Portal 应读取当前可发起的最新版本。
+                .processDefinitionKey(key).active().latestVersion().singleResult();
     }
 
     @Override
@@ -165,6 +172,25 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
         }
         processDefinitionMapper.insert(definitionDO);
         return definition.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String deployProcessDefinitionXml(Long userId, BpmModelSaveReqVO modelReqVO) {
+        String modelId = modelReqVO.getId();
+        if (StrUtil.isEmpty(modelId)) {
+            modelId = modelService.createModel(modelReqVO);
+        } else {
+            modelService.updateModel(userId, modelReqVO);
+        }
+        modelService.deployModel(userId, modelId);
+
+        Model model = modelService.getModel(modelId);
+        ProcessDefinition definition = repositoryService.createProcessDefinitionQuery()
+                .deploymentId(model.getDeploymentId())
+                .processDefinitionTenantId(FlowableUtils.getTenantId())
+                .singleResult();
+        return definition != null ? definition.getId() : null;
     }
 
     @Override

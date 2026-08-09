@@ -103,11 +103,11 @@ public class DeptDataPermissionRule implements DataPermissionRule {
         DeptDataPermissionRespDTO deptDataPermission = loginUser.getContext(CONTEXT_KEY, DeptDataPermissionRespDTO.class);
         // 从上下文中拿不到，则调用逻辑进行获取
         if (deptDataPermission == null) {
-            deptDataPermission = permissionApi.getDeptDataPermission(loginUser.getId());
+            deptDataPermission = permissionApi.getDeptDataPermission(loginUser.getSystemUserId());
             if (deptDataPermission == null) {
                 log.error("[getExpression][LoginUser({}) 获取数据权限为 null]", JsonUtils.toJsonString(loginUser));
                 throw new NullPointerException(String.format("LoginUser(%d) Table(%s/%s) 未返回数据权限",
-                        loginUser.getId(), tableName, tableAlias.getName()));
+                        loginUser.getSystemUserId(), tableName, tableAlias.getName()));
             }
             // 添加到上下文中，避免重复计算
             loginUser.setContext(CONTEXT_KEY, deptDataPermission);
@@ -126,7 +126,7 @@ public class DeptDataPermissionRule implements DataPermissionRule {
 
         // 情况三，拼接 Dept 和 User 的条件，最后组合
         Expression deptExpression = buildDeptExpression(tableName,tableAlias, deptDataPermission.getDeptIds());
-        Expression userExpression = buildUserExpression(tableName, tableAlias, deptDataPermission.getSelf(), loginUser.getId());
+        Expression userExpression = buildUserExpression(tableName, tableAlias, deptDataPermission.getSelf(), loginUser.getSystemUserId());
         if (deptExpression == null && userExpression == null) {
             // TODO 芋艿：获得不到条件的时候，暂时不抛出异常，而是不返回数据
             log.warn("[getExpression][LoginUser({}) Table({}/{}) DeptDataPermission({}) 构建的条件为空]",

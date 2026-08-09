@@ -58,6 +58,7 @@ import org.flowable.task.api.history.HistoricTaskInstance;
 import org.flowable.task.api.history.HistoricTaskInstanceQuery;
 import org.flowable.task.service.impl.persistence.entity.TaskEntity;
 import org.flowable.task.service.impl.persistence.entity.TaskEntityImpl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,6 +113,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
     private AdminUserApi adminUserApi;
     @Resource
     private DeptApi deptApi;
+
+    /**
+     * 无头模式不维护本地用户，也由 Portal 负责任务通知。
+     */
+    @Value("${yudao.bpm.headless.enabled:false}")
+    private boolean headlessEnabled;
 
     // ========== Query 查询相关方法 ==========
 
@@ -1643,6 +1650,10 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                         }
                     }
 
+                    // 无头模式由 Portal 负责通知；不能在此把 Portal 的 String ID 转为本地 Long 用户 ID。
+                    if (headlessEnabled) {
+                        return;
+                    }
                     // 发送消息
                     AdminUserRespDTO startUser = adminUserApi.getUser(Long.valueOf(processInstance.getStartUserId()));
                     messageService.sendMessageWhenTaskAssigned(BpmTaskConvert.INSTANCE.convert(processInstance, startUser, task));

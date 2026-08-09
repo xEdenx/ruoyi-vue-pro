@@ -1,9 +1,23 @@
-# 无头 BPM 中台 (Headless BPM Engine) 零用户同步与动态选人 API 全流程实测报告 (V2 流程)
+# 无头 BPM 中台 (Headless BPM Engine) 零用户同步与动态选人 API 全流程实测报告 (V5 流程)
 
 > **测试时间**: 2026-08-07 19:07:30
 > **测试环境**: RuoYi-Vue-Pro / Flowable 7 / Supabase PostgreSQL / REST API
-> **流程定义**: `office_supplies_request_v2` (办公用品申请流程 V2)
-> **流程定义 ID**: `11c6aadb-924f-11f1-b105-e62ab33efc67`
+> **流程定义**: `office_supplies_request_v5` (办公用品申请流程 V5)
+> **流程定义 ID**: 每次通过 `/deploy-xml` 发布后由服务返回；不得复用历史 ID。
+
+---
+
+## 当前可执行演练配置（HEADLESS_REMOTE）
+
+下方 2026-08-07 的履历是旧的实测记录。当前 V5 流程图配置为：
+
+- Activity_Manager：START_USER_SELECT，发起请求传入用户 102。
+- Activity_Admin：HEADLESS_REMOTE，Portal mock 按 ROLE_ADMIN 返回用户 103。
+- Activity_Supplier：HEADLESS_REMOTE，Portal mock 按 ROLE_SUPPLIER 返回用户 104、105，并行会签。
+
+本地环境通过 `yudao.bpm.headless-mock.enabled=true` 注册 mock。运行脚本前必须用 `POST /admin-api/bpm/process-definition/deploy-xml` 将 `docs/office_supplies_request_v5.bpmn.xml` 及其完整 `BpmModelSaveReqVO` 元数据一键保存并发布；随后执行 `script/shell/test_headless_bpm_walkthrough.sh`。该入口接收 JSON，不接受 multipart XML 上传。
+
+脚本的 JWT 以 `role` 声明模拟 Portal 角色。该临时无头授权不读取本地 `system_user_role`；没有 `role`/`roles` 的 JWT 必须被拒绝。
 
 ---
 
@@ -12,7 +26,7 @@
 ```text
                Portal 页面打开发起申请
                         │
- [ 1. 拉取表单 Schema ] GET /admin-api/bpm/process-definition/get?key=office_supplies_request_v2
+ [ 1. 拉取表单 Schema ] GET /admin-api/bpm/process-definition/get?key=office_supplies_request_v5
                         │
  [ 2. 预测审批节点 ]   POST /admin-api/bpm/process-instance/get-approval-detail (带表单变量)
                         │
@@ -24,7 +38,7 @@
 ## 二、 步骤 1：Portal API 动态拉取流程定义与表单字段 Schema
 
 ### 1.1 HTTP 请求
-- **URL**: `GET /admin-api/bpm/process-definition/get?key=office_supplies_request_v2`
+- **URL**: `GET /admin-api/bpm/process-definition/get?key=office_supplies_request_v5`
 - **Header**: `Authorization: Bearer <Portal_User_Token>`, `tenant-id: 1`
 
 ### 1.2 返回的数据结构
@@ -33,8 +47,8 @@
   "code": 0,
   "data": {
     "id": "11c6aadb-924f-11f1-b105-e62ab33efc67",
-    "key": "office_supplies_request_v2",
-    "name": "办公用品申请流程 V2",
+    "key": "office_supplies_request_v5",
+    "name": "办公用品申请流程 V5",
     "formFields": [
       "{\"type\":\"input\",\"field\":\"name\",\"title\":\"物品名称\",\"$required\":true}",
       "{\"type\":\"inputNumber\",\"field\":\"count\",\"title\":\"物品数量\",\"$required\":true}",
