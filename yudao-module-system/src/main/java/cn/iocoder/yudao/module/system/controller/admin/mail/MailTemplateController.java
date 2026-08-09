@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 @Tag(name = "管理后台 - 邮件模版")
 @RestController
@@ -93,7 +93,7 @@ public class MailTemplateController {
     @Operation(summary = "发送短信")
     @PreAuthorize("@ss.hasPermission('system:mail-template:send-mail')")
     public CommonResult<Long> sendMail(@Valid @RequestBody MailTemplateSendReqVO sendReqVO) {
-        return success(mailSendService.sendSingleMailToAdmin(getLoginUserId(),
+        return success(mailSendService.sendSingleMailToAdmin(getLoginUserLongId(),
                 sendReqVO.getToMails(), sendReqVO.getCcMails(), sendReqVO.getBccMails(),
                 sendReqVO.getTemplateCode(), sendReqVO.getTemplateParams()));
     }

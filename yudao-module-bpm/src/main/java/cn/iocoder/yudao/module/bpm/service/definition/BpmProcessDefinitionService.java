@@ -66,7 +66,7 @@ public interface BpmProcessDefinitionService {
      * @param modelReqVO 与模型保存接口一致的参数
      * @return 流程定义编号
      */
-    String deployProcessDefinitionXml(Long userId, @Valid BpmModelSaveReqVO modelReqVO);
+    String deployProcessDefinitionXml(String userId, @Valid BpmModelSaveReqVO modelReqVO);
 
     /**
      * 更新流程定义状态

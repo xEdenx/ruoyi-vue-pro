@@ -40,7 +40,7 @@ import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeC
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception0;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 /**
  * 提供给外部应用调用为主
@@ -188,7 +188,7 @@ public class OAuth2OpenController {
         // 1. 获得 Client 客户端的信息
         OAuth2ClientDO client = oauth2ClientService.validOAuthClientFromCache(clientId);
         // 2. 获得用户已经授权的信息
-        List<OAuth2ApproveDO> approves = oauth2ApproveService.getApproveList(getLoginUserId(), getUserType(), clientId);
+        List<OAuth2ApproveDO> approves = oauth2ApproveService.getApproveList(getLoginUserLongId(), getUserType(), clientId);
         // 拼接返回
         return success(OAuth2OpenConvert.INSTANCE.convert(client, approves));
     }
@@ -233,12 +233,12 @@ public class OAuth2OpenController {
         // 2.1 假设 approved 为 null，说明是场景一
         if (Boolean.TRUE.equals(autoApprove)) {
             // 如果无法自动授权通过，则返回空 url，前端不进行跳转
-            if (!oauth2ApproveService.checkForPreApproval(getLoginUserId(), getUserType(), clientId, scopes.keySet())) {
+            if (!oauth2ApproveService.checkForPreApproval(getLoginUserLongId(), getUserType(), clientId, scopes.keySet())) {
                 return success(null);
             }
         } else { // 2.2 假设 approved 非 null，说明是场景二
             // 如果计算后不通过，则跳转一个错误链接
-            if (!oauth2ApproveService.updateAfterApproval(getLoginUserId(), getUserType(), clientId, scopes)) {
+            if (!oauth2ApproveService.updateAfterApproval(getLoginUserLongId(), getUserType(), clientId, scopes)) {
                 return success(OAuth2Utils.buildUnsuccessfulRedirect(redirectUri, responseType, state,
                         "access_denied", "User denied access"));
             }
@@ -247,10 +247,10 @@ public class OAuth2OpenController {
         // 3.1 如果是 code 授权码模式，则发放 code 授权码，并重定向
         List<String> approveScopes = convertList(scopes.entrySet(), Map.Entry::getKey, Map.Entry::getValue);
         if (grantTypeEnum == OAuth2GrantTypeEnum.AUTHORIZATION_CODE) {
-            return success(getAuthorizationCodeRedirect(getLoginUserId(), client, approveScopes, redirectUri, state));
+            return success(getAuthorizationCodeRedirect(getLoginUserLongId(), client, approveScopes, redirectUri, state));
         }
         // 3.2 如果是 token 则是 implicit 简化模式，则发送 accessToken 访问令牌，并重定向
-        return success(getImplicitGrantRedirect(getLoginUserId(), client, approveScopes, redirectUri, state));
+        return success(getImplicitGrantRedirect(getLoginUserLongId(), client, approveScopes, redirectUri, state));
     }
 
     private static OAuth2GrantTypeEnum getGrantTypeEnum(String responseType) {

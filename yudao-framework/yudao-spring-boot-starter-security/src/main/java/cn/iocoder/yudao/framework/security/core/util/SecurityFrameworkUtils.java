@@ -86,9 +86,9 @@ public class SecurityFrameworkUtils {
      * @return 用户编号
      */
     @Nullable
-    public static Long getLoginUserId() {
+    public static String getLoginUserId() {
         LoginUser loginUser = getLoginUser();
-        return loginUser != null ? loginUser.getSystemUserId() : null;
+        return loginUser != null ? loginUser.getId() : null;
     }
 
     /**
@@ -97,9 +97,9 @@ public class SecurityFrameworkUtils {
      * Portal / 无头 BPM 链路应使用此方法，避免将外部用户 ID 约束为 Long。
      */
     @Nullable
-    public static String getLoginUserStringId() {
-        LoginUser loginUser = getLoginUser();
-        return loginUser != null ? loginUser.getId() : null;
+    public static Long getLoginUserLongId() {
+        String userId = getLoginUserId();
+        return cn.hutool.core.util.NumberUtil.isLong(userId) ? Long.valueOf(userId) : null;
     }
 
     /**
@@ -138,7 +138,8 @@ public class SecurityFrameworkUtils {
         // 额外设置到 request 中，用于 ApiAccessLogFilter 可以获取到用户编号；
         // 原因是，Spring Security 的 Filter 在 ApiAccessLogFilter 后面，在它记录访问日志时，线上上下文已经没有用户编号等信息
         if (request != null) {
-            WebFrameworkUtils.setLoginUserId(request, loginUser.getSystemUserId());
+            // 访问日志等遗留表仍是 Long 主键；Portal 的字符串身份不写入这些字段。
+            WebFrameworkUtils.setLoginUserId(request, getLoginUserLongId());
             WebFrameworkUtils.setLoginUserType(request, loginUser.getUserType());
         }
     }

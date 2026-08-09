@@ -61,6 +61,7 @@ import org.flowable.engine.runtime.ProcessInstanceBuilder;
 import org.flowable.engine.task.Attachment;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -124,6 +125,10 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
 
     @Resource
     private BpmProcessIdRedisDAO processIdRedisDAO;
+
+    /** 无头模式由 Portal 负责通知，不向只接受本地 Long 用户 ID 的消息模块投递。 */
+    @Value("${yudao.bpm.headless.enabled:false}")
+    private boolean headlessEnabled;
 
     // ========== Query 查询相关方法 ==========
 
@@ -210,7 +215,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
             activities = taskService.getActivityListByProcessInstanceId(reqVO.getProcessInstanceId());
             List<HistoricTaskInstance> tasks = taskService.getTaskListByProcessInstanceId(reqVO.getProcessInstanceId(),
                     true);
-            endActivityNodes = getEndActivityNodeList(startUserId, bpmnModel, processDefinitionInfo,
+            endActivityNodes = getEndActivityNodeList(startUserId != null ? String.valueOf(startUserId) : null, bpmnModel, processDefinitionInfo,
                     historicProcessInstance, processInstanceStatus, activities, tasks);
             runActivityNodes = getRunApproveNodeList(startUserId, bpmnModel, processDefinition, processVariables,
                     activities, tasks);
@@ -245,6 +250,28 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
         // 4. 拼接最终数据
         return buildApprovalDetail(reqVO, bpmnModel, processDefinition, processDefinitionInfo, historicProcessInstance,
                 processInstanceStatus, endActivityNodes, runActivityNodes, simulateActivityNodes, todoTask);
+    }
+
+    @Override
+    public BpmApprovalDetailRespVO getApprovalDetail(String loginUserId, BpmApprovalDetailReqVO reqVO) {
+        if (StrUtil.isBlank(reqVO.getProcessInstanceId())) {
+            throw new IllegalArgumentException("Portal 审批详情必须指定流程实例");
+        }
+        HistoricProcessInstance processInstance = getHistoricProcessInstance(reqVO.getProcessInstanceId());
+        if (processInstance == null) {
+            throw exception(ErrorCodeConstants.PROCESS_INSTANCE_NOT_EXISTS);
+        }
+        ProcessDefinition processDefinition = processDefinitionService.getProcessDefinition(processInstance.getProcessDefinitionId());
+        BpmProcessDefinitionInfoDO processDefinitionInfo = processDefinitionService
+                .getProcessDefinitionInfo(processDefinition.getId());
+        BpmnModel bpmnModel = processDefinitionService.getProcessDefinitionBpmnModel(processDefinition.getId());
+        Integer status = FlowableUtils.getProcessInstanceStatus(processInstance);
+        List<HistoricActivityInstance> activities = taskService.getActivityListByProcessInstanceId(processInstance.getId());
+        List<HistoricTaskInstance> tasks = taskService.getTaskListByProcessInstanceId(processInstance.getId(), true);
+        List<ActivityNode> endNodes = getEndActivityNodeList(processInstance.getStartUserId(), bpmnModel,
+                processDefinitionInfo, processInstance, status, activities, tasks);
+        return buildPortalApprovalDetail(reqVO, bpmnModel, processDefinition, processDefinitionInfo,
+                processInstance, status, endNodes);
     }
 
     @Override
@@ -395,10 +422,22 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
                 processInstanceStatus, approveNodes, todoTask, formFieldsPermission, userMap, deptMap);
     }
 
+    private BpmApprovalDetailRespVO buildPortalApprovalDetail(BpmApprovalDetailReqVO reqVO,
+                                                              BpmnModel bpmnModel,
+                                                              ProcessDefinition processDefinition,
+                                                              BpmProcessDefinitionInfoDO processDefinitionInfo,
+                                                              HistoricProcessInstance processInstance,
+                                                              Integer processInstanceStatus,
+                                                              List<ActivityNode> approveNodes) {
+        return BpmProcessInstanceConvert.INSTANCE.buildApprovalDetail(bpmnModel, processDefinition,
+                processDefinitionInfo, processInstance, processInstanceStatus, approveNodes, null,
+                getFormFieldsPermission(bpmnModel, reqVO.getActivityId(), reqVO.getTaskId()), Map.of(), Map.of());
+    }
+
     /**
      * 获得【已结束】的活动节点们
      */
-    private List<ActivityNode> getEndActivityNodeList(Long startUserId, BpmnModel bpmnModel,
+    private List<ActivityNode> getEndActivityNodeList(String startUserId, BpmnModel bpmnModel,
                                                       BpmProcessDefinitionInfoDO processDefinitionInfo,
                                                       HistoricProcessInstance historicProcessInstance, Integer processInstanceStatus,
                                                       List<HistoricActivityInstance> activities, List<HistoricTaskInstance> tasks) {
@@ -438,7 +477,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
                     && !CollUtil.contains(activities, // 特殊：如果已经存在用户手动创建的 START_USER_NODE_ID 节点，则忽略 StartEvent
                     historicActivity -> historicActivity.getActivityId().equals(START_USER_NODE_ID))) {
                 ActivityNodeTask startTask = new ActivityNodeTask().setId(BpmnModelConstants.START_USER_NODE_ID)
-                        .setAssignee(startUserId != null ? String.valueOf(startUserId) : null)
+                        .setAssignee(startUserId)
                         .setStatus(BpmTaskStatusEnum.APPROVE.getStatus());
                 ActivityNode startNode = new ActivityNode().setId(startTask.getId())
                         .setName(BpmSimpleModelNodeTypeEnum.START_USER_NODE.getName())
@@ -790,7 +829,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
             }
 
             // Portal 负责发起权限；BPM 不查询或同步本地 system_user。
-            validateStartUserSelectAssignees(null, definition, createReqVO.getStartUserSelectAssignees(),
+            validateStartUserSelectAssignees(definition, createReqVO.getStartUserSelectAssignees(),
                     createReqVO.getVariables());
             Map<String, Object> variables = createReqVO.getVariables() != null
                     ? new HashMap<>(createReqVO.getVariables()) : new HashMap<>();
@@ -850,7 +889,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
             throw exception(PROCESS_INSTANCE_START_USER_CAN_START);
         }
         // 1.3 校验发起人自选审批人
-        validateStartUserSelectAssignees(userId, definition, startUserSelectAssignees, variables);
+        validateStartUserSelectAssignees(definition, startUserSelectAssignees, variables);
 
         // 2. 创建流程实例
         if (variables == null) {
@@ -884,23 +923,20 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
         return instance.getId();
     }
 
-    private void validateStartUserSelectAssignees(Long userId, ProcessDefinition definition,
+    private void validateStartUserSelectAssignees(ProcessDefinition definition,
                                                   Map<String, List<String>> startUserSelectAssignees,
                                                   Map<String, Object> variables) {
-        // 1. 获取预测的节点信息
-        BpmApprovalDetailRespVO detailRespVO = getApprovalDetail(userId, new BpmApprovalDetailReqVO()
-                .setProcessDefinitionId(definition.getId())
-                .setProcessVariables(variables));
-        List<ActivityNode> activityNodes = detailRespVO.getActivityNodes();
-        if (CollUtil.isEmpty(activityNodes)) {
-            return;
-        }
-
-        // 2.1 移除掉不是发起人自选审批人节点
-        activityNodes.removeIf(task ->
-                ObjectUtil.notEqual(BpmTaskCandidateStrategyEnum.START_USER_SELECT.getStrategy(), task.getCandidateStrategy()));
-        // 2.2 流程发起时要先获取当前流程的预测走向节点，发起时只校验预测的节点发起人自选审批人的审批人和抄送人是否都配置了
-        activityNodes.forEach(task -> {
+        // 预测逻辑原先会把 Portal 自选的字符串 ID 转回 Long；这里仅根据当前变量找出实际会经过的节点，
+        // 并校验发起人是否提供了非空 ID，从而保持 Portal ID 的透明传递。
+        BpmnModel bpmnModel = processDefinitionService.getProcessDefinitionBpmnModel(definition.getId());
+        List<FlowElement> flowElements = BpmnModelUtils.simulateProcess(bpmnModel,
+                variables != null ? variables : Collections.emptyMap());
+        flowElements.stream()
+                .filter(UserTask.class::isInstance)
+                .map(UserTask.class::cast)
+                .filter(task -> ObjectUtil.equal(BpmTaskCandidateStrategyEnum.START_USER_SELECT.getStrategy(),
+                        BpmnModelUtils.parseCandidateStrategy(task)))
+                .forEach(task -> {
             List<String> assignees = startUserSelectAssignees != null ? startUserSelectAssignees.get(task.getId()) : null;
             if (CollUtil.isEmpty(assignees) || assignees.stream().anyMatch(StrUtil::isBlank)) {
                 throw exception(PROCESS_INSTANCE_START_USER_SELECT_ASSIGNEES_NOT_CONFIG, task.getName());
@@ -1063,13 +1099,15 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
             });
         }
 
-        // 2. 发送对应的消息通知
-        if (Objects.equals(status, BpmProcessInstanceStatusEnum.APPROVE.getStatus())) {
-            messageService.sendMessageWhenProcessInstanceApprove(
-                    BpmProcessInstanceConvert.INSTANCE.buildProcessInstanceApproveMessage(instance));
-        } else if (Objects.equals(status, BpmProcessInstanceStatusEnum.REJECT.getStatus())) {
-            messageService.sendMessageWhenProcessInstanceReject(
-                    BpmProcessInstanceConvert.INSTANCE.buildProcessInstanceRejectMessage(instance, reason));
+        // 2. 无头模式由 Portal 负责通知；本地消息 DTO 仍以 Long 用户 ID 为契约。
+        if (!headlessEnabled) {
+            if (Objects.equals(status, BpmProcessInstanceStatusEnum.APPROVE.getStatus())) {
+                messageService.sendMessageWhenProcessInstanceApprove(
+                        BpmProcessInstanceConvert.INSTANCE.buildProcessInstanceApproveMessage(instance));
+            } else if (Objects.equals(status, BpmProcessInstanceStatusEnum.REJECT.getStatus())) {
+                messageService.sendMessageWhenProcessInstanceReject(
+                        BpmProcessInstanceConvert.INSTANCE.buildProcessInstanceRejectMessage(instance, reason));
+            }
         }
 
         // 3. 发送流程实例的状态事件
@@ -1105,7 +1143,8 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
 
             @Override
             public void afterCommit() {
-                String name = generateProcessInstanceName(Long.valueOf(instance.getStartUserId()),
+                // Portal 发起人是透明字符串 ID，不能在提交后的标题刷新路径回转为本地 Long 用户 ID。
+                String name = generatePortalProcessInstanceName(instance.getStartUserId(),
                         processDefinition, processDefinitionInfo, instance.getProcessVariables());
                 if (ObjUtil.notEqual(instance.getName(), name)) {
                     runtimeService.setProcessInstanceName(instance.getProcessInstanceId(), name);

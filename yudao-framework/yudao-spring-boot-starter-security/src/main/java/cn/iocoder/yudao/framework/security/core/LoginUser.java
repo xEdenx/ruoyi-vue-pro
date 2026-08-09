@@ -28,13 +28,6 @@ public class LoginUser {
      */
     private String id;
     /**
-     * 本地系统用户编号。
-     *
-     * 仅供尚未迁移的 system_user、审计等遗留链路使用；Portal 用户不设置该字段。
-     */
-    @JsonIgnore
-    private Long systemUserId;
-    /**
      * 用户类型
      *
      * 关联 {@link UserTypeEnum}

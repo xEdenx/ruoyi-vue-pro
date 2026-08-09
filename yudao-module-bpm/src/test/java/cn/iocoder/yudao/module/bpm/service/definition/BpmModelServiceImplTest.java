@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModel
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.simple.BpmSimpleModelNodeVO;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmSimpleModelNodeTypeEnum;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalIdentityApi;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.repository.Model;
 import org.flowable.engine.repository.ModelQuery;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,6 +49,8 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
     private RepositoryService repositoryService;
     @Mock
     private ModelQuery modelQuery;
+    @Mock
+    private BpmPortalIdentityApi portalIdentityApi;
 
     @BeforeEach
     public void setUp() {
@@ -125,7 +129,7 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
         reqVO.setBpmnXml("<definitions />");
         reqVO.setStartUserIds(Arrays.asList(10L, 20L));
         reqVO.setStartDeptIds(Collections.singletonList(30L));
-        reqVO.setManagerUserIds(Collections.singletonList(40L));
+        reqVO.setManagerRoleCodes(Collections.singletonList("ROLE_BPM_MODEL_MANAGER"));
         Model model = mock(Model.class);
         when(model.getId()).thenReturn(MODEL_ID);
         // mock 方法（repositoryService）
@@ -150,7 +154,23 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
         assertNotNull(metaInfo);
         assertEquals(Arrays.asList(10L, 20L), metaInfo.getStartUserIds());
         assertEquals(Collections.singletonList(30L), metaInfo.getStartDeptIds());
-        assertEquals(Collections.singletonList(40L), metaInfo.getManagerUserIds());
+        assertEquals(Collections.singletonList("ROLE_BPM_MODEL_MANAGER"), metaInfo.getManagerRoleCodes());
+    }
+
+    @Test
+    public void testValidateModelManager_legacyModelCanBeMigratedWithoutLocalUserLookup() {
+        Model model = mock(Model.class);
+        BpmModelMetaInfoVO metaInfo = new BpmModelMetaInfoVO();
+        metaInfo.setType(BpmModelTypeEnum.BPMN.getType());
+        when(model.getMetaInfo()).thenReturn(JsonUtils.toJsonString(metaInfo));
+        when(model.getCreateTime()).thenReturn(new Date(1_000L));
+        mockGetModel(model);
+
+        Model result = ReflectionTestUtils.invokeMethod(modelService, "validateModelManager", MODEL_ID,
+                "portal-manager-b3c4");
+
+        assertSame(model, result);
+        verifyNoInteractions(portalIdentityApi);
     }
 
     private Model mockModel(Integer type) {

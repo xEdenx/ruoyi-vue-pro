@@ -3,14 +3,32 @@ package cn.iocoder.yudao.framework.security.core.filter;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.json.JSONObject;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
+
+    @AfterEach
+    public void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    public void testGetLoginUserLongId_returnsNullForPortalStringId() {
+        LoginUser portalUser = new LoginUser().setId("portal-manager-b3c4");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(portalUser, null));
+
+        assertNull(SecurityFrameworkUtils.getLoginUserLongId());
+    }
 
     @Test
     public void testParseLoginUserFromJwt_successWithUuidAndRole() {
@@ -29,7 +47,6 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
         LoginUser loginUser = filter.parseLoginUserFromJwt(jwtToken, 1);
         assertNotNull(loginUser);
         assertEquals("b943f25d-4064-4f5f-8b8f-70437e4d6fd3", loginUser.getId());
-        assertNull(loginUser.getSystemUserId());
         assertEquals("b943f25d-4064-4f5f-8b8f-70437e4d6fd3", loginUser.getInfo().get("portalUserId"));
         assertEquals("true", loginUser.getInfo().get(TokenAuthenticationFilter.PORTAL_JWT_INFO_KEY));
         assertEquals("ROLE_ADMIN", loginUser.getInfo().get("role"));
@@ -52,7 +69,6 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
         LoginUser loginUser = filter.parseLoginUserFromJwt(jwtToken, 1);
         assertNotNull(loginUser);
         assertEquals("102", loginUser.getId());
-        assertEquals(102L, loginUser.getSystemUserId());
         assertEquals("102", loginUser.getInfo().get("portalUserId"));
         assertEquals("ROLE_MANAGER", loginUser.getInfo().get("role"));
     }

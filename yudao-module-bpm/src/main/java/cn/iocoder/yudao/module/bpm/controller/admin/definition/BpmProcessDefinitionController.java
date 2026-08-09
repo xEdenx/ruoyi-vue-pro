@@ -40,6 +40,7 @@ import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionU
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 
 @Tag(name = "管理后台 - 流程定义")
@@ -94,7 +95,7 @@ public class BpmProcessDefinitionController {
         // 1.2 移除不可见的流程定义
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(list, ProcessDefinition::getId));
-        Long userId = getLoginUserId();
+        Long userId = getLoginUserLongId();
         list.removeIf(processDefinition -> {
             BpmProcessDefinitionInfoDO processDefinitionInfo = processDefinitionMap.get(processDefinition.getId());
             return processDefinitionInfo == null // 不存在
@@ -139,7 +140,7 @@ public class BpmProcessDefinitionController {
     @PostMapping("/deploy-xml")
     @Operation(summary = "一键保存并发布 BPMN 流程模型", description = "复用流程模型的保存与发布逻辑，不额外要求角色")
     public CommonResult<String> deployProcessDefinitionXml(@Valid @RequestBody BpmModelSaveReqVO modelReqVO) {
-        Long userId = getLoginUserId();
+        String userId = getLoginUserId();
         if (userId == null) {
             throw exception(UNAUTHORIZED);
         }

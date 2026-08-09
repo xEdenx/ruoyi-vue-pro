@@ -41,23 +41,23 @@ make_jwt() {
 }
 
 # 登录身份准备
-TOKEN_USER_101=$(make_jwt "101" "ROLE_USER")
-TOKEN_MANAGER_102=$(make_jwt "102" "ROLE_MANAGER")
-TOKEN_ADMIN_103=$(make_jwt "103" "ROLE_ADMIN")
-TOKEN_SUPPLIER_104=$(make_jwt "104" "ROLE_SUPPLIER")
-TOKEN_SUPPLIER_105=$(make_jwt "105" "ROLE_SUPPLIER")
+TOKEN_PORTAL_REQUESTER=$(make_jwt "portal-requester-a1f2" "ROLE_USER")
+TOKEN_PORTAL_MANAGER=$(make_jwt "portal-manager-b3c4" "ROLE_MANAGER")
+TOKEN_PORTAL_ADMIN=$(make_jwt "portal-admin-d5e6" "ROLE_ADMIN")
+TOKEN_PORTAL_SUPPLIER_A=$(make_jwt "portal-supplier-e7f8" "ROLE_SUPPLIER")
+TOKEN_PORTAL_SUPPLIER_B=$(make_jwt "portal-supplier-f9a0" "ROLE_SUPPLIER")
 
 echo -e "${BOLD}${MAGENTA}>>> [V5 流程节点确定模式说明]:${RESET}"
-echo -e "  1. 部门经理节点 (Activity_Manager) : START_USER_SELECT，发起时传入 [\"102\"]"
-echo -e "  2. 行政管理员节点 (Activity_Admin)  : HEADLESS_REMOTE + ROLE_ADMIN -> mock 返回 [\"103\"]"
-echo -e "  3. 供应商节点 (Activity_Supplier)   : HEADLESS_REMOTE + ROLE_SUPPLIER -> mock 返回 [\"104\", \"105\"]\n"
+echo -e "  1. 部门经理节点 (Activity_Manager) : START_USER_SELECT，发起时传入 [\"portal-manager-b3c4\"]"
+echo -e "  2. 行政管理员节点 (Activity_Admin)  : HEADLESS_REMOTE + ROLE_ADMIN -> mock 返回 [\"portal-admin-d5e6\"]"
+echo -e "  3. 供应商节点 (Activity_Supplier)   : HEADLESS_REMOTE + ROLE_SUPPLIER -> mock 返回 [\"portal-supplier-e7f8\", \"portal-supplier-f9a0\"]\n"
 
 # ==============================================================================
 # 步骤 1：Portal API 动态拉取流程定义与表单 Schema
 # ==============================================================================
 echo -e "${BOLD}${YELLOW}>>> 步骤 1：Portal 拉取流程定义与动态表单 Schema${RESET}"
 DEF_RESP=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-definition/get?key=${PROCESS_KEY}" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}")
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
 
 DEF_ID=$(echo "${DEF_RESP}" | jq -r '.data.id // empty')
 FORM_FIELDS=$(echo "${DEF_RESP}" | jq -c '.data.formFields // []')
@@ -172,7 +172,7 @@ assert_process_status() {
 echo -e "${BOLD}${YELLOW}>>> 启动 场景一：小额申请直通流程 (totalAmount = 500元 <= 1000元)${RESET}"
 
 CREATE_RESP_1=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}" \
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}" \
   -H "Content-Type: application/json" \
   -d '{
     "processDefinitionId": "'"${DEF_ID}"'",
@@ -190,18 +190,18 @@ if [ -z "${PROC_ID_1}" ]; then
   echo -e "${RED}❌ 场景一发起失败: $(echo "${CREATE_RESP_1}" | jq -c '.msg')${RESET}"
   exit 1
 fi
-echo -e "${GREEN}✓ [发起人 101] 流程发起成功（下游候选人由 Portal mock 在节点到达时解算），实例 ID: ${PROC_ID_1}${RESET}"
+echo -e "${GREEN}✓ [发起人 portal-requester-a1f2] 流程发起成功（下游候选人由 Portal mock 在节点到达时解算），实例 ID: ${PROC_ID_1}${RESET}"
 
-# 1. 行政管理员（Portal mock 依据 ROLE_ADMIN 解算为用户 103）查获待办并办理
-fetch_and_approve_task "103 行政管理员" "ROLE_ADMIN" "${TOKEN_ADMIN_103}" "${PROC_ID_1}" "同意直通采购"
+# 1. 行政管理员（Portal mock 依据 ROLE_ADMIN 解算为用户 portal-admin-d5e6）查获待办并办理
+fetch_and_approve_task "portal-admin-d5e6 行政管理员" "ROLE_ADMIN" "${TOKEN_PORTAL_ADMIN}" "${PROC_ID_1}" "同意直通采购"
 
-# 2. 供应商会签（Portal mock 依据 ROLE_SUPPLIER 解算为用户 104、105）全部办理
-fetch_and_approve_task "104 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_SUPPLIER_104}" "${PROC_ID_1}" "供应商104确认发货派送"
-fetch_and_approve_task "105 供应商成员B" "ROLE_SUPPLIER" "${TOKEN_SUPPLIER_105}" "${PROC_ID_1}" "供应商105确认发货派送"
+# 2. 供应商会签（Portal mock 依据 ROLE_SUPPLIER 解算为用户 portal-supplier-e7f8、portal-supplier-f9a0）全部办理
+fetch_and_approve_task "portal-supplier-e7f8 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_A}" "${PROC_ID_1}" "供应商portal-supplier-e7f8确认发货派送"
+fetch_and_approve_task "portal-supplier-f9a0 供应商成员B" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_B}" "${PROC_ID_1}" "供应商portal-supplier-f9a0确认发货派送"
 
 # 3. 校验流程履历
 DETAIL_1=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${PROC_ID_1}" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}")
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
 STATUS_1=$(echo "${DETAIL_1}" | jq -r '.data.status // empty')
 assert_process_status "$STATUS_1" "2"
 echo -e "${BOLD}${GREEN}✓ 场景一全流程测试完毕，流程状态 code: ${STATUS_1} (2=正常完成)${RESET}\n"
@@ -214,7 +214,7 @@ echo -e "${BOLD}${GREEN}✓ 场景一全流程测试完毕，流程状态 code: 
 echo -e "${BOLD}${YELLOW}>>> 启动 场景二：大额申请全流程通过 (totalAmount = 3500元 > 1000元)${RESET}"
 
 CREATE_RESP_2=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}" \
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}" \
   -H "Content-Type: application/json" \
   -d '{
     "processDefinitionId": "'"${DEF_ID}"'",
@@ -225,7 +225,7 @@ CREATE_RESP_2=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/crea
       "totalAmount": 3500
     },
     "startUserSelectAssignees": {
-      "Activity_Manager": ["102"]
+      "Activity_Manager": ["portal-manager-b3c4"]
     }
   }')
 
@@ -234,21 +234,21 @@ if [ -z "${PROC_ID_2}" ]; then
   echo -e "${RED}❌ 场景二发起失败: $(echo "${CREATE_RESP_2}" | jq -c '.msg')${RESET}"
   exit 1
 fi
-echo -e "${GREEN}✓ [发起人 101] 流程发起成功（仅经理在发起时指定），实例 ID: ${PROC_ID_2}${RESET}"
+echo -e "${GREEN}✓ [发起人 portal-requester-a1f2] 流程发起成功（仅经理在发起时指定），实例 ID: ${PROC_ID_2}${RESET}"
 
-# 1. 部门经理 (指定个人 102) 查获待办并办理
-fetch_and_approve_task "102 部门经理" "ROLE_MANAGER" "${TOKEN_MANAGER_102}" "${PROC_ID_2}" "部门大额同意"
+# 1. 部门经理 (指定个人 portal-manager-b3c4) 查获待办并办理
+fetch_and_approve_task "portal-manager-b3c4 部门经理" "ROLE_MANAGER" "${TOKEN_PORTAL_MANAGER}" "${PROC_ID_2}" "部门大额同意"
 
-# 2. 办公室管理员（Portal mock 解算的用户 103）查获待办并办理
-fetch_and_approve_task "103 办公室管理员" "ROLE_ADMIN" "${TOKEN_ADMIN_103}" "${PROC_ID_2}" "行政备案同意"
+# 2. 办公室管理员（Portal mock 解算的用户 portal-admin-d5e6）查获待办并办理
+fetch_and_approve_task "portal-admin-d5e6 办公室管理员" "ROLE_ADMIN" "${TOKEN_PORTAL_ADMIN}" "${PROC_ID_2}" "行政备案同意"
 
-# 3. 供应商会签（Portal mock 解算的用户 104、105）全部办理
-fetch_and_approve_task "104 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_SUPPLIER_104}" "${PROC_ID_2}" "大额订单出库派送"
-fetch_and_approve_task "105 供应商成员B" "ROLE_SUPPLIER" "${TOKEN_SUPPLIER_105}" "${PROC_ID_2}" "大额订单确认派送"
+# 3. 供应商会签（Portal mock 解算的用户 portal-supplier-e7f8、portal-supplier-f9a0）全部办理
+fetch_and_approve_task "portal-supplier-e7f8 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_A}" "${PROC_ID_2}" "大额订单出库派送"
+fetch_and_approve_task "portal-supplier-f9a0 供应商成员B" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_B}" "${PROC_ID_2}" "大额订单确认派送"
 
 # 4. 校验流程状态
 DETAIL_2=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${PROC_ID_2}" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}")
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
 STATUS_2=$(echo "${DETAIL_2}" | jq -r '.data.status // empty')
 assert_process_status "$STATUS_2" "2"
 echo -e "${BOLD}${GREEN}✓ 场景二全流程测试完毕，流程状态 code: ${STATUS_2} (2=正常完成)${RESET}\n"
@@ -260,7 +260,7 @@ echo -e "${BOLD}${GREEN}✓ 场景二全流程测试完毕，流程状态 code: 
 echo -e "${BOLD}${YELLOW}>>> 启动 场景三：供应商拒单一票否决终止流程 (totalAmount = 2500元)${RESET}"
 
 CREATE_RESP_3=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}" \
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}" \
   -H "Content-Type: application/json" \
   -d '{
     "processDefinitionId": "'"${DEF_ID}"'",
@@ -271,7 +271,7 @@ CREATE_RESP_3=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/crea
       "totalAmount": 2500
     },
     "startUserSelectAssignees": {
-      "Activity_Manager": ["102"]
+      "Activity_Manager": ["portal-manager-b3c4"]
     }
   }')
 
@@ -280,20 +280,20 @@ if [ -z "${PROC_ID_3}" ]; then
   echo -e "${RED}❌ 场景三发起失败: $(echo "${CREATE_RESP_3}" | jq -c '.msg')${RESET}"
   exit 1
 fi
-echo -e "${GREEN}✓ [发起人 101] 流程发起成功，实例 ID: ${PROC_ID_3}${RESET}"
+echo -e "${GREEN}✓ [发起人 portal-requester-a1f2] 流程发起成功，实例 ID: ${PROC_ID_3}${RESET}"
 
-# 1. 部门经理 (指定个人 102) 查获待办并办理
-fetch_and_approve_task "102 部门经理" "ROLE_MANAGER" "${TOKEN_MANAGER_102}" "${PROC_ID_3}" "部门同意"
+# 1. 部门经理 (指定个人 portal-manager-b3c4) 查获待办并办理
+fetch_and_approve_task "portal-manager-b3c4 部门经理" "ROLE_MANAGER" "${TOKEN_PORTAL_MANAGER}" "${PROC_ID_3}" "部门同意"
 
-# 2. 办公室管理员（Portal mock 解算的用户 103）查获待办并办理
-fetch_and_approve_task "103 办公室管理员" "ROLE_ADMIN" "${TOKEN_ADMIN_103}" "${PROC_ID_3}" "行政同意"
+# 2. 办公室管理员（Portal mock 解算的用户 portal-admin-d5e6）查获待办并办理
+fetch_and_approve_task "portal-admin-d5e6 办公室管理员" "ROLE_ADMIN" "${TOKEN_PORTAL_ADMIN}" "${PROC_ID_3}" "行政同意"
 
-# 3. 供应商会签中用户 104 查获待办后拒单
-fetch_and_reject_task "104 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_SUPPLIER_104}" "${PROC_ID_3}" "【供应商拒单】商品断货且物流受阻，无法完成派送"
+# 3. 供应商会签中用户 portal-supplier-e7f8 查获待办后拒单
+fetch_and_reject_task "portal-supplier-e7f8 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_A}" "${PROC_ID_3}" "【供应商拒单】商品断货且物流受阻，无法完成派送"
 
 # 4. 校验流程状态 (3=不通过/终止)
 DETAIL_3=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${PROC_ID_3}" \
-  -H "Authorization: Bearer ${TOKEN_USER_101}")
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
 STATUS_3=$(echo "${DETAIL_3}" | jq -r '.data.status // empty')
 assert_process_status "$STATUS_3" "3"
 echo -e "${BOLD}${GREEN}✓ 场景三全流程测试完毕，流程状态 code: ${STATUS_3} (3=拒绝/终止)${RESET}\n"

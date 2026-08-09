@@ -24,7 +24,7 @@ public class DemoWebSocketMessageListener implements WebSocketMessageListener<De
 
     @Override
     public void onMessage(WebSocketSession session, DemoSendMessage message) {
-        Long fromUserId = WebSocketFrameworkUtils.getLoginUserId(session);
+        Long fromUserId = cn.iocoder.yudao.framework.common.util.number.NumberUtils.parseLong(WebSocketFrameworkUtils.getLoginUserId(session));
         // 情况一：单发
         if (message.getToUserId() != null) {
             DemoReceiveMessage toMessage = new DemoReceiveMessage().setFromUserId(fromUserId)

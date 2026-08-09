@@ -13,16 +13,16 @@ class LocalPortalCandidateApiMockTest {
 
     @Test
     void resolveAssigneeIds_returnsCandidatesForConfiguredPortalRoles() {
-        assertEquals(Set.of("103"),
-                mock.resolveAssigneeIds("101", "Activity_Admin", "ROLE_ADMIN", "process-1"));
-        assertEquals(Set.of("104", "105"),
-                mock.resolveAssigneeIds("101", "Activity_Supplier", "ROLE_SUPPLIER", "process-1"));
+        assertEquals(Set.of("portal-admin-d5e6"),
+                mock.resolveAssigneeIds("portal-requester-a1f2", "Activity_Admin", "ROLE_ADMIN", "process-1"));
+        assertEquals(Set.of("portal-supplier-e7f8", "portal-supplier-f9a0"),
+                mock.resolveAssigneeIds("portal-requester-a1f2", "Activity_Supplier", "ROLE_SUPPLIER", "process-1"));
     }
 
     @Test
     void resolveAssigneeIds_rejectsUnknownActivityAndRoleCombination() {
         assertThrows(IllegalArgumentException.class,
-                () -> mock.resolveAssigneeIds("101", "Activity_Admin", "ROLE_SUPPLIER", "process-1"));
+                () -> mock.resolveAssigneeIds("portal-requester-a1f2", "Activity_Admin", "ROLE_SUPPLIER", "process-1"));
     }
 
 }

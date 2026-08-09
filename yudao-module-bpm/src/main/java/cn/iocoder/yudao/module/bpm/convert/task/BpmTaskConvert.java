@@ -52,8 +52,11 @@ public interface BpmTaskConvert {
                 return;
             }
             taskVO.setProcessInstance(BeanUtils.toBean(processInstance, BpmTaskRespVO.ProcessInstance.class));
-            AdminUserRespDTO startUser = userMap.get(NumberUtils.parseLong(processInstance.getStartUserId()));
-            taskVO.getProcessInstance().setStartUser(BeanUtils.toBean(startUser, UserSimpleBaseVO.class));
+            // Portal 待办列表不查询本地用户字典；外部字符串 ID 由 Portal 自行渲染。
+            if (CollUtil.isNotEmpty(userMap)) {
+                AdminUserRespDTO startUser = userMap.get(NumberUtils.parseLong(processInstance.getStartUserId()));
+                taskVO.getProcessInstance().setStartUser(BeanUtils.toBean(startUser, UserSimpleBaseVO.class));
+            }
             taskVO.getProcessInstance().setCreateTime(DateUtils.of(processInstance.getStartTime()));
             // 摘要
             taskVO.getProcessInstance().setSummary(FlowableUtils.getSummary(processDefinitionInfoMap.get(processInstance.getProcessDefinitionId()),

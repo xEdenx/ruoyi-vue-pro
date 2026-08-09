@@ -86,7 +86,7 @@ public interface BpmModelService {
      * @param userId 用户编号
      * @param updateReqVO 更新信息
      */
-    void updateModel(Long userId, @Valid BpmModelSaveReqVO updateReqVO);
+    void updateModel(String userId, @Valid BpmModelSaveReqVO updateReqVO);
 
     /**
      * 批量更新模型排序
@@ -94,7 +94,7 @@ public interface BpmModelService {
      * @param userId 用户编号
      * @param ids 编号列表
      */
-    void updateModelSortBatch(Long userId, List<String> ids);
+    void updateModelSortBatch(String userId, List<String> ids);
 
     /**
      * 将流程模型，部署成一个流程定义
@@ -102,7 +102,7 @@ public interface BpmModelService {
      * @param userId 用户编号
      * @param id 编号
      */
-    void deployModel(Long userId, String id);
+    void deployModel(String userId, String id);
 
     /**
      * 删除模型
@@ -110,7 +110,7 @@ public interface BpmModelService {
      * @param userId  用户编号
      * @param id 编号
      */
-    void deleteModel(Long userId, String id);
+    void deleteModel(String userId, String id);
 
     /**
      * 清理模型，包括流程实例
@@ -118,7 +118,7 @@ public interface BpmModelService {
      * @param userId  用户编号
      * @param id 编号
      */
-    void cleanModel(Long userId, String id);
+    void cleanModel(String userId, String id);
 
     /**
      * 修改模型的状态，实际更新的部署的流程定义的状态
@@ -127,7 +127,7 @@ public interface BpmModelService {
      * @param id    编号
      * @param state 状态
      */
-    void updateModelState(Long userId, String id, Integer state);
+    void updateModelState(String userId, String id, Integer state);
 
     /**
      * 获得流程定义编号对应的 BPMN Model
@@ -153,6 +153,6 @@ public interface BpmModelService {
      * @param userId 用户编号
      * @param reqVO 请求信息
      */
-    void updateSimpleModel(Long userId, @Valid BpmSimpleModelUpdateReqVO reqVO);
+    void updateSimpleModel(String userId, @Valid BpmSimpleModelUpdateReqVO reqVO);
 
 }

@@ -15,7 +15,7 @@ import java.util.List;
 public class NumberUtils {
 
     public static Long parseLong(String str) {
-        return StrUtil.isNotEmpty(str) ? Long.valueOf(str) : null;
+        return NumberUtil.isLong(str) ? Long.valueOf(str) : null;
     }
 
     public static Integer parseInt(String str) {

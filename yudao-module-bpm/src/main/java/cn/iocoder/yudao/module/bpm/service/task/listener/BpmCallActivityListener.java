@@ -53,7 +53,7 @@ public class BpmCallActivityListener implements ExecutionListener {
         // 1. 当发起人来源为主流程发起人时，并兜底 startUserSetting 为空时
         if (startUserSetting == null
                 || startUserSetting.getType().equals(BpmChildProcessStartUserTypeEnum.MAIN_PROCESS_START_USER.getType())) {
-            FlowableUtils.setAuthenticatedUserId(Long.parseLong(processInstance.getStartUserId()));
+            FlowableUtils.setAuthenticatedUserId(processInstance.getStartUserId());
             return;
         }
 
@@ -64,7 +64,7 @@ public class BpmCallActivityListener implements ExecutionListener {
             if (StrUtil.isEmpty(formFieldValue)) {
                 // 2.1.1 来自主流程发起人
                 if (startUserSetting.getEmptyType().equals(BpmChildProcessStartUserEmptyTypeEnum.MAIN_PROCESS_START_USER.getType())) {
-                    FlowableUtils.setAuthenticatedUserId(Long.parseLong(processInstance.getStartUserId()));
+                    FlowableUtils.setAuthenticatedUserId(processInstance.getStartUserId());
                     return;
                 }
                 // 2.1.2 来自子流程管理员
@@ -82,18 +82,18 @@ public class BpmCallActivityListener implements ExecutionListener {
                     return;
                 }
             }
-            // 2.2 使用表单值，并兜底字符串转 Long 失败时使用主流程发起人
-            try {
-                FlowableUtils.setAuthenticatedUserId(Long.parseLong(formFieldValue));
-            } catch (NumberFormatException ex) {
+            // 2.2 使用 Portal 原样传入的字符串 ID；数组值取第一个 ID。
+            if (formFieldValue.startsWith("[")) {
                 try {
-                    List<Long> formFieldValues = JsonUtils.parseArray(formFieldValue, Long.class);
+                    List<String> formFieldValues = JsonUtils.parseArray(formFieldValue, String.class);
                     FlowableUtils.setAuthenticatedUserId(formFieldValues.get(0));
-                } catch (Exception e) {
-                    log.error("[notify][监听器：{}，子流程监听器设置流程的发起人字符串转 Long 失败，字符串：{}]",
+                } catch (Exception ignored) {
+                    log.error("[notify][监听器：{}，子流程监听器无法解析表单发起人，字符串：{}]",
                             DELEGATE_EXPRESSION, formFieldValue);
-                    FlowableUtils.setAuthenticatedUserId(Long.parseLong(processInstance.getStartUserId()));
+                    FlowableUtils.setAuthenticatedUserId(processInstance.getStartUserId());
                 }
+            } else {
+                FlowableUtils.setAuthenticatedUserId(formFieldValue);
             }
         }
     }

@@ -6,6 +6,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmUserTaskApproveTypeEnum;
@@ -120,7 +121,10 @@ public class BpmTaskCandidateInvoker {
             ProcessInstance processInstance = SpringUtil.getBean(BpmProcessInstanceService.class)
                     .getProcessInstance(execution.getProcessInstanceId());
             Assert.notNull(processInstance, "流程实例({}) 不存在", execution.getProcessInstanceId());
-            removeStartUserIfSkip(userIds, flowElement, Long.valueOf(processInstance.getStartUserId()));
+            Long startUserId = NumberUtils.parseLong(processInstance.getStartUserId());
+            if (startUserId != null) {
+                removeStartUserIfSkip(userIds, flowElement, startUserId);
+            }
             return userIds;
         });
     }

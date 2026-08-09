@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 @Tag(name = "管理后台 - 用户个人中心")
 @RestController
@@ -52,7 +52,7 @@ public class UserProfileController {
     @DataPermission(enable = false) // 关闭数据权限，避免只查看自己时，查询不到部门。
     public CommonResult<UserProfileRespVO> getUserProfile() {
         // 获得用户基本信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        AdminUserDO user = userService.getUser(getLoginUserLongId());
         // 获得用户角色
         List<RoleDO> userRoles = roleService.getRoleListFromCache(permissionService.getUserRoleIdListByUserId(user.getId()));
         // 获得部门信息
@@ -65,14 +65,14 @@ public class UserProfileController {
     @PutMapping("/update")
     @Operation(summary = "修改用户个人信息")
     public CommonResult<Boolean> updateUserProfile(@Valid @RequestBody UserProfileUpdateReqVO reqVO) {
-        userService.updateUserProfile(getLoginUserId(), reqVO);
+        userService.updateUserProfile(getLoginUserLongId(), reqVO);
         return success(true);
     }
 
     @PutMapping("/update-password")
     @Operation(summary = "修改用户个人密码")
     public CommonResult<Boolean> updateUserProfilePassword(@Valid @RequestBody UserProfileUpdatePasswordReqVO reqVO) {
-        userService.updateUserPassword(getLoginUserId(), reqVO);
+        userService.updateUserPassword(getLoginUserLongId(), reqVO);
         return success(true);
     }
 

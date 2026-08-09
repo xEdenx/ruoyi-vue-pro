@@ -56,7 +56,7 @@ class SecurityFrameworkServiceImplTest extends BaseMockitoUnitTest {
         if (role != null) {
             info.put(TokenAuthenticationFilter.PORTAL_ROLE_INFO_KEY, role);
         }
-        LoginUser loginUser = new LoginUser().setId("portal-user-102").setSystemUserId(103L).setInfo(info);
+        LoginUser loginUser = new LoginUser().setId("portal-user-102").setInfo(info);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(loginUser, null));
     }

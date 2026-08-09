@@ -53,11 +53,12 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
         }
 
         // 权限校验
-        Long userId = getLoginUserId();
-        if (userId == null) {
+        String userId = getLoginUserId();
+        if (StrUtil.isBlank(userId)) {
             return false;
         }
-        return permissionApi.hasAnyPermissions(userId, permissions);
+        Long localUserId = cn.iocoder.yudao.framework.common.util.number.NumberUtils.parseLong(userId);
+        return localUserId != null && permissionApi.hasAnyPermissions(localUserId, permissions);
     }
 
     @Override
@@ -78,11 +79,12 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
         }
 
         // 权限校验
-        Long userId = getLoginUserId();
-        if (userId == null) {
+        String userId = getLoginUserId();
+        if (StrUtil.isBlank(userId)) {
             return false;
         }
-        return permissionApi.hasAnyRoles(userId, roles);
+        Long localUserId = cn.iocoder.yudao.framework.common.util.number.NumberUtils.parseLong(userId);
+        return localUserId != null && permissionApi.hasAnyRoles(localUserId, roles);
     }
 
     private static boolean isPortalJwt(LoginUser loginUser) {

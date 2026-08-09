@@ -176,7 +176,7 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String deployProcessDefinitionXml(Long userId, BpmModelSaveReqVO modelReqVO) {
+    public String deployProcessDefinitionXml(String userId, BpmModelSaveReqVO modelReqVO) {
         String modelId = modelReqVO.getId();
         if (StrUtil.isEmpty(modelId)) {
             modelId = modelService.createModel(modelReqVO);

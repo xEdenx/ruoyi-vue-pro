@@ -33,7 +33,7 @@ import java.util.stream.Stream;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 @Tag(name = "管理后台 - 流程实例抄送")
 @RestController
@@ -57,7 +57,7 @@ public class BpmProcessInstanceCopyController {
     public CommonResult<PageResult<BpmProcessInstanceCopyRespVO>> getProcessInstanceCopyPage(
             @Valid BpmProcessInstanceCopyPageReqVO pageReqVO) {
         PageResult<BpmProcessInstanceCopyDO> pageResult = processInstanceCopyService.getProcessInstanceCopyPage(
-                getLoginUserId(), pageReqVO);
+                getLoginUserLongId(), pageReqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(new PageResult<>(pageResult.getTotal()));
         }

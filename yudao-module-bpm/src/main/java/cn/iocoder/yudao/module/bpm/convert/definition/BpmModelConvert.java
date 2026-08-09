@@ -131,6 +131,9 @@ public interface BpmModelConvert {
         if (vo.getManagerUserIds() == null) {
             vo.setManagerUserIds(Collections.emptyList());
         }
+        if (vo.getManagerRoleCodes() == null) {
+            vo.setManagerRoleCodes(Collections.emptyList());
+        }
         if (vo.getStartUserIds() == null) {
             vo.setStartUserIds(Collections.emptyList());
         }

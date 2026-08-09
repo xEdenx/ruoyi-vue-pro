@@ -38,7 +38,7 @@ import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 @Tag(name = "管理后台 - 认证")
 @RestController
@@ -95,13 +95,13 @@ public class AuthController {
     @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致无法查询用户。类似：https://t.zsxq.com/LHnrp
     public CommonResult<AuthPermissionInfoRespVO> getPermissionInfo() {
         // 1.1 获得用户信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        AdminUserDO user = userService.getUser(getLoginUserLongId());
         if (user == null) {
             return success(null);
         }
 
         // 1.2 获得角色列表
-        Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(getLoginUserId());
+        Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(getLoginUserLongId());
         if (CollUtil.isEmpty(roleIds)) {
             return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
         }

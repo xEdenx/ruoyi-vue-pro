@@ -39,7 +39,7 @@ import java.util.Set;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 import static cn.iocoder.yudao.module.bpm.controller.admin.task.BpmPortalUserIdUtils.getCurrentUserId;
 import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.PROCESS_INSTANCE_NOT_EXISTS;
 
@@ -69,7 +69,7 @@ public class BpmProcessInstanceController {
     public CommonResult<PageResult<BpmProcessInstanceRespVO>> getProcessInstanceMyPage(
             @Valid BpmProcessInstancePageReqVO pageReqVO) {
         PageResult<HistoricProcessInstance> pageResult = processInstanceService.getProcessInstancePage(
-                getLoginUserId(), pageReqVO);
+                getLoginUserLongId(), pageReqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(PageResult.empty(pageResult.getTotal()));
         }
@@ -158,7 +158,7 @@ public class BpmProcessInstanceController {
     @PreAuthorize("@ss.hasPermission('bpm:process-instance:cancel')")
     public CommonResult<Boolean> cancelProcessInstanceByStartUser(
             @Valid @RequestBody BpmProcessInstanceCancelReqVO cancelReqVO) {
-        processInstanceService.cancelProcessInstanceByStartUser(getLoginUserId(), cancelReqVO);
+        processInstanceService.cancelProcessInstanceByStartUser(getLoginUserLongId(), cancelReqVO);
         return success(true);
     }
 
@@ -167,7 +167,7 @@ public class BpmProcessInstanceController {
     @PreAuthorize("@ss.hasPermission('bpm:process-instance:cancel-by-admin')")
     public CommonResult<Boolean> cancelProcessInstanceByManager(
             @Valid @RequestBody BpmProcessInstanceCancelReqVO cancelReqVO) {
-        processInstanceService.cancelProcessInstanceByAdmin(getLoginUserId(), cancelReqVO);
+        processInstanceService.cancelProcessInstanceByAdmin(getLoginUserLongId(), cancelReqVO);
         return success(true);
     }
 
@@ -180,7 +180,7 @@ public class BpmProcessInstanceController {
         if (StrUtil.isNotEmpty(reqVO.getProcessVariablesStr())) {
             reqVO.setProcessVariables(JsonUtils.parseObject(reqVO.getProcessVariablesStr(), Map.class));
         }
-        return success(processInstanceService.getApprovalDetail(getLoginUserId(), reqVO));
+        return success(processInstanceService.getApprovalDetail(getCurrentUserId(), reqVO));
     }
 
     @GetMapping("/get-next-approval-nodes")
@@ -191,7 +191,7 @@ public class BpmProcessInstanceController {
         if (StrUtil.isNotEmpty(reqVO.getProcessVariablesStr())) {
             reqVO.setProcessVariables(JsonUtils.parseObject(reqVO.getProcessVariablesStr(), Map.class));
         }
-        return success(processInstanceService.getNextApprovalNodes(getLoginUserId(), reqVO));
+        return success(processInstanceService.getNextApprovalNodes(getLoginUserLongId(), reqVO));
     }
 
     @GetMapping("/get-bpmn-model-view")

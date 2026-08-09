@@ -24,7 +24,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 /**
  * 提供给外部应用调用为主
@@ -53,7 +53,7 @@ public class OAuth2UserController {
     @PreAuthorize("@ss.hasScope('user.read')") //
     public CommonResult<OAuth2UserInfoRespVO> getUserInfo() {
         // 获得用户基本信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        AdminUserDO user = userService.getUser(getLoginUserLongId());
         OAuth2UserInfoRespVO resp = BeanUtils.toBean(user, OAuth2UserInfoRespVO.class);
         // 获得部门信息
         if (user.getDeptId() != null) {
@@ -74,7 +74,7 @@ public class OAuth2UserController {
     public CommonResult<Boolean> updateUserInfo(@Valid @RequestBody OAuth2UserUpdateReqVO reqVO) {
         // 这里将 UserProfileUpdateReqVO =》UserProfileUpdateReqVO 对象，实现接口的复用。
         // 主要是，AdminUserService 没有自己的 BO 对象，所以复用只能这么做
-        userService.updateUserProfile(getLoginUserId(), BeanUtils.toBean(reqVO, UserProfileUpdateReqVO.class));
+        userService.updateUserProfile(getLoginUserLongId(), BeanUtils.toBean(reqVO, UserProfileUpdateReqVO.class));
         return success(true);
     }
 

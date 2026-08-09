@@ -1567,7 +1567,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                                 .finished();
                         if (BpmAutoApproveTypeEnum.APPROVE_ALL.getType().equals(processDefinitionInfo.getAutoApprovalType())
                                 && approvedTaskQuery.taskAssignee(task.getAssignee()).count() > 0) {
-                            getSelf().approveTask(Long.valueOf(task.getAssignee()), new BpmTaskApproveReqVO().setId(task.getId())
+                            getSelf().approveTask(task.getAssignee(), new BpmTaskApproveReqVO().setId(task.getId())
                                     .setReason(BpmAutoApproveTypeEnum.APPROVE_ALL.getName()));
                             return;
                         }
@@ -1584,7 +1584,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                             approvedTaskQuery.taskDefinitionKeys(sourceTaskIds).orderByTaskCreateTime().desc(); // 设置 taskIds, 并按创建时间倒序排序
                             HistoricTaskInstance firstHisTask = CollUtil.getFirst(approvedTaskQuery.list());
                             if (firstHisTask != null && StrUtil.equals(firstHisTask.getAssignee(), task.getAssignee())) {
-                                getSelf().approveTask(Long.valueOf(task.getAssignee()), new BpmTaskApproveReqVO().setId(task.getId())
+                                getSelf().approveTask(task.getAssignee(), new BpmTaskApproveReqVO().setId(task.getId())
                                         .setReason(BpmAutoApproveTypeEnum.APPROVE_SEQUENT.getName()));
                                 return;
                             }
@@ -1607,7 +1607,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                             && (skipStartUserNodeFlag == null // 目的：一般是“主流程”，发起人节点，自动通过审核
                             || BooleanUtil.isTrue(skipStartUserNodeFlag)) // 目的：一般是“子流程”，发起人节点，按配置自动通过审核
                             && ObjUtil.notEqual(returnTaskFlag, Boolean.TRUE)) {
-                        getSelf().approveTask(Long.valueOf(task.getAssignee()), new BpmTaskApproveReqVO().setId(task.getId())
+                        getSelf().approveTask(task.getAssignee(), new BpmTaskApproveReqVO().setId(task.getId())
                                 .setReason(BpmReasonEnum.ASSIGN_START_USER_APPROVE_WHEN_SKIP_START_USER_NODE.getReason()));
                         return;
                     }
@@ -1620,13 +1620,17 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                             // 情况一：自动跳过
                             if (ObjectUtils.equalsAny(assignStartUserHandlerType,
                                     BpmUserTaskAssignStartUserHandlerTypeEnum.SKIP.getType())) {
-                                getSelf().approveTask(Long.valueOf(task.getAssignee()), new BpmTaskApproveReqVO().setId(task.getId())
+                                getSelf().approveTask(task.getAssignee(), new BpmTaskApproveReqVO().setId(task.getId())
                                         .setReason(BpmReasonEnum.ASSIGN_START_USER_APPROVE_WHEN_SKIP.getReason()));
                                 return;
                             }
                             // 情况二：转交给部门负责人审批
                             if (ObjectUtils.equalsAny(assignStartUserHandlerType,
                                     BpmUserTaskAssignStartUserHandlerTypeEnum.TRANSFER_DEPT_LEADER.getType())) {
+                                if (headlessEnabled) {
+                                    log.warn("[processTaskAssigned][taskId({}) 无头模式不支持基于本地部门的转交策略]", task.getId());
+                                    return;
+                                }
                                 AdminUserRespDTO startUser = adminUserApi.getUser(Long.valueOf(processInstance.getStartUserId()));
                                 Assert.notNull(startUser, "提交人({})信息为空", processInstance.getStartUserId());
                                 DeptRespDTO dept = startUser.getDeptId() != null ? deptApi.getDept(startUser.getDeptId()) : null;
@@ -1634,7 +1638,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                                 // 找不到部门负责人的情况下，自动审批通过
                                 // noinspection DataFlowIssue
                                 if (dept.getLeaderUserId() == null) {
-                                    getSelf().approveTask(Long.valueOf(task.getAssignee()), new BpmTaskApproveReqVO().setId(task.getId())
+                                    getSelf().approveTask(task.getAssignee(), new BpmTaskApproveReqVO().setId(task.getId())
                                             .setReason(BpmReasonEnum.ASSIGN_START_USER_APPROVE_WHEN_DEPT_LEADER_NOT_FOUND.getReason()));
                                     return;
                                 }
@@ -1703,6 +1707,10 @@ public class BpmTaskServiceImpl implements BpmTaskService {
         taskList.forEach(task -> FlowableUtils.execute(task.getTenantId(), () -> {
             // 情况一：自动提醒
             if (Objects.equals(handlerType, BpmUserTaskTimeoutHandlerTypeEnum.REMINDER.getType())) {
+                // 无头模式由 Portal 投递提醒，BPM 不再依赖本地 Long 用户 ID。
+                if (headlessEnabled) {
+                    return;
+                }
                 messageService.sendMessageWhenTaskTimeout(new BpmMessageSendWhenTaskTimeoutReqDTO()
                         .setProcessInstanceId(processInstanceId).setProcessInstanceName(processInstance.getName())
                         .setTaskId(task.getId()).setTaskName(task.getName()).setAssigneeUserId(Long.parseLong(task.getAssignee())));
@@ -1711,14 +1719,14 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
             // 情况二：自动同意
             if (Objects.equals(handlerType, BpmUserTaskTimeoutHandlerTypeEnum.APPROVE.getType())) {
-                approveTask(Long.parseLong(task.getAssignee()),
+                approveTask(task.getAssignee(),
                         new BpmTaskApproveReqVO().setId(task.getId()).setReason(BpmReasonEnum.TIMEOUT_APPROVE.getReason()));
                 return;
             }
 
             // 情况三：自动拒绝
             if (Objects.equals(handlerType, BpmUserTaskTimeoutHandlerTypeEnum.REJECT.getType())) {
-                rejectTask(Long.parseLong(task.getAssignee()),
+                rejectTask(task.getAssignee(),
                         new BpmTaskRejectReqVO().setId(task.getId()).setReason(BpmReasonEnum.REJECT_TASK.getReason()));
             }
         }));

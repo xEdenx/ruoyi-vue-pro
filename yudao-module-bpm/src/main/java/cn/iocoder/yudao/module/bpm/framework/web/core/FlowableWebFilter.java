@@ -22,7 +22,7 @@ public class FlowableWebFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             // 设置工作流的用户
-            Long userId = SecurityFrameworkUtils.getLoginUserId();
+            String userId = SecurityFrameworkUtils.getLoginUserId();
             if (userId != null) {
                 FlowableUtils.setAuthenticatedUserId(userId);
             }

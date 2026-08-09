@@ -62,9 +62,13 @@ public class BpmModelMetaInfoVO {
     @Schema(description = "可发起部门编号数组", example = "[2,4,6]")
     private List<Long> startDeptIds;
 
-    @Schema(description = "可管理用户编号数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "[2,4,6]")
-    @NotEmpty(message = "可管理用户编号数组不能为空")
+    @Schema(description = "遗留的可管理本地用户编号数组，仅供 ASSIGN_EMPTY 等本地候选人策略兼容使用", example = "[2,4,6]")
     private List<Long> managerUserIds;
+
+    @Schema(description = "可管理该流程的 Portal 角色编码数组", requiredMode = Schema.RequiredMode.REQUIRED,
+            example = "[\"ROLE_BPM_MODEL_MANAGER\"]")
+    @NotEmpty(message = "可管理角色编码数组不能为空")
+    private List<String> managerRoleCodes;
 
     @Schema(description = "排序", example = "1")
     private Long sort; // 创建时，后端自动生成

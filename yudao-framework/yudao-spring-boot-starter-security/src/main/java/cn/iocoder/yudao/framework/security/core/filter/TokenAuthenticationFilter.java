@@ -93,7 +93,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             }
             // 构建登录用户
             return new LoginUser().setId(String.valueOf(accessToken.getUserId()))
-                    .setSystemUserId(accessToken.getUserId()).setUserType(accessToken.getUserType())
+                    .setUserType(accessToken.getUserType())
                     .setInfo(accessToken.getUserInfo()) // 额外的用户信息
                     .setTenantId(accessToken.getTenantId()).setScopes(accessToken.getScopes())
                     .setExpiresTime(accessToken.getExpiresTime());
@@ -167,15 +167,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
             Integer resolvedUserType = userType != null ? userType : cn.iocoder.yudao.framework.common.enums.UserTypeEnum.ADMIN.getValue();
             Long tenantId = payload.getLong("tenantId");
-            Long systemUserId = null;
-            try {
-                systemUserId = Long.valueOf(userIdStr);
-            } catch (NumberFormatException ignored) {
-                // Portal 用户 ID 可以是 UUID 等非数字字符串；此时不映射为本地 system_user ID。
-            }
             return new LoginUser()
                     .setId(userIdStr)
-                    .setSystemUserId(systemUserId)
                     .setUserType(resolvedUserType)
                     .setInfo(info)
                     .setTenantId(tenantId);

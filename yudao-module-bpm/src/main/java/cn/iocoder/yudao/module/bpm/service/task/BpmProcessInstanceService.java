@@ -97,6 +97,11 @@ public interface BpmProcessInstanceService {
     BpmApprovalDetailRespVO getApprovalDetail(Long loginUserId, @Valid BpmApprovalDetailReqVO reqVO);
 
     /**
+     * 获取 Portal 身份下的审批详情。用户编号保持 Portal 原始字符串，不查询本地用户表。
+     */
+    BpmApprovalDetailRespVO getApprovalDetail(String loginUserId, @Valid BpmApprovalDetailReqVO reqVO);
+
+    /**
      * 获取下一个执行节点信息
      *
      * @param loginUserId 登录人的用户编号

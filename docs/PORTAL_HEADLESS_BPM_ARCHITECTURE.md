@@ -121,12 +121,12 @@
 ### 3.0 流程定义发布部署 API（无头 Headless 专用）
 - **接口路径**: `POST /admin-api/bpm/process-definition/deploy-xml`
 - **Content-Type**: `application/json`
-- **认证与授权**: 该入口不额外声明 BPM 菜单/角色权限；认证通过后即可调用。为保持与既有模型 API 一致，更新或发布已有模型仍会校验请求人的 `systemUserId` 是否在 `managerUserIds` 中，禁止伪造固定维护用户。
+- **认证与授权**: 该入口不额外声明 BPM 菜单/角色权限；认证通过后即可调用。更新、发布、停用和删除已有模型时，BPM 通过 `BpmPortalIdentityApi` 向 Portal 校验请求人的角色是否命中模型的 `managerRoleCodes`；不会读取本地用户、角色或部门表。
 - **说明**: 这是“一键保存并发布”组合 API，不是原生 XML 文件上传 API。它按现有生命周期执行：
   `createModel`（无 `id`）或 `updateModel`（有 `id`）→ `deployModel`。
   因此会保留 BPMN 合法性、表单配置、候选人策略和模型管理人校验，并自动挂起旧版本。
 - **请求参数**: 请求体与模型保存 API 完全一致，为 `BpmModelSaveReqVO`。`bpmnXml` 是 BPMN XML 文本；`type` 固定为 `10`（BPMN）；新建时不传 `id`，更新时传已有 Flowable model ID。
-- **最小可部署示例**（`formId` 必须是已存在的 `bpm_form` 主键，且 `managerUserIds` 包含当前认证用户的兼容本地 ID）：
+- **最小可部署示例**（`formId` 必须是已存在的 `bpm_form` 主键；`managerRoleCodes` 是 Portal 维护角色）：
   ```json
   {
     "key": "office_supplies_request_v5",
@@ -136,7 +136,7 @@
     "formType": 10,
     "formId": 1,
     "visible": true,
-    "managerUserIds": [102],
+    "managerRoleCodes": ["ROLE_BPM_MODEL_MANAGER"],
     "bpmnXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><definitions>...</definitions>"
   }
   ```
@@ -181,6 +181,19 @@ Portal 将返回的 `processInstanceId` 保存到本地业务表中。
 真实 Portal 接入时，应替换为已验证 JWT 及 Portal 自己的权限策略；不得再绑定本地 `system_user`、`system_role` 或 `system_user_role`。
 
 本地无头配置还启用 `yudao.bpm.headless.enabled=true`：流程完成、拒绝、任务分配和超时不会调用本地 `system` 短信服务。Portal 负责接收状态变化并自行通知业务用户。
+
+### 3.1.2 Portal 适配器替换点
+
+为使接入真实 Portal 时不改动 Flowable 流转逻辑，BPM 只保留以下两个 Java SPI；两者的 ID 都是原始 `String`，接口中没有 `system_user`、`system_role` 或 `Long userId`：
+
+| 场景 | SPI 方法 | Portal 返回值 |
+| --- | --- | --- |
+| `HEADLESS_REMOTE` 节点到达时的审批人解算 | `HeadlessRemoteCandidateStrategy.PortalCandidateApi.resolveAssigneeIds(startUserId, activityId, roleParam, processInstanceId)` | `Set<String>` 审批人 ID |
+| 流程模型的管理人信息与角色校验 | `BpmPortalIdentityApi.getUser(userId)`；框架默认调用 `hasAnyRole(...)` | `PortalUser(id, displayName, departmentId, roleCodes)` |
+
+生产接入只需关闭 `yudao.bpm.headless-mock.enabled`，并分别提供这两个接口的 HTTP 实现 Bean。调用方和 BPMN 图均无需修改：前者替代 `LocalPortalCandidateApiMock`，后者替代 `LocalBpmPortalIdentityApiMock`。若候选人适配器缺失、Portal 返回空审批人，或身份适配器未配置，服务会失败关闭，不会回退查询本地用户、角色或部门表。
+
+真实 HTTP 实现应使用 BPM 与 Portal 约定的服务间凭证或已验证的用户委托凭证；不要把客户端随意传入的用户 ID 当作 Portal 身份事实。
 
 ---
 

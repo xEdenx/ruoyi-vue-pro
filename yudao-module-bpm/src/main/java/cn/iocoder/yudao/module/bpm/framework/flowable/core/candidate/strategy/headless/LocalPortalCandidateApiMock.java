@@ -17,8 +17,8 @@ import java.util.Set;
 public class LocalPortalCandidateApiMock implements HeadlessRemoteCandidateStrategy.PortalCandidateApi {
 
     private static final Map<ResolutionKey, Set<String>> CANDIDATES = Map.of(
-            new ResolutionKey("Activity_Admin", "ROLE_ADMIN"), Set.of("103"),
-            new ResolutionKey("Activity_Supplier", "ROLE_SUPPLIER"), Set.of("104", "105")
+            new ResolutionKey("Activity_Admin", "ROLE_ADMIN"), Set.of("portal-admin-d5e6"),
+            new ResolutionKey("Activity_Supplier", "ROLE_SUPPLIER"), Set.of("portal-supplier-e7f8", "portal-supplier-f9a0")
     );
 
     @Override

@@ -33,7 +33,7 @@ public class DefaultDBFieldHandler implements MetaObjectHandler {
                 baseDO.setUpdateTime(current);
             }
 
-            Long userId = SecurityFrameworkUtils.getLoginUserId();
+            Long userId = SecurityFrameworkUtils.getLoginUserLongId();
             // 当前登录用户不为空，创建人为空，则当前登录用户为创建人
             if (Objects.nonNull(userId) && Objects.isNull(baseDO.getCreator())) {
                 baseDO.setCreator(userId.toString());
@@ -55,7 +55,7 @@ public class DefaultDBFieldHandler implements MetaObjectHandler {
 
         // 当前登录用户不为空，更新人为空，则当前登录用户为更新人
         Object modifier = getFieldValByName("updater", metaObject);
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        Long userId = SecurityFrameworkUtils.getLoginUserLongId();
         if (Objects.nonNull(userId) && Objects.isNull(modifier)) {
             setFieldValByName("updater", userId.toString(), metaObject);
         }

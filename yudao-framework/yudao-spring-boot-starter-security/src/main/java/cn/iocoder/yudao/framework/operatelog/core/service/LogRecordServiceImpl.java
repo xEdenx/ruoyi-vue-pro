@@ -53,7 +53,7 @@ public class LogRecordServiceImpl implements ILogRecordService {
         if (loginUser == null) {
             return;
         }
-        reqDTO.setUserId(loginUser.getSystemUserId());
+        reqDTO.setUserId(cn.iocoder.yudao.framework.common.util.number.NumberUtils.parseLong(loginUser.getId()));
         reqDTO.setUserType(loginUser.getUserType());
     }
 

@@ -236,7 +236,11 @@ public interface BpmProcessInstanceConvert {
 
     default Set<Long> parseUserIds02(HistoricProcessInstance processInstance,
                                      List<HistoricTaskInstance> tasks) {
-        Set<Long> userIds = SetUtils.asSet(Long.valueOf(processInstance.getStartUserId()));
+        Set<Long> userIds = new HashSet<>();
+        Long startUserId = NumberUtils.parseLong(processInstance.getStartUserId());
+        if (startUserId != null) {
+            userIds.add(startUserId);
+        }
         tasks.forEach(task -> {
             CollUtil.addIfAbsent(userIds, NumberUtils.parseLong((task.getAssignee())));
             CollUtil.addIfAbsent(userIds, NumberUtils.parseLong((task.getOwner())));
@@ -257,7 +261,9 @@ public interface BpmProcessInstanceConvert {
         // 1.1 流程实例
         BpmProcessInstanceRespVO processInstanceResp = null;
         if (processInstance != null) {
-            AdminUserRespDTO startUser = userMap.get(NumberUtils.parseLong(processInstance.getStartUserId()));
+            // Portal 详情不附带本地用户字典，保留 Flowable 中的字符串身份供 Portal 渲染。
+            AdminUserRespDTO startUser = CollUtil.isNotEmpty(userMap)
+                    ? userMap.get(NumberUtils.parseLong(processInstance.getStartUserId())) : null;
             DeptRespDTO dept = startUser != null ? deptMap.get(startUser.getDeptId()) : null;
             processInstanceResp = buildProcessInstance(processInstance, null, null, startUser, dept);
         }

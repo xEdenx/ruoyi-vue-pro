@@ -38,9 +38,9 @@ public class WebSocketFrameworkUtils {
      *
      * @return 用户编号
      */
-    public static Long getLoginUserId(WebSocketSession session) {
+    public static String getLoginUserId(WebSocketSession session) {
         LoginUser loginUser = getLoginUser(session);
-        return loginUser != null ? loginUser.getSystemUserId() : null;
+        return loginUser != null ? loginUser.getId() : null;
     }
 
     /**

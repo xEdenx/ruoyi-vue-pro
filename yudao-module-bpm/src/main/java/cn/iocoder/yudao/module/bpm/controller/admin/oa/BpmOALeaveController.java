@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 
 /**
  * OA 请假申请 Controller，用于演示自己存储数据，接入工作流的例子
@@ -39,7 +39,7 @@ public class BpmOALeaveController {
     @PreAuthorize("@ss.hasPermission('bpm:oa-leave:create')")
     @Operation(summary = "创建请求申请")
     public CommonResult<Long> createLeave(@Valid @RequestBody BpmOALeaveCreateReqVO createReqVO) {
-        return success(leaveService.createLeave(getLoginUserId(), createReqVO));
+        return success(leaveService.createLeave(getLoginUserLongId(), createReqVO));
     }
 
     @GetMapping("/get")
@@ -55,7 +55,7 @@ public class BpmOALeaveController {
     @PreAuthorize("@ss.hasPermission('bpm:oa-leave:query')")
     @Operation(summary = "获得请假申请分页")
     public CommonResult<PageResult<BpmOALeaveRespVO>> getLeavePage(@Valid BpmOALeavePageReqVO pageVO) {
-        PageResult<BpmOALeaveDO> pageResult = leaveService.getLeavePage(getLoginUserId(), pageVO);
+        PageResult<BpmOALeaveDO> pageResult = leaveService.getLeavePage(getLoginUserLongId(), pageVO);
         return success(BeanUtils.toBean(pageResult, BpmOALeaveRespVO.class));
     }
 
