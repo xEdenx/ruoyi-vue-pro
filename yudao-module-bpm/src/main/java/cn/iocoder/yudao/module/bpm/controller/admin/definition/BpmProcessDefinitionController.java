@@ -26,11 +26,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +45,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
 import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
+import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.PROCESS_DEFINITION_DEPLOY_FILE_EMPTY;
 
 @Tag(name = "管理后台 - 流程定义")
 @RestController
@@ -137,13 +141,19 @@ public class BpmProcessDefinitionController {
                 processDefinition, null, processDefinitionInfo, null, null, bpmnModel));
     }
 
-    @PostMapping("/deploy-xml")
-    @Operation(summary = "一键保存并发布 BPMN 流程模型", description = "复用流程模型的保存与发布逻辑，不额外要求角色")
-    public CommonResult<String> deployProcessDefinitionXml(@Valid @RequestBody BpmModelSaveReqVO modelReqVO) {
+    @PostMapping(value = "/deploy-xml", consumes = "multipart/form-data")
+    @Operation(summary = "上传并一键发布 BPMN 流程模型", description = "model 为 BpmModelSaveReqVO JSON，file 为 UTF-8 编码的 BPMN XML 文件")
+    public CommonResult<String> deployProcessDefinitionXml(
+            @RequestPart("file") MultipartFile file,
+            @Valid @RequestPart("model") BpmModelSaveReqVO modelReqVO) throws IOException {
         String userId = getLoginUserId();
         if (userId == null) {
             throw exception(UNAUTHORIZED);
         }
+        if (file.isEmpty()) {
+            throw exception(PROCESS_DEFINITION_DEPLOY_FILE_EMPTY);
+        }
+        modelReqVO.setBpmnXml(new String(file.getBytes(), StandardCharsets.UTF_8));
         String definitionId = processDefinitionService.deployProcessDefinitionXml(userId, modelReqVO);
         return success(definitionId);
     }

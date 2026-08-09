@@ -237,8 +237,8 @@ public class <ProcessName>Listeners {
 
 ---
 
-## 四、 标杆案例示范：办公用品申请流程 V2 (`office_supplies_request_v2`)
+## 四、 标杆案例示范：办公用品申请流程 V5 (`office_supplies_request_v5`)
 
-- **BPMN XML**：[docs/office_supplies_request_v2.bpmn.xml](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/docs/office_supplies_request_v2.bpmn.xml)
+- **BPMN XML**：[docs/office_supplies_request_v5.bpmn.xml](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/docs/office_supplies_request_v5.bpmn.xml)
 - **Java 监听器**：[OfficeSuppliesListeners.java](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/yudao-module-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/listener/office/OfficeSuppliesListeners.java)
 - **测试 Walkthrough**：[docs/HEADLESS_BPM_TEST_WALKTHROUGH.md](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/docs/HEADLESS_BPM_TEST_WALKTHROUGH.md)

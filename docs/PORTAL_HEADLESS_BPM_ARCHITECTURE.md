@@ -120,12 +120,12 @@
 
 ### 3.0 流程定义发布部署 API（无头 Headless 专用）
 - **接口路径**: `POST /admin-api/bpm/process-definition/deploy-xml`
-- **Content-Type**: `application/json`
+- **Content-Type**: `multipart/form-data`
 - **认证与授权**: 该入口不额外声明 BPM 菜单/角色权限；认证通过后即可调用。更新、发布、停用和删除已有模型时，BPM 通过 `BpmPortalIdentityApi` 向 Portal 校验请求人的角色是否命中模型的 `managerRoleCodes`；不会读取本地用户、角色或部门表。
 - **说明**: 这是“一键保存并发布”组合 API，不是原生 XML 文件上传 API。它按现有生命周期执行：
   `createModel`（无 `id`）或 `updateModel`（有 `id`）→ `deployModel`。
   因此会保留 BPMN 合法性、表单配置、候选人策略和模型管理人校验，并自动挂起旧版本。
-- **请求参数**: 请求体与模型保存 API 完全一致，为 `BpmModelSaveReqVO`。`bpmnXml` 是 BPMN XML 文本；`type` 固定为 `10`（BPMN）；新建时不传 `id`，更新时传已有 Flowable model ID。
+- **请求参数**: `model` part 是 JSON 格式的 `BpmModelSaveReqVO`；`file` part 是 UTF-8 编码的 BPMN XML 文件。接口从上传文件读取 BPMN，不接受 `model.bpmnXml` 传入的 XML 文本；`type` 固定为 `10`（BPMN）；新建时不传 `id`，更新时传已有 Flowable model ID。
 - **最小可部署示例**（`formId` 必须是已存在的 `bpm_form` 主键；`managerRoleCodes` 是 Portal 维护角色）：
   ```json
   {
@@ -136,16 +136,15 @@
     "formType": 10,
     "formId": 1,
     "visible": true,
-    "managerRoleCodes": ["ROLE_BPM_MODEL_MANAGER"],
-    "bpmnXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><definitions>...</definitions>"
+    "managerRoleCodes": ["ROLE_BPM_MODEL_MANAGER"]
   }
   ```
 - **调用示例**:
   ```bash
   curl -X POST 'http://127.0.0.1:48080/admin-api/bpm/process-definition/deploy-xml' \
     -H 'Authorization: Bearer <Portal_JWT>' \
-    -H 'Content-Type: application/json' \
-    --data @deploy-office-supplies-v3.json
+    -F 'model={"key":"office_supplies_request_v5","name":"办公用品申请流程 V5","category":"无","type":10,"formType":10,"formId":1,"visible":true,"managerRoleCodes":["ROLE_BPM_MODEL_MANAGER"]};type=application/json' \
+    -F 'file=@docs/office_supplies_request_v5.bpmn.xml;type=application/xml'
   ```
 - **响应示例**:
   ```json

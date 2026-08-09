@@ -15,7 +15,7 @@
 - Activity_Admin：HEADLESS_REMOTE，Portal mock 按 ROLE_ADMIN 返回 `portal-admin-d5e6`。
 - Activity_Supplier：HEADLESS_REMOTE，Portal mock 按 ROLE_SUPPLIER 返回 `portal-supplier-e7f8`、`portal-supplier-f9a0`，并行会签。
 
-本地环境通过 `yudao.bpm.headless-mock.enabled=true` 注册 mock。运行脚本前必须用 `POST /admin-api/bpm/process-definition/deploy-xml` 将 `docs/office_supplies_request_v5.bpmn.xml` 及其完整 `BpmModelSaveReqVO` 元数据一键保存并发布；随后执行 `script/shell/test_headless_bpm_walkthrough.sh`。该入口接收 JSON，不接受 multipart XML 上传。
+本地环境通过 `yudao.bpm.headless-mock.enabled=true` 注册 mock。运行脚本前必须用 `POST /admin-api/bpm/process-definition/deploy-xml` 上传 `docs/office_supplies_request_v5.bpmn.xml`，并在 `model` multipart part 中传入完整 `BpmModelSaveReqVO` 元数据以一键保存并发布；随后执行 `script/shell/test_headless_bpm_walkthrough.sh`。
 
 脚本的 JWT 以 `role` 声明模拟 Portal 角色。该临时无头授权不读取本地 `system_user_role`；没有 `role`/`roles` 的 JWT 必须被拒绝。
 

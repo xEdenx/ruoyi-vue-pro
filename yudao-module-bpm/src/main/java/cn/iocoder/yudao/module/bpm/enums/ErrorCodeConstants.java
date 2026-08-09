@@ -32,6 +32,7 @@ public interface ErrorCodeConstants {
     ErrorCode PROCESS_DEFINITION_NAME_NOT_MATCH = new ErrorCode(1_009_003_001, "流程定义的名字期望是({})，当前是({})，请修改 BPMN 流程图");
     ErrorCode PROCESS_DEFINITION_NOT_EXISTS = new ErrorCode(1_009_003_002, "流程定义不存在");
     ErrorCode PROCESS_DEFINITION_IS_SUSPENDED = new ErrorCode(1_009_003_003, "流程定义处于挂起状态");
+    ErrorCode PROCESS_DEFINITION_DEPLOY_FILE_EMPTY = new ErrorCode(1_009_003_004, "发布流程失败，BPMN 文件不能为空");
 
     // ========== 流程实例 1-009-004-000 ==========
     ErrorCode PROCESS_INSTANCE_NOT_EXISTS = new ErrorCode(1_009_004_000, "流程实例不存在");
