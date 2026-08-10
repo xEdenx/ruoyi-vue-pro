@@ -3,17 +3,91 @@
 # 无头 BPM (Headless Flowable) walkthrough.md 自动化测试一键脚本
 # 说明：部门经理使用 START_USER_SELECT；行政与供应商节点使用 HEADLESS_REMOTE，
 # 由本地 Portal mock 在节点到达时按角色参数返回最终 String 用户 ID。
+# 用法：bash script/shell/test_headless_bpm_walkthrough.sh [BASE_URL]
+# 可选环境变量：TODO_PAGE_SIZE、TASK_POLL_ATTEMPTS、TASK_POLL_INTERVAL_SECONDS、
+# RESULT_DIR、RUN_ID。脚本只依赖目标环境公开的 HTTP API 与 curl/jq，不调用 MCP。
 # ==============================================================================
 
-set -e
+set -euo pipefail
 
 BASE_URL="${1:-http://127.0.0.1:48080}"
 PROCESS_KEY="office_supplies_request_v5"
+TODO_PAGE_SIZE="${TODO_PAGE_SIZE:-100}"
+TASK_POLL_ATTEMPTS="${TASK_POLL_ATTEMPTS:-15}"
+TASK_POLL_INTERVAL_SECONDS="${TASK_POLL_INTERVAL_SECONDS:-1}"
+RESULT_DIR="${RESULT_DIR:-output/walkthrough}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d%H%M%S)}"
+RESULT_FILE="${RESULT_DIR}/headless-bpm-${RUN_ID}.json"
+CURRENT_STEP="初始化"
+declare -a SCENARIO_RESULTS=()
 
 # 每个 Portal 调用都必须有边界，避免网络或远端数据库异常时遗留无限等待的测试进程。
 curl() {
-  command curl --connect-timeout 10 --max-time 90 "$@"
+  command curl --silent --show-error --fail --connect-timeout 10 --max-time 90 "$@"
 }
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "缺少必需命令: $1" >&2
+    exit 1
+  }
+}
+
+write_result_file() {
+  local status="$1"
+  local message="${2:-}"
+  mkdir -p "$RESULT_DIR"
+  printf '%s\n' "${SCENARIO_RESULTS[@]:-}" | jq -s \
+    --arg runId "$RUN_ID" \
+    --arg status "$status" \
+    --arg message "$message" \
+    --arg processDefinitionKey "$PROCESS_KEY" \
+    --arg baseUrl "$BASE_URL" \
+    --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{runId: $runId, status: $status, message: $message, processDefinitionKey: $processDefinitionKey,
+      baseUrl: $baseUrl, generatedAt: $generatedAt, scenarios: .}' > "$RESULT_FILE"
+}
+
+record_scenario() {
+  local name="$1"
+  local process_instance_id="$2"
+  local status="$3"
+  local existing existing_process_instance_id
+  local -a updated_results=()
+  for existing in "${SCENARIO_RESULTS[@]:-}"; do
+    [ -n "${existing}" ] || continue
+    existing_process_instance_id=$(echo "${existing}" | jq -r '.processInstanceId')
+    if [ "${existing_process_instance_id}" != "${process_instance_id}" ]; then
+      updated_results+=("${existing}")
+    fi
+  done
+  SCENARIO_RESULTS=("${updated_results[@]}")
+  SCENARIO_RESULTS+=("$(jq -cn --arg name "$name" --arg processInstanceId "$process_instance_id" --argjson status "$status" \
+    '{name: $name, processInstanceId: $processInstanceId, status: $status}')")
+  write_result_file "running" "已完成 ${name}"
+}
+
+fail() {
+  local message="$1"
+  echo "❌ ${message}" >&2
+  write_result_file "failed" "$message"
+  echo "  结果文件: ${RESULT_FILE}" >&2
+  exit 1
+}
+
+on_unexpected_error() {
+  local exit_code="$1"
+  trap - ERR
+  write_result_file "failed" "执行失败，当前步骤：${CURRENT_STEP}"
+  echo "❌ 执行失败，当前步骤：${CURRENT_STEP}" >&2
+  echo "  结果文件: ${RESULT_FILE}" >&2
+  exit "$exit_code"
+}
+
+trap 'on_unexpected_error $?' ERR
+
+require_command curl
+require_command jq
 
 # 颜色控制
 GREEN="\033[32m"
@@ -54,25 +128,56 @@ echo -e "  2. 行政管理员节点 (Activity_Admin)  : HEADLESS_REMOTE + ROLE_A
 echo -e "  3. 供应商节点 (Activity_Supplier)   : HEADLESS_REMOTE + ROLE_SUPPLIER -> mock 返回 [\"portal-supplier-e7f8\", \"portal-supplier-f9a0\"]\n"
 
 # ==============================================================================
-# 步骤 1：Portal API 动态拉取流程定义与表单 Schema
-# ==============================================================================
-echo -e "${BOLD}${YELLOW}>>> 步骤 1：Portal 拉取流程定义与动态表单 Schema${RESET}"
-DEF_RESP=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-definition/get?key=${PROCESS_KEY}" \
-  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
-
-DEF_ID=$(echo "${DEF_RESP}" | jq -r '.data.id // empty')
-FORM_FIELDS=$(echo "${DEF_RESP}" | jq -c '.data.formFields // []')
-
-if [ -n "${DEF_ID}" ]; then
-  echo -e "${GREEN}✓ 流程定义拉取成功: ID = ${DEF_ID}${RESET}"
-  echo -e "  - 表单 Schema 字段: ${FORM_FIELDS}\n"
-else
-  echo -e "${YELLOW}⚠️ 提示: 未响应流程定义 Schema，继续执行流转测试...${RESET}\n"
-fi
-
-# ==============================================================================
 # 核心函数：根据 Bearer Token 包含的用户与角色在待办列表中寻找并审批任务
 # ==============================================================================
+assert_api_success() {
+  local response="$1"
+  local action="$2"
+  local code
+  code=$(echo "${response}" | jq -r '.code // empty')
+  if [ "${code}" != "0" ]; then
+    fail "${action} 返回业务错误：$(echo "${response}" | jq -c '{code, msg}')"
+  fi
+}
+
+fetch_task_node() {
+  local token="$1"
+  local proc_inst_id="$2"
+  local attempt todo_resp task_node
+  for ((attempt = 1; attempt <= TASK_POLL_ATTEMPTS; attempt++)); do
+    todo_resp=$(curl -X GET "${BASE_URL}/admin-api/bpm/task/todo-page?pageNo=1&pageSize=${TODO_PAGE_SIZE}" \
+      -H "Authorization: Bearer ${token}")
+    assert_api_success "${todo_resp}" "查询待办（第 ${attempt} 次）"
+    task_node=$(echo "${todo_resp}" | jq -c --arg processInstanceId "${proc_inst_id}" \
+      '.data.list[]? | select(.processInstance.id == $processInstanceId)' | head -n 1)
+    if [ -n "${task_node}" ] && [ "${task_node}" != "null" ]; then
+      echo "${task_node}"
+      return 0
+    fi
+    sleep "${TASK_POLL_INTERVAL_SECONDS}"
+  done
+  return 1
+}
+
+wait_for_process_status() {
+  local token="$1"
+  local proc_inst_id="$2"
+  local expected_status="$3"
+  local attempt detail_resp actual_status
+  for ((attempt = 1; attempt <= TASK_POLL_ATTEMPTS; attempt++)); do
+    detail_resp=$(curl -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${proc_inst_id}" \
+      -H "Authorization: Bearer ${token}")
+    assert_api_success "${detail_resp}" "查询流程 ${proc_inst_id} 的审批轨迹（第 ${attempt} 次）"
+    actual_status=$(echo "${detail_resp}" | jq -r '.data.status // empty')
+    if [ "${actual_status}" = "${expected_status}" ]; then
+      echo "${actual_status}"
+      return 0
+    fi
+    sleep "${TASK_POLL_INTERVAL_SECONDS}"
+  done
+  fail "流程 ${proc_inst_id} 状态未在 ${TASK_POLL_ATTEMPTS} 次轮询内变为 ${expected_status}"
+}
+
 fetch_and_approve_task() {
   local user_name="$1"
   local role_name="$2"
@@ -80,22 +185,10 @@ fetch_and_approve_task() {
   local proc_inst_id="$4"
   local reason="$5"
 
-  # 1. 模拟用户携带 Token 调 GET /task/todo-page 识别待办
-  local todo_resp=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/task/todo-page?pageNo=1&pageSize=10" \
-    -H "Authorization: Bearer ${token}")
-  
-  local task_node=$(echo "${todo_resp}" | jq -c ".data.list[]? | select(.processInstance.id==\"${proc_inst_id}\")" | head -n 1)
-  
-  if [ -z "${task_node}" ] || [ "${task_node}" == "null" ]; then
-    # 检查流程是否已正常完成或已推进
-    local check_detail=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${proc_inst_id}" -H "Authorization: Bearer ${token}")
-    local check_status=$(echo "${check_detail}" | jq -r '.data.status // empty')
-    if [ "${check_status}" == "2" ] || [ -n "${check_status}" ]; then
-      echo -e "${YELLOW}  ℹ [用户 ${user_name} (角色:${role_name})] 该节点已由同组成员完成审批（抢签/会签条件已达标），跳过重复审批${RESET}"
-      return 0
-    fi
-    echo -e "${RED}❌ [用户 ${user_name} (角色:${role_name})] 在待办列表中未查询到属于自己或自己角色的待办任务！${RESET}"
-    exit 1
+  CURRENT_STEP="${user_name} 查询流程 ${proc_inst_id} 的待办"
+  local task_node
+  if ! task_node=$(fetch_task_node "${token}" "${proc_inst_id}"); then
+    fail "[用户 ${user_name} (角色:${role_name})] 在 ${TASK_POLL_ATTEMPTS} 次轮询内未找到流程 ${proc_inst_id} 的待办"
   fi
 
   local task_id=$(echo "${task_node}" | jq -r '.id')
@@ -104,27 +197,14 @@ fetch_and_approve_task() {
   echo -e "${CYAN}  🔍 [用户 ${user_name} (角色:${role_name})] 成功查获待办任务 -> 任务名: '${task_name}', Task ID: ${task_id}${RESET}"
 
   # 2. 提交 PUT /admin-api/bpm/task/approve
-  local approve_resp=$(curl -s -X PUT "${BASE_URL}/admin-api/bpm/task/approve" \
+  CURRENT_STEP="${user_name} 同意任务 ${task_id}"
+  local approve_resp=$(curl -X PUT "${BASE_URL}/admin-api/bpm/task/approve" \
     -H "Authorization: Bearer ${token}" \
     -H "Content-Type: application/json" \
     -d "{\"id\":\"${task_id}\",\"reason\":\"${reason}\"}")
 
-  local code=$(echo "${approve_resp}" | jq -r '.code // -1')
-  if [ "${code}" == "0" ]; then
-    echo -e "${GREEN}  ✓ [用户 ${user_name}] 对任务 [${task_name}] 办理同意成功 (PUT /task/approve)${RESET}"
-  elif [ "${code}" == "1009005002" ]; then
-    local check_detail=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${proc_inst_id}" -H "Authorization: Bearer ${token}")
-    local check_status=$(echo "${check_detail}" | jq -r '.data.status // empty')
-    if [ -n "${check_status}" ]; then
-      echo -e "${YELLOW}  ℹ [用户 ${user_name}] 该任务已由同组成员完成（抢签/会签条件已达成），跳过${RESET}"
-      return 0
-    fi
-    echo -e "${RED}❌ [用户 ${user_name}] 审批提交失败: $(echo "${approve_resp}" | jq -c '.msg')${RESET}"
-    exit 1
-  else
-    echo -e "${RED}❌ [用户 ${user_name}] 审批提交失败: $(echo "${approve_resp}" | jq -c '.msg')${RESET}"
-    exit 1
-  fi
+  assert_api_success "${approve_resp}" "[用户 ${user_name}] 同意任务 ${task_id}"
+  echo -e "${GREEN}  ✓ [用户 ${user_name}] 对任务 [${task_name}] 办理同意成功 (PUT /task/approve)${RESET}"
 }
 
 fetch_and_reject_task() {
@@ -134,37 +214,43 @@ fetch_and_reject_task() {
   local proc_inst_id="$4"
   local reason="$5"
 
-  local todo_resp=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/task/todo-page?pageNo=1&pageSize=10" \
-    -H "Authorization: Bearer ${token}")
-  
-  local task_node=$(echo "${todo_resp}" | jq -c ".data.list[]? | select(.processInstance.id==\"${proc_inst_id}\")" | head -n 1)
-  if [ -z "$task_node" ] || [ "$task_node" == "null" ]; then
-    echo "Reject task was not found in the current user's todo list." >&2
-    exit 1
+  CURRENT_STEP="${user_name} 查询流程 ${proc_inst_id} 的拒绝待办"
+  local task_node
+  if ! task_node=$(fetch_task_node "${token}" "${proc_inst_id}"); then
+    fail "[用户 ${user_name} (角色:${role_name})] 在 ${TASK_POLL_ATTEMPTS} 次轮询内未找到流程 ${proc_inst_id} 的拒绝待办"
   fi
   local task_id=$(echo "${task_node}" | jq -r '.id')
   local task_name=$(echo "${task_node}" | jq -r '.name')
 
   echo -e "${CYAN}  🔍 [用户 ${user_name} (角色:${role_name})] 成功查获待办任务 -> 任务名: '${task_name}', Task ID: ${task_id}${RESET}"
 
-  local reject_resp=$(curl -s -X PUT "${BASE_URL}/admin-api/bpm/task/reject" \
+  CURRENT_STEP="${user_name} 拒绝任务 ${task_id}"
+  local reject_resp=$(curl -X PUT "${BASE_URL}/admin-api/bpm/task/reject" \
     -H "Authorization: Bearer ${token}" \
     -H "Content-Type: application/json" \
     -d "{\"id\":\"${task_id}\",\"reason\":\"${reason}\"}")
 
-  if [ "$(echo "$reject_resp" | jq -r '.code // -1')" != "0" ]; then
-    echo "Reject request failed." >&2
-    exit 1
-  fi
+  assert_api_success "${reject_resp}" "[用户 ${user_name}] 拒绝任务 ${task_id}"
   echo -e "${RED}  ✓ [用户 ${user_name}] 拒绝任务 [${task_name}]，一票否决终止流程 (PUT /task/reject)${RESET}"
 }
 
-assert_process_status() {
-  if [ "$1" != "$2" ]; then
-    echo "Unexpected process status: expected $2, got $1." >&2
-    exit 1
-  fi
-}
+# ==============================================================================
+# 步骤 1：Portal API 动态拉取流程定义与表单 Schema
+# ==============================================================================
+echo -e "${BOLD}${YELLOW}>>> 步骤 1：Portal 拉取流程定义与动态表单 Schema${RESET}"
+CURRENT_STEP="读取流程定义 ${PROCESS_KEY}"
+DEF_RESP=$(curl -X GET "${BASE_URL}/admin-api/bpm/process-definition/get?key=${PROCESS_KEY}" \
+  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
+assert_api_success "${DEF_RESP}" "读取流程定义 ${PROCESS_KEY}"
+
+DEF_ID=$(echo "${DEF_RESP}" | jq -r '.data.id // empty')
+FORM_FIELDS=$(echo "${DEF_RESP}" | jq -c '.data.formFields // []')
+
+if [ -z "${DEF_ID}" ]; then
+  fail "流程定义 ${PROCESS_KEY} 不存在或未发布"
+fi
+echo -e "${GREEN}✓ 流程定义拉取成功: ID = ${DEF_ID}${RESET}"
+echo -e "  - 表单 Schema 字段: ${FORM_FIELDS}\n"
 
 # ==============================================================================
 # 场景一：小额申请直通流程 (totalAmount = 500 <= 1000元)
@@ -172,7 +258,8 @@ assert_process_status() {
 # ==============================================================================
 echo -e "${BOLD}${YELLOW}>>> 启动 场景一：小额申请直通流程 (totalAmount = 500元 <= 1000元)${RESET}"
 
-CREATE_RESP_1=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
+CURRENT_STEP="发起场景一流程"
+CREATE_RESP_1=$(curl -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
   -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -186,11 +273,10 @@ CREATE_RESP_1=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/crea
     "startUserSelectAssignees": {}
   }')
 
+assert_api_success "${CREATE_RESP_1}" "发起场景一流程"
 PROC_ID_1=$(echo "${CREATE_RESP_1}" | jq -r '.data // empty')
-if [ -z "${PROC_ID_1}" ]; then
-  echo -e "${RED}❌ 场景一发起失败: $(echo "${CREATE_RESP_1}" | jq -c '.msg')${RESET}"
-  exit 1
-fi
+[ -n "${PROC_ID_1}" ] || fail "场景一未返回流程实例 ID"
+record_scenario "小额直通" "${PROC_ID_1}" "1"
 echo -e "${GREEN}✓ [发起人 portal-requester-a1f2] 流程发起成功（下游候选人由 Portal mock 在节点到达时解算），实例 ID: ${PROC_ID_1}${RESET}"
 
 # 1. 行政管理员（Portal mock 依据 ROLE_ADMIN 解算为用户 portal-admin-d5e6）查获待办并办理
@@ -201,10 +287,9 @@ fetch_and_approve_task "portal-supplier-e7f8 供应商成员A" "ROLE_SUPPLIER" "
 fetch_and_approve_task "portal-supplier-f9a0 供应商成员B" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_B}" "${PROC_ID_1}" "供应商portal-supplier-f9a0确认发货派送"
 
 # 3. 校验流程履历
-DETAIL_1=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${PROC_ID_1}" \
-  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
-STATUS_1=$(echo "${DETAIL_1}" | jq -r '.data.status // empty')
-assert_process_status "$STATUS_1" "2"
+CURRENT_STEP="校验场景一最终状态"
+STATUS_1=$(wait_for_process_status "${TOKEN_PORTAL_REQUESTER}" "${PROC_ID_1}" "2")
+record_scenario "小额直通" "${PROC_ID_1}" "${STATUS_1}"
 echo -e "${BOLD}${GREEN}✓ 场景一全流程测试完毕，流程状态 code: ${STATUS_1} (2=正常完成)${RESET}\n"
 
 
@@ -214,7 +299,8 @@ echo -e "${BOLD}${GREEN}✓ 场景一全流程测试完毕，流程状态 code: 
 # ==============================================================================
 echo -e "${BOLD}${YELLOW}>>> 启动 场景二：大额申请全流程通过 (totalAmount = 3500元 > 1000元)${RESET}"
 
-CREATE_RESP_2=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
+CURRENT_STEP="发起场景二流程"
+CREATE_RESP_2=$(curl -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
   -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -230,11 +316,10 @@ CREATE_RESP_2=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/crea
     }
   }')
 
+assert_api_success "${CREATE_RESP_2}" "发起场景二流程"
 PROC_ID_2=$(echo "${CREATE_RESP_2}" | jq -r '.data // empty')
-if [ -z "${PROC_ID_2}" ]; then
-  echo -e "${RED}❌ 场景二发起失败: $(echo "${CREATE_RESP_2}" | jq -c '.msg')${RESET}"
-  exit 1
-fi
+[ -n "${PROC_ID_2}" ] || fail "场景二未返回流程实例 ID"
+record_scenario "大额审批与会签" "${PROC_ID_2}" "1"
 echo -e "${GREEN}✓ [发起人 portal-requester-a1f2] 流程发起成功（仅经理在发起时指定），实例 ID: ${PROC_ID_2}${RESET}"
 
 # 1. 部门经理 (指定个人 portal-manager-b3c4) 查获待办并办理
@@ -248,10 +333,9 @@ fetch_and_approve_task "portal-supplier-e7f8 供应商成员A" "ROLE_SUPPLIER" "
 fetch_and_approve_task "portal-supplier-f9a0 供应商成员B" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_B}" "${PROC_ID_2}" "大额订单确认派送"
 
 # 4. 校验流程状态
-DETAIL_2=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${PROC_ID_2}" \
-  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
-STATUS_2=$(echo "${DETAIL_2}" | jq -r '.data.status // empty')
-assert_process_status "$STATUS_2" "2"
+CURRENT_STEP="校验场景二最终状态"
+STATUS_2=$(wait_for_process_status "${TOKEN_PORTAL_REQUESTER}" "${PROC_ID_2}" "2")
+record_scenario "大额审批与会签" "${PROC_ID_2}" "${STATUS_2}"
 echo -e "${BOLD}${GREEN}✓ 场景二全流程测试完毕，流程状态 code: ${STATUS_2} (2=正常完成)${RESET}\n"
 
 
@@ -260,7 +344,8 @@ echo -e "${BOLD}${GREEN}✓ 场景二全流程测试完毕，流程状态 code: 
 # ==============================================================================
 echo -e "${BOLD}${YELLOW}>>> 启动 场景三：供应商拒单一票否决终止流程 (totalAmount = 2500元)${RESET}"
 
-CREATE_RESP_3=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
+CURRENT_STEP="发起场景三流程"
+CREATE_RESP_3=$(curl -X POST "${BASE_URL}/admin-api/bpm/process-instance/create" \
   -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -276,11 +361,10 @@ CREATE_RESP_3=$(curl -s -X POST "${BASE_URL}/admin-api/bpm/process-instance/crea
     }
   }')
 
+assert_api_success "${CREATE_RESP_3}" "发起场景三流程"
 PROC_ID_3=$(echo "${CREATE_RESP_3}" | jq -r '.data // empty')
-if [ -z "${PROC_ID_3}" ]; then
-  echo -e "${RED}❌ 场景三发起失败: $(echo "${CREATE_RESP_3}" | jq -c '.msg')${RESET}"
-  exit 1
-fi
+[ -n "${PROC_ID_3}" ] || fail "场景三未返回流程实例 ID"
+record_scenario "供应商拒绝终止" "${PROC_ID_3}" "1"
 echo -e "${GREEN}✓ [发起人 portal-requester-a1f2] 流程发起成功，实例 ID: ${PROC_ID_3}${RESET}"
 
 # 1. 部门经理 (指定个人 portal-manager-b3c4) 查获待办并办理
@@ -293,10 +377,9 @@ fetch_and_approve_task "portal-admin-d5e6 办公室管理员" "ROLE_ADMIN" "${TO
 fetch_and_reject_task "portal-supplier-e7f8 供应商成员A" "ROLE_SUPPLIER" "${TOKEN_PORTAL_SUPPLIER_A}" "${PROC_ID_3}" "【供应商拒单】商品断货且物流受阻，无法完成派送"
 
 # 4. 校验流程状态 (3=不通过/终止)
-DETAIL_3=$(curl -s -X GET "${BASE_URL}/admin-api/bpm/process-instance/get-approval-detail?processInstanceId=${PROC_ID_3}" \
-  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
-STATUS_3=$(echo "${DETAIL_3}" | jq -r '.data.status // empty')
-assert_process_status "$STATUS_3" "3"
+CURRENT_STEP="校验场景三最终状态"
+STATUS_3=$(wait_for_process_status "${TOKEN_PORTAL_REQUESTER}" "${PROC_ID_3}" "3")
+record_scenario "供应商拒绝终止" "${PROC_ID_3}" "${STATUS_3}"
 echo -e "${BOLD}${GREEN}✓ 场景三全流程测试完毕，流程状态 code: ${STATUS_3} (3=拒绝/终止)${RESET}\n"
 
 
@@ -306,3 +389,5 @@ echo -e "${BOLD}${GREEN}  场景 1 (小额直通): 实例 ${PROC_ID_1} -> 状态
 echo -e "${BOLD}${GREEN}  场景 2 (大额通过): 实例 ${PROC_ID_2} -> 状态: ${STATUS_2}${RESET}"
 echo -e "${BOLD}${GREEN}  场景 3 (拒单终止): 实例 ${PROC_ID_3} -> 状态: ${STATUS_3}${RESET}"
 echo -e "${BOLD}${GREEN}==============================================================================${RESET}"
+write_result_file "passed" "三个场景均通过"
+echo -e "${GREEN}  结构化结果: ${RESULT_FILE}${RESET}"

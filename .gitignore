@@ -56,3 +56,6 @@ application-my.yaml
 
 # Local browser automation snapshots and sessions
 .playwright-cli/
+
+# Local walkthrough result artifacts
+/output/walkthrough/

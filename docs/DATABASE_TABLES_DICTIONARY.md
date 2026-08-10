@@ -16,7 +16,6 @@
 | `bpm_process_expression` | 流程表达式配置表 | 核心使用 |
 | `bpm_process_instance_copy` | 流程实例抄送表 | 核心使用 |
 | `bpm_process_listener` | 流程监听器配置表 | 核心使用 |
-| `bpm_user_group` | 流程用户组配置表 | 核心使用 |
 
 ---
 
@@ -34,35 +33,20 @@ Flowable 工作流引擎底层运行时（`act_ru_*`）、历史记录（`act_hi
 
 ---
 
-## 3. 基础设施模块表 (Infra Module Tables)
+## 3. 已归档的 System / Infra 表
 
-用于系统参数配置及文件存储等基础功能。
+Headless BPM 默认构建不加载 system / infra 模块，且不读取这些表。为保留审计和回滚能力，全部原地重命名为 `bak_` 前缀；不再作为运行时表使用。
 
-| 表名 | 功能描述 | 状态 |
+| 原始表前缀 / 表 | 归档表 | 原用途 |
 | --- | --- | --- |
-| `infra_config` | 系统参数配置表 | 核心保留 |
-| `infra_file` | 文件上传记录表 | 核心保留 (流程附件/流程图) |
-| `infra_file_config` | 文件存储配置表 | 核心保留 |
-| `infra_file_content` | 数据库存储文件内容表 | 核心保留 |
+| `system_*`（32 张） | `bak_system_*` | 本地身份、组织、权限、字典、OAuth2、通知与审计 |
+| `infra_config`、`infra_file*` | `bak_infra_config`、`bak_infra_file*` | 本地参数及文件存储 |
+| `bpm_user_group` | `bak_bpm_user_group` | 已下线的本地用户组候选人策略 |
+| `bpm_oa_leave` | `bak_bpm_oa_leave` | 已下线的 OA 请假样例 |
 
 ---
 
-## 4. 系统管理模块表 (System Module Tables)
-
-支撑旧 system 模块的用户、角色、部门、字典、菜单及鉴权能力。Headless BPM 默认构建不加载该模块，也不读取本节任一表；本节仅保留为现有数据库盘点。
-
-| 分类 | 代表性表 | 功能描述 |
-| --- | --- | --- |
-| **组织架构** | `system_users`, `system_dept`, `system_post`, `system_user_post` | 用户、部门、岗位及关联关系 |
-| **权限与角色** | `system_role`, `system_menu`, `system_role_menu`, `system_user_role` | 角色、菜单权限与授权 |
-| **字典与公告** | `system_dict_type`, `system_dict_data`, `system_notice` | 系统数据字典与公告消息 |
-| **认证与 OAuth2** | `system_oauth2_client`, `system_oauth2_access_token`, `system_oauth2_refresh_token` | OAuth2 客户端与 Token 鉴权 |
-| **租户与日志** | `system_tenant`, `system_tenant_package`, `system_login_log`, `system_operate_log` | 多租户管理与审计日志 |
-| **消息通知** | `system_notify_template`, `system_notify_message`, `system_sms_*`, `system_mail_*` | 站内信、短信与邮件模板及日志 |
-
----
-
-## 5. 备份 / 已瘦身工具表 (Backup Tables with `bak_` Prefix)
+## 4. 备份 / 已瘦身工具表 (Backup Tables with `bak_` Prefix)
 
 已安全添加 `bak_` 前缀，与 BPM 主业务隔离：
 

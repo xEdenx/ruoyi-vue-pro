@@ -117,9 +117,9 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 
 | 表 | 前提 |
 | --- | --- |
-| `bpm_oa_leave` | 已下线旧 OA 请假示例。生产库在确认无待处理或审计保留需求后，执行 [删除脚本](migrations/2026-08-10-remove-bpm-oa-leave-example.sql)。新业务按 [Portal 业务接入模板](PORTAL_BUSINESS_BPM_INTEGRATION_TEMPLATE.md) 实现。 |
+| `bpm_oa_leave` | 已下线旧 OA 请假示例，已归档为 `bak_bpm_oa_leave`，不直接删除以保留回滚数据。新业务按 [Portal 业务接入模板](PORTAL_BUSINESS_BPM_INTEGRATION_TEMPLATE.md) 实现。 |
 | `bpm_process_instance_copy` | 当前不在删除范围。先保留抄送节点、监听器、查询 API 和审计记录；仅将收件人解算、投递和 Portal 收件箱替换为 Portal 适配器。未来若业务明确下线 BPM 抄送审计，再单独设计迁移和删除。 |
-| `bpm_user_group` | 已完成阶段 1 的本地用户组策略移除。 |
+| `bpm_user_group` | 已完成阶段 1 的本地用户组策略移除，已归档为 `bak_bpm_user_group`。 |
 
 `bpm_process_definition_info` 已将用户、部门和子流程管理员字段改为 Portal String ID；逗号分隔列的物理类型无需变化。旧数值白名单不允许自动映射，必须在 Portal 侧确认后重新保存。
 
@@ -148,7 +148,7 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 2. [x] 从 `yudao-server` 和根 `pom.xml` 移除 `system`、`infra` 依赖与 Reactor 模块；源码目录暂保留在仓库中，不参与 headless 默认构建。
 3. 清理 system/infra 配置、自动装配、测试夹具和无效 REST API。
 4. 在新建的最小 PostgreSQL schema 上验证启动，确认仅创建保留表。
-5. 备份生产数据后，以可回滚迁移删除候选表；不要以手工 `DROP TABLE` 替代迁移。
+5. 备份生产数据后，以可回滚迁移将候选表改名为 `bak_` 前缀；不要以手工 `DROP TABLE` 替代迁移。
 
 Flowable starter 当前可能自动引入 IDM 与 Event Registry。`ACT_ID_*`、`FLW_EVENT_*` 只能在精简依赖并验证相关引擎未启动后再清理，不能与 system 表一起直接删除。
 
