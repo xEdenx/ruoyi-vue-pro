@@ -13,9 +13,8 @@ import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmFormDO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
 import cn.iocoder.yudao.module.bpm.enums.task.BpmTaskStatusEnum;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.FlowableUtils;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskCreatedReqDTO;
-import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.task.Attachment;
@@ -30,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
 
 /**
  * Bpm 任务 Convert
@@ -44,7 +42,7 @@ public interface BpmTaskConvert {
 
     default PageResult<BpmTaskRespVO> buildTodoTaskPage(PageResult<Task> pageResult,
                                                         Map<String, ProcessInstance> processInstanceMap,
-                                                        Map<Long, AdminUserRespDTO> userMap,
+                                                        Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
                                                         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap) {
         return BeanUtils.toBean(pageResult, BpmTaskRespVO.class, taskVO -> {
             ProcessInstance processInstance = processInstanceMap.get(taskVO.getProcessInstanceId());
@@ -54,8 +52,7 @@ public interface BpmTaskConvert {
             taskVO.setProcessInstance(BeanUtils.toBean(processInstance, BpmTaskRespVO.ProcessInstance.class));
             // Portal 待办列表不查询本地用户字典；外部字符串 ID 由 Portal 自行渲染。
             if (CollUtil.isNotEmpty(userMap)) {
-                AdminUserRespDTO startUser = userMap.get(NumberUtils.parseLong(processInstance.getStartUserId()));
-                taskVO.getProcessInstance().setStartUser(BeanUtils.toBean(startUser, UserSimpleBaseVO.class));
+                taskVO.getProcessInstance().setStartUser(buildUser(processInstance.getStartUserId(), userMap));
             }
             taskVO.getProcessInstance().setCreateTime(DateUtils.of(processInstance.getStartTime()));
             // 摘要
@@ -66,8 +63,8 @@ public interface BpmTaskConvert {
 
     default PageResult<BpmTaskRespVO> buildTaskPage(PageResult<HistoricTaskInstance> pageResult,
                                                     Map<String, HistoricProcessInstance> processInstanceMap,
-                                                    Map<Long, AdminUserRespDTO> userMap,
-                                                    Map<Long, DeptRespDTO> deptMap,
+                                                    Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                                                    Map<String, BpmPortalOrganizationApi.PortalDepartment> deptMap,
                                                     Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap,
                                                     Map<String, List<Attachment>> taskAttachmentMap) {
         List<BpmTaskRespVO> taskVOList = CollectionUtils.convertList(pageResult.getList(), task -> {
@@ -75,17 +72,12 @@ public interface BpmTaskConvert {
             taskVO.setStatus(FlowableUtils.getTaskStatus(task)).setReason(FlowableUtils.getTaskReason(task));
             buildTaskEvidence(taskVO, task, taskAttachmentMap);
             // 用户信息
-            AdminUserRespDTO assignUser = userMap.get(NumberUtils.parseLong(task.getAssignee()));
-            if (assignUser != null) {
-                taskVO.setAssigneeUser(BeanUtils.toBean(assignUser, UserSimpleBaseVO.class));
-                findAndThen(deptMap, assignUser.getDeptId(), dept -> taskVO.getAssigneeUser().setDeptName(dept.getName()));
-            }
+            taskVO.setAssigneeUser(buildUser(task.getAssignee(), userMap));
             // 流程实例
             HistoricProcessInstance processInstance = processInstanceMap.get(taskVO.getProcessInstanceId());
             if (processInstance != null) {
-                AdminUserRespDTO startUser = userMap.get(NumberUtils.parseLong(processInstance.getStartUserId()));
                 taskVO.setProcessInstance(BeanUtils.toBean(processInstance, BpmTaskRespVO.ProcessInstance.class));
-                taskVO.getProcessInstance().setStartUser(BeanUtils.toBean(startUser, UserSimpleBaseVO.class));
+                taskVO.getProcessInstance().setStartUser(buildUser(processInstance.getStartUserId(), userMap));
                 // 摘要
                 taskVO.getProcessInstance().setSummary(FlowableUtils.getSummary(processDefinitionInfoMap.get(processInstance.getProcessDefinitionId()),
                         processInstance.getProcessVariables()));
@@ -97,8 +89,8 @@ public interface BpmTaskConvert {
 
     default List<BpmTaskRespVO> buildTaskListByProcessInstanceId(List<HistoricTaskInstance> taskList,
                                                                  Map<Long, BpmFormDO> formMap,
-                                                                 Map<Long, AdminUserRespDTO> userMap,
-                                                                 Map<Long, DeptRespDTO> deptMap,
+                                                                 Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                                                                 Map<String, BpmPortalOrganizationApi.PortalDepartment> deptMap,
                                                                  Map<String, List<Attachment>> taskAttachmentMap) {
         return CollectionUtils.convertList(taskList, task -> {
             // 特殊：已取消的任务，不返回
@@ -123,22 +115,11 @@ public interface BpmTaskConvert {
     }
 
     default List<BpmTaskRespVO> buildTaskListByParentTaskId(List<Task> taskList,
-                                                            Map<Long, AdminUserRespDTO> userMap,
-                                                            Map<Long, DeptRespDTO> deptMap) {
+                                                            Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                                                            Map<String, BpmPortalOrganizationApi.PortalDepartment> deptMap) {
         return convertList(taskList, task -> BeanUtils.toBean(task, BpmTaskRespVO.class, taskVO -> {
-            AdminUserRespDTO assignUser = userMap.get(NumberUtils.parseLong(task.getAssignee()));
-            if (assignUser != null) {
-                taskVO.setAssigneeUser(BeanUtils.toBean(assignUser, UserSimpleBaseVO.class));
-                DeptRespDTO dept = deptMap.get(assignUser.getDeptId());
-                if (dept != null) {
-                    taskVO.getAssigneeUser().setDeptName(dept.getName());
-                }
-            }
-            AdminUserRespDTO ownerUser = userMap.get(NumberUtils.parseLong(task.getOwner()));
-            if (ownerUser != null) {
-                taskVO.setOwnerUser(BeanUtils.toBean(ownerUser, UserSimpleBaseVO.class));
-                findAndThen(deptMap, ownerUser.getDeptId(), dept -> taskVO.getOwnerUser().setDeptName(dept.getName()));
-            }
+            taskVO.setAssigneeUser(buildUser(task.getAssignee(), userMap));
+            taskVO.setOwnerUser(buildUser(task.getOwner(), userMap));
         }));
     }
 
@@ -157,30 +138,25 @@ public interface BpmTaskConvert {
         return bpmTaskRespVO;
     }
 
-    default BpmMessageSendWhenTaskCreatedReqDTO convert(ProcessInstance processInstance, AdminUserRespDTO startUser,
-                                                        Task task) {
+    default BpmMessageSendWhenTaskCreatedReqDTO convert(ProcessInstance processInstance, Task task) {
         BpmMessageSendWhenTaskCreatedReqDTO reqDTO = new BpmMessageSendWhenTaskCreatedReqDTO();
         reqDTO.setProcessInstanceId(processInstance.getProcessInstanceId())
                 .setProcessInstanceName(processInstance.getName())
-                .setStartUserId(startUser != null ? startUser.getId() : NumberUtils.parseLong(processInstance.getStartUserId()))
-                .setStartUserNickname(startUser != null ? startUser.getNickname() : processInstance.getStartUserId())
+                .setStartUserId(processInstance.getStartUserId())
                 .setTaskId(task.getId()).setTaskName(task.getName())
-                .setAssigneeUserId(NumberUtils.parseLong(task.getAssignee()));
+                .setAssigneeUserId(task.getAssignee());
         return reqDTO;
     }
 
     default void buildTaskOwner(BpmTaskRespVO task, String taskOwner,
-                                Map<Long, AdminUserRespDTO> userMap,
-                                Map<Long, DeptRespDTO> deptMap) {
-        AdminUserRespDTO ownerUser = userMap.get(NumberUtils.parseLong(taskOwner));
-        if (ownerUser != null) {
-            task.setOwnerUser(BeanUtils.toBean(ownerUser, UserSimpleBaseVO.class));
-            findAndThen(deptMap, ownerUser.getDeptId(), dept -> task.getOwnerUser().setDeptName(dept.getName()));
-        }
+                                Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                                Map<String, BpmPortalOrganizationApi.PortalDepartment> deptMap) {
+        task.setOwnerUser(buildUser(taskOwner, userMap));
     }
 
     default void buildTaskChildren(BpmTaskRespVO task, Map<String, List<Task>> childrenTaskMap,
-                                   Map<Long, AdminUserRespDTO> userMap, Map<Long, DeptRespDTO> deptMap) {
+                                   Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                                   Map<String, BpmPortalOrganizationApi.PortalDepartment> deptMap) {
         List<Task> childTasks = childrenTaskMap.get(task.getId());
         if (CollUtil.isNotEmpty(childTasks)) {
             task.setChildren(
@@ -196,13 +172,21 @@ public interface BpmTaskConvert {
     }
 
     default void buildTaskAssignee(BpmTaskRespVO task, String taskAssignee,
-                                   Map<Long, AdminUserRespDTO> userMap,
-                                   Map<Long, DeptRespDTO> deptMap) {
-        AdminUserRespDTO assignUser = userMap.get(NumberUtils.parseLong(taskAssignee));
-        if (assignUser != null) {
-            task.setAssigneeUser(BeanUtils.toBean(assignUser, UserSimpleBaseVO.class));
-            findAndThen(deptMap, assignUser.getDeptId(), dept -> task.getAssigneeUser().setDeptName(dept.getName()));
+                                   Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                                   Map<String, BpmPortalOrganizationApi.PortalDepartment> deptMap) {
+        task.setAssigneeUser(buildUser(taskAssignee, userMap));
+    }
+
+    default UserSimpleBaseVO buildUser(String userId, Map<String, BpmPortalOrganizationApi.PortalUser> userMap) {
+        if (userId == null || userMap == null) {
+            return null;
         }
+        BpmPortalOrganizationApi.PortalUser user = userMap.get(userId);
+        if (user == null) {
+            return null;
+        }
+        return new UserSimpleBaseVO().setId(user.getId()).setNickname(user.getDisplayName()).setAvatar(user.getAvatar())
+                .setDeptId(user.getDepartmentId()).setDeptName(user.getDepartmentName());
     }
 
     /**

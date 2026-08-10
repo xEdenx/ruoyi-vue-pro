@@ -32,7 +32,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.util.pattern.PathPattern;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,14 +67,6 @@ public class YudaoWebSecurityConfigurerAdapter {
      */
     @Resource
     private TokenAuthenticationFilter authenticationTokenFilter;
-
-    /**
-     * 自定义的权限映射 Bean 们
-     *
-     * @see #filterChain(HttpSecurity)
-     */
-    @Resource
-    private List<AuthorizeRequestsCustomizer> authorizeRequestsCustomizers;
 
     @Resource
     private ApplicationContext applicationContext;
@@ -140,9 +131,7 @@ public class YudaoWebSecurityConfigurerAdapter {
                     // 1.3 基于 yudao.security.permit-all-urls 无需认证
                     .requestMatchers(securityProperties.getPermitAllUrls().toArray(new String[0])).permitAll()
                 )
-                // ②：每个项目的自定义规则
-                .authorizeHttpRequests(c -> authorizeRequestsCustomizers.forEach(customizer -> customizer.customize(c)))
-                // ③：兜底规则，必须认证
+                // ②：兜底规则，必须认证
                 .authorizeHttpRequests(c -> c
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll() // WebFlux 异步请求，无需认证，目的：SSE 场景
                         .anyRequest().authenticated());

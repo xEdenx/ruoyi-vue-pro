@@ -2,7 +2,7 @@ package cn.iocoder.yudao.framework.apilog.config;
 
 import cn.iocoder.yudao.framework.apilog.core.filter.ApiAccessLogFilter;
 import cn.iocoder.yudao.framework.apilog.core.interceptor.ApiAccessLogInterceptor;
-import cn.iocoder.yudao.framework.common.biz.infra.logger.ApiAccessLogCommonApi;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApplicationLogApi;
 import cn.iocoder.yudao.framework.common.enums.WebFilterOrderEnum;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import cn.iocoder.yudao.framework.web.config.YudaoWebAutoConfiguration;
@@ -25,8 +25,8 @@ public class YudaoApiLogAutoConfiguration implements WebMvcConfigurer {
     @ConditionalOnProperty(prefix = "yudao.access-log", value = "enable", matchIfMissing = true) // 允许使用 yudao.access-log.enable=false 禁用访问日志
     public FilterRegistrationBean<ApiAccessLogFilter> apiAccessLogFilter(WebProperties webProperties,
                                                                          @Value("${spring.application.name}") String applicationName,
-                                                                         ApiAccessLogCommonApi apiAccessLogApi) {
-        ApiAccessLogFilter filter = new ApiAccessLogFilter(webProperties, applicationName, apiAccessLogApi);
+                                                                         PortalApplicationLogApi applicationLogApi) {
+        ApiAccessLogFilter filter = new ApiAccessLogFilter(webProperties, applicationName, applicationLogApi);
         return createFilterBean(filter, WebFilterOrderEnum.API_ACCESS_LOG_FILTER);
     }
 

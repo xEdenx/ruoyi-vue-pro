@@ -171,6 +171,16 @@ public class BpmTaskCandidateInvoker {
     public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId,
                                                        Long startUserId, String processDefinitionId,
                                                        Map<String, Object> processVariables) {
+        return calculateAssigneeIdsByActivity(bpmnModel, activityId, String.valueOf(startUserId), processDefinitionId,
+                processVariables);
+    }
+
+    /**
+     * 计算审批详情中展示的处理人 ID，保留 Portal 原始发起人 ID。
+     */
+    public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId,
+                                                       String startUserId, String processDefinitionId,
+                                                       Map<String, Object> processVariables) {
         FlowElement flowElement = BpmnModelUtils.getFlowElementById(bpmnModel, activityId);
         if (flowElement instanceof UserTask) {
             BpmTaskCandidateStrategy strategy = getCandidateStrategy(BpmnModelUtils.parseCandidateStrategy(flowElement));

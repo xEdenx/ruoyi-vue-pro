@@ -1,5 +1,7 @@
 package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.headless;
 
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -32,7 +34,12 @@ public class LocalPortalCandidateApiMock implements HeadlessRemoteCandidateStrat
         return assigneeIds;
     }
 
-    private record ResolutionKey(String activityId, String roleParam) {
+    @AllArgsConstructor
+    @EqualsAndHashCode
+    private static class ResolutionKey {
+
+        private final String activityId;
+        private final String roleParam;
     }
 
 }

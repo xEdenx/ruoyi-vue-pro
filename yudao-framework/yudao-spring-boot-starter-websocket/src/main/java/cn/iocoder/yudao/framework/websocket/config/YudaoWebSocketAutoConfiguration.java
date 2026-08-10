@@ -5,7 +5,6 @@ import cn.iocoder.yudao.framework.mq.redis.core.RedisMQTemplate;
 import cn.iocoder.yudao.framework.websocket.core.handler.JsonWebSocketMessageHandler;
 import cn.iocoder.yudao.framework.websocket.core.listener.WebSocketMessageListener;
 import cn.iocoder.yudao.framework.websocket.core.security.LoginUserHandshakeInterceptor;
-import cn.iocoder.yudao.framework.websocket.core.security.WebSocketAuthorizeRequestsCustomizer;
 import cn.iocoder.yudao.framework.websocket.core.sender.kafka.KafkaWebSocketMessageConsumer;
 import cn.iocoder.yudao.framework.websocket.core.sender.kafka.KafkaWebSocketMessageSender;
 import cn.iocoder.yudao.framework.websocket.core.sender.local.LocalWebSocketMessageSender;
@@ -21,6 +20,7 @@ import cn.iocoder.yudao.framework.websocket.core.session.WebSocketSessionManager
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -32,8 +32,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.server.HandshakeInterceptor;
-
-import java.util.List;
 
 /**
  * WebSocket 自动配置
@@ -65,9 +63,9 @@ public class YudaoWebSocketAutoConfiguration {
 
     @Bean
     public WebSocketHandler webSocketHandler(WebSocketSessionManager sessionManager,
-                                             List<? extends WebSocketMessageListener<?>> messageListeners) {
+                                             ObjectProvider<WebSocketMessageListener<?>> messageListenerProvider) {
         // 1. 创建 JsonWebSocketMessageHandler 对象，处理消息
-        JsonWebSocketMessageHandler messageHandler = new JsonWebSocketMessageHandler(messageListeners);
+        JsonWebSocketMessageHandler messageHandler = new JsonWebSocketMessageHandler(messageListenerProvider.orderedStream().toList());
         // 2. 创建 WebSocketSessionHandlerDecorator 对象，处理连接
         return new WebSocketSessionHandlerDecorator(messageHandler, sessionManager);
     }
@@ -75,11 +73,6 @@ public class YudaoWebSocketAutoConfiguration {
     @Bean
     public WebSocketSessionManager webSocketSessionManager() {
         return new WebSocketSessionManagerImpl();
-    }
-
-    @Bean
-    public WebSocketAuthorizeRequestsCustomizer webSocketAuthorizeRequestsCustomizer(WebSocketProperties webSocketProperties) {
-        return new WebSocketAuthorizeRequestsCustomizer(webSocketProperties);
     }
 
     // ==================== Sender 相关 ====================

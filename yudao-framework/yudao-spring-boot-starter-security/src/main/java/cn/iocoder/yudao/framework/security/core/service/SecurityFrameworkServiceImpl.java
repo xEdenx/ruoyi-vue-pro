@@ -2,16 +2,13 @@ package cn.iocoder.yudao.framework.security.core.service;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.biz.system.permission.PermissionCommonApi;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
-import lombok.AllArgsConstructor;
 
 import java.util.Arrays;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.skipPermissionCheck;
 
 /**
@@ -19,7 +16,6 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
  *
  * @author 芋道源码
  */
-@AllArgsConstructor
 public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
 
     /**
@@ -31,8 +27,6 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
     private static final Set<String> HEADLESS_PORTAL_BPM_PERMISSIONS = Set.of(
             "bpm:process-instance:query", "bpm:task:query", "bpm:task:update");
     private static final String BPM_MODEL_MANAGER_ROLE = "ROLE_BPM_MODEL_MANAGER";
-
-    private final PermissionCommonApi permissionApi;
 
     @Override
     public boolean hasPermission(String permission) {
@@ -56,13 +50,8 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
                             && permission.startsWith("bpm:")));
         }
 
-        // 权限校验
-        String userId = getLoginUserId();
-        if (StrUtil.isBlank(userId)) {
-            return false;
-        }
-        Long localUserId = cn.iocoder.yudao.framework.common.util.number.NumberUtils.parseLong(userId);
-        return localUserId != null && permissionApi.hasAnyPermissions(localUserId, permissions);
+        // 未经 Portal claims 标记的主体不允许访问 BPM 管理或运行 API。
+        return false;
     }
 
     @Override
@@ -82,13 +71,8 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
             return Arrays.stream(roles).anyMatch(role -> getPortalRoles(loginUser).contains(role));
         }
 
-        // 权限校验
-        String userId = getLoginUserId();
-        if (StrUtil.isBlank(userId)) {
-            return false;
-        }
-        Long localUserId = cn.iocoder.yudao.framework.common.util.number.NumberUtils.parseLong(userId);
-        return localUserId != null && permissionApi.hasAnyRoles(localUserId, roles);
+        // 未经 Portal claims 标记的主体不具备角色。
+        return false;
     }
 
     private static boolean isPortalJwt(LoginUser loginUser) {

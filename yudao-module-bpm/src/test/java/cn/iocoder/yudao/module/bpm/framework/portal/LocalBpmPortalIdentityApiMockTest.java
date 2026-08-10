@@ -6,24 +6,32 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LocalBpmPortalIdentityApiMockTest {
 
-    private final LocalBpmPortalIdentityApiMock mock = new LocalBpmPortalIdentityApiMock();
+    private final LocalBpmPortalIdentityApiMock portalApi = new LocalBpmPortalIdentityApiMock();
 
     @Test
-    void modelManagerRoleComesFromPortalMock() {
-        assertTrue(mock.hasAnyRole("portal-manager-b3c4", List.of("ROLE_BPM_MODEL_MANAGER")));
-        assertFalse(mock.hasAnyRole("portal-requester-a1f2", List.of("ROLE_BPM_MODEL_MANAGER")));
+    void resolveUserIds_resolvesDepartmentLeaderFromPortalDirectory() {
+        assertEquals(Set.of("portal-manager-b3c4"), portalApi.resolveUserIds("DEPT_LEADER_OF_USER",
+                List.of("portal-requester-a1f2"), "portal-requester-a1f2", "process-1"));
     }
 
     @Test
-    void organizationSelectorsResolveFinalPortalUserIds() {
-        assertEquals(Set.of("portal-supplier-e7f8", "portal-supplier-f9a0"),
-                mock.resolveUserIds("ROLE", Set.of("ROLE_SUPPLIER"), "portal-requester-a1f2", "instance-1"));
-        assertEquals(Set.of("portal-admin-d5e6"),
-                mock.resolveUserIds("DEPT", Set.of("portal-dept-admin"), "portal-requester-a1f2", "instance-1"));
+    void getDepartment_returnsPortalStringIdProjection() {
+        BpmPortalOrganizationApi.PortalDepartment department = portalApi.getDepartment("portal-dept-general");
+
+        assertEquals("portal-dept-general", department.getId());
+        assertEquals("通用部门", department.getName());
+    }
+
+    @Test
+    void listSelectableDirectory_returnsPortalStringIds() {
+        assertEquals(List.of("portal-admin-d5e6", "portal-manager-b3c4", "portal-requester-a1f2",
+                        "portal-supplier-e7f8", "portal-supplier-f9a0"),
+                portalApi.listSelectableUsers().stream().map(BpmPortalOrganizationApi.PortalUser::getId).toList());
+        assertEquals(List.of("portal-dept-admin", "portal-dept-general", "portal-dept-supplier"),
+                portalApi.listSelectableDepartments().stream()
+                        .map(BpmPortalOrganizationApi.PortalDepartment::getId).toList());
     }
 }

@@ -32,7 +32,7 @@ public class BpmPortalUserProjection {
         if (user == null) {
             return null;
         }
-        return new UserSimpleBaseVO().setId(user.id()).setNickname(user.displayName()).setAvatar(user.avatar())
-                .setDeptId(user.departmentId()).setDeptName(user.departmentName());
+        return new UserSimpleBaseVO().setId(user.getId()).setNickname(user.getDisplayName()).setAvatar(user.getAvatar())
+                .setDeptId(user.getDepartmentId()).setDeptName(user.getDepartmentName());
     }
 }

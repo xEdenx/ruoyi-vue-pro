@@ -111,6 +111,11 @@ public interface BpmProcessInstanceService {
     List<BpmApprovalDetailRespVO.ActivityNode> getNextApprovalNodes(Long loginUserId, @Valid BpmApprovalDetailReqVO reqVO);
 
     /**
+     * 获取 Portal 身份下的下一个执行节点。
+     */
+    List<BpmApprovalDetailRespVO.ActivityNode> getNextApprovalNodes(String loginUserId, @Valid BpmApprovalDetailReqVO reqVO);
+
+    /**
      * 获取流程实例的 BPMN 模型视图
      *
      * @param id 流程实例的编号
@@ -152,12 +157,22 @@ public interface BpmProcessInstanceService {
     void cancelProcessInstanceByStartUser(Long userId, @Valid BpmProcessInstanceCancelReqVO cancelReqVO);
 
     /**
+     * Portal 发起人取消流程实例。用户 ID 按原始字符串与 Flowable 保存值比较。
+     */
+    void cancelProcessInstanceByStartUser(String userId, @Valid BpmProcessInstanceCancelReqVO cancelReqVO);
+
+    /**
      * 管理员取消流程实例
      *
      * @param userId      用户编号
      * @param cancelReqVO 取消信息
      */
     void cancelProcessInstanceByAdmin(Long userId, BpmProcessInstanceCancelReqVO cancelReqVO);
+
+    /**
+     * Portal 管理员取消流程实例。
+     */
+    void cancelProcessInstanceByAdmin(String userId, BpmProcessInstanceCancelReqVO cancelReqVO);
 
     /**
      * 更新 ProcessInstance 为不通过

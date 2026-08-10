@@ -49,6 +49,9 @@ public class BpmProcessInstanceRespVO {
     /**
      * 发起流程的用户
      */
+    @Schema(description = "发起人编号。Flowable 保存 Portal 原始 String ID", example = "portal-requester-a1f2")
+    private String startUserId;
+
     private UserSimpleBaseVO startUser;
 
     @Schema(description = "流程定义的编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "2048")

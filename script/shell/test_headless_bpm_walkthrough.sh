@@ -31,12 +31,13 @@ echo -e "${BOLD}${BLUE}  目标服务地址: ${BASE_URL}${RESET}"
 echo -e "${BOLD}${BLUE}  流程 Definition Key: ${PROCESS_KEY}${RESET}"
 echo -e "${BOLD}${BLUE}==============================================================================${RESET}\n"
 
-# 构造 Base64URL 格式的 JWT Token
+# 构造仅供本地 Headless Mock 使用的 Base64URL token。
+# 生产 Portal 必须使用已经过验签的 JWT 或受信任网关身份，不能复用本 token。
 make_jwt() {
   local user_id="$1"
   local role="$2"
   local header_b64=$(echo -n '{"alg":"HS256","typ":"JWT"}' | base64 | tr -d '\n=' | tr '+/' '-_')
-  local payload_b64=$(echo -n "{\"userId\":\"${user_id}\",\"tenantId\":1,\"role\":\"${role}\"}" | base64 | tr -d '\n=' | tr '+/' '-_')
+  local payload_b64=$(echo -n "{\"userId\":\"${user_id}\",\"tenantId\":1,\"role\":\"${role}\",\"headlessMock\":true}" | base64 | tr -d '\n=' | tr '+/' '-_')
   echo "${header_b64}.${payload_b64}.fake_signature"
 }
 

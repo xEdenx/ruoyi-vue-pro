@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.framework.tenant.core.service;
 
-import cn.iocoder.yudao.framework.common.biz.system.tenant.TenantCommonApi;
+import cn.iocoder.yudao.framework.common.biz.portal.tenant.PortalTenantApi;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.util.cache.CacheUtils;
 import com.google.common.cache.CacheLoader;
@@ -21,7 +21,7 @@ public class TenantFrameworkServiceImpl implements TenantFrameworkService {
 
     private static final ServiceException SERVICE_EXCEPTION_NULL = new ServiceException();
 
-    private final TenantCommonApi tenantApi;
+    private final PortalTenantApi tenantApi;
 
     /**
      * 针对 {@link #getTenantIds()} 的缓存

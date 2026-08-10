@@ -62,7 +62,7 @@ public class BpmPortalAuthController {
     @Operation(summary = "使用 Portal 用户 ID 登录本地 Headless BPM Mock")
     public CommonResult<BpmPortalMockLoginRespVO> login(@Valid @RequestBody BpmPortalMockLoginReqVO reqVO) {
         BpmPortalOrganizationApi.PortalUser user = portalOrganizationApi.getUser(reqVO.getUserId());
-        if (!isValidPassword(reqVO.getPassword()) || user == null || !user.active()) {
+        if (!isValidPassword(reqVO.getPassword()) || user == null || !user.isActive()) {
             throw exception(UNAUTHORIZED);
         }
         BpmPortalMockLoginRespVO response = new BpmPortalMockLoginRespVO();
@@ -90,7 +90,7 @@ public class BpmPortalAuthController {
             throw exception(UNAUTHORIZED);
         }
         BpmPortalOrganizationApi.PortalUser user = portalOrganizationApi.getUser(loginUser.getId());
-        if (user == null || !user.active()) {
+        if (user == null || !user.isActive()) {
             throw exception(UNAUTHORIZED);
         }
         return user;
@@ -98,8 +98,8 @@ public class BpmPortalAuthController {
 
     private String issueLocalMockToken(BpmPortalOrganizationApi.PortalUser user) {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("userId", user.id());
-        payload.put("role", String.join(",", user.roleCodes()));
+        payload.put("userId", user.getId());
+        payload.put("role", String.join(",", user.getRoleCodes()));
         payload.put("tenantId", tenantId);
         payload.put(LOCAL_MOCK_CLAIM, true);
         payload.put("iss", "local-headless-bpm-mock");
@@ -113,12 +113,12 @@ public class BpmPortalAuthController {
 
     private static BpmPortalUserRespVO convertUser(BpmPortalOrganizationApi.PortalUser user) {
         BpmPortalUserRespVO response = new BpmPortalUserRespVO();
-        response.setId(user.id());
-        response.setDisplayName(user.displayName());
-        response.setAvatar(user.avatar());
-        response.setDepartmentId(user.departmentId());
-        response.setDepartmentName(user.departmentName());
-        response.setRoleCodes(user.roleCodes());
+        response.setId(user.getId());
+        response.setDisplayName(user.getDisplayName());
+        response.setAvatar(user.getAvatar());
+        response.setDepartmentId(user.getDepartmentId());
+        response.setDepartmentName(user.getDepartmentName());
+        response.setRoleCodes(user.getRoleCodes());
         return response;
     }
 

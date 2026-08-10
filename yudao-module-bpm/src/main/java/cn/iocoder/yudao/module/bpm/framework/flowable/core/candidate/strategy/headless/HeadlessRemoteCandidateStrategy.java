@@ -55,7 +55,15 @@ public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy
     @Override
     public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId, String param,
                                                         Long startUserId, String processDefinitionId, Map<String, Object> processVariables) {
-        return resolveAssigneeIds(String.valueOf(startUserId), activityId, param, null);
+        return calculateAssigneeIdsByActivity(bpmnModel, activityId, param, String.valueOf(startUserId),
+                processDefinitionId, processVariables);
+    }
+
+    @Override
+    public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId, String param,
+                                                        String startUserId, String processDefinitionId,
+                                                        Map<String, Object> processVariables) {
+        return resolveAssigneeIds(startUserId, activityId, param, null);
     }
 
     @Override

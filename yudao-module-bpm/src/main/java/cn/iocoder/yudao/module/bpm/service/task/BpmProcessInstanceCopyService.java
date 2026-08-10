@@ -22,7 +22,7 @@ public interface BpmProcessInstanceCopyService {
      * @param reason 抄送意见
      * @param taskId 流程任务编号
      */
-    void createProcessInstanceCopy(Collection<Long> userIds, String reason, String taskId);
+    void createProcessInstanceCopy(Collection<String> userIds, String reason, String taskId);
 
     /**
      * 【自动抄送】流程实例的抄送
@@ -34,7 +34,7 @@ public interface BpmProcessInstanceCopyService {
      * @param activityName 任务编号（对应 {@link FlowNode#getName()}）
      * @param taskId 任务编号，允许空
      */
-    void createProcessInstanceCopy(Collection<Long> userIds, String reason,
+    void createProcessInstanceCopy(Collection<String> userIds, String reason,
                                    @NotEmpty(message = "流程实例编号不能为空") String processInstanceId,
                                    @NotEmpty(message = "流程活动编号不能为空") String activityId,
                                    @NotEmpty(message = "流程活动名字不能为空") String activityName,
@@ -47,7 +47,7 @@ public interface BpmProcessInstanceCopyService {
      * @param pageReqVO 分页请求
      * @return 抄送的分页结果
      */
-    PageResult<BpmProcessInstanceCopyDO> getProcessInstanceCopyPage(Long userId,
+    PageResult<BpmProcessInstanceCopyDO> getProcessInstanceCopyPage(String userId,
                                                                     BpmProcessInstanceCopyPageReqVO pageReqVO);
 
     /**

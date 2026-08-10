@@ -41,8 +41,7 @@ import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
-import static cn.iocoder.yudao.module.bpm.controller.admin.task.BpmPortalUserIdUtils.getCurrentUserId;
+import static cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalPrincipalUtils.getCurrentUserId;
 
 @Tag(name = "管理后台 - 流程任务实例")
 @RestController
@@ -109,7 +108,7 @@ public class BpmTaskController {
     @Operation(summary = "获取全部任务的分页", description = "用于【流程任务】菜单")
     @PreAuthorize("@ss.hasPermission('bpm:task:manager-query')")
     public CommonResult<PageResult<BpmTaskRespVO>> getTaskManagerPage(@Valid BpmTaskPageReqVO pageVO) {
-        PageResult<HistoricTaskInstance> pageResult = taskService.getTaskPage(getLoginUserId(), pageVO);
+        PageResult<HistoricTaskInstance> pageResult = taskService.getTaskPage(pageVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(PageResult.empty());
         }
@@ -179,7 +178,7 @@ public class BpmTaskController {
     @Operation(summary = "退回任务", description = "用于【流程详情】的【退回】按钮")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> returnTask(@Valid @RequestBody BpmTaskReturnReqVO reqVO) {
-        taskService.returnTask(getLoginUserId(), reqVO);
+        taskService.returnTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -187,7 +186,7 @@ public class BpmTaskController {
     @Operation(summary = "委派任务", description = "用于【流程详情】的【委派】按钮")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> delegateTask(@Valid @RequestBody BpmTaskDelegateReqVO reqVO) {
-        taskService.delegateTask(getLoginUserId(), reqVO);
+        taskService.delegateTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -195,7 +194,7 @@ public class BpmTaskController {
     @Operation(summary = "转派任务", description = "用于【流程详情】的【转派】按钮")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> transferTask(@Valid @RequestBody BpmTaskTransferReqVO reqVO) {
-        taskService.transferTask(getLoginUserId(), reqVO);
+        taskService.transferTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -203,7 +202,7 @@ public class BpmTaskController {
     @Operation(summary = "加签", description = "before 前加签，after 后加签")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> createSignTask(@Valid @RequestBody BpmTaskSignCreateReqVO reqVO) {
-        taskService.createSignTask(getLoginUserId(), reqVO);
+        taskService.createSignTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -211,7 +210,7 @@ public class BpmTaskController {
     @Operation(summary = "减签")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> deleteSignTask(@Valid @RequestBody BpmTaskSignDeleteReqVO reqVO) {
-        taskService.deleteSignTask(getLoginUserId(), reqVO);
+        taskService.deleteSignTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -219,7 +218,7 @@ public class BpmTaskController {
     @Operation(summary = "抄送任务")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> copyTask(@Valid @RequestBody BpmTaskCopyReqVO reqVO) {
-        taskService.copyTask(getLoginUserId(), reqVO);
+        taskService.copyTask(getCurrentUserId(), reqVO);
         return success(true);
     }
 
@@ -227,7 +226,7 @@ public class BpmTaskController {
     @Operation(summary = "撤回任务")
     @PreAuthorize("@ss.hasPermission('bpm:task:update')")
     public CommonResult<Boolean> withdrawTask(@RequestParam("taskId") String taskId) {
-        taskService.withdrawTask(getLoginUserId(), taskId);
+        taskService.withdrawTask(getCurrentUserId(), taskId);
         return success(true);
     }
 

@@ -18,8 +18,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.List;
-
 /**
  * BPM 模块的 Flowable 配置类
  *
@@ -79,9 +77,9 @@ public class BpmFlowableConfiguration {
     }
 
     @Bean
-    public BpmTaskCandidateInvoker bpmTaskCandidateInvoker(List<BpmTaskCandidateStrategy> strategyList,
+    public BpmTaskCandidateInvoker bpmTaskCandidateInvoker(ObjectProvider<BpmTaskCandidateStrategy> strategyProvider,
                                                            BpmPortalOrganizationApi portalOrganizationApi) {
-        return new BpmTaskCandidateInvoker(strategyList, portalOrganizationApi);
+        return new BpmTaskCandidateInvoker(strategyProvider.orderedStream().toList(), portalOrganizationApi);
     }
 
     // =========== 自己拓展的 Bean ==========

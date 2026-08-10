@@ -57,14 +57,14 @@ Headless BPM Server
 
 目标运行时保留：`yudao-server`、`yudao-module-bpm`、必要的 `yudao-framework` starter、`yudao-dependencies` 和 PostgreSQL 驱动。
 
-目标运行时移除：`yudao-module-system`、`yudao-module-infra`，以及未启用的业务模块。
+目标运行时移除：`yudao-module-system`、`yudao-module-infra`，以及未启用的业务模块。当前 `yudao-server` 已仅依赖 BPM；安全 starter 不再调用 system OAuth2 或权限 API。
 
 ## 3. 阶段 0：冻结 API 与数据契约
 
 **目标：** 在删除依赖前明确 Portal 与 BPM 的可信边界。
 
-- [ ] 定义 `PortalPrincipal`：`userId: String`、可选 `tenantId: String`、`authorities`。（本地 Mock 登录与 `/me` 已完成；生产 Principal 尚未实现）
-- [ ] 由 BPM 网关或服务端验证 Portal JWT / mTLS；不得从普通请求头读取用户 ID。（本地 Mock token 仅用于 walkthrough，不能作为验收）
+- [x] 定义 `BpmPortalPrincipal`：`userId: String`、可选 `tenantId: String`、`authorities`；Controller 与 Flowable Filter 经 `BpmPortalPrincipalUtils` 读取当前主体。（本地安全上下文适配已完成；生产可信 Principal 尚未实现）
+- [ ] 由 BPM 网关或服务端验证 Portal JWT / mTLS，并提供 `PortalTenantApi`；不得从普通请求头读取用户 ID。（本地 Mock token 和固定租户仅用于 walkthrough，不能作为验收）
 - [ ] 将运行 API 收敛为：流程定义/表单读取、创建流程、待办/已办、同意/拒绝、审批轨迹；流程图维护 API 仅开放给定义管理员。
 - [ ] 定义流程发起契约：`processDefinitionId`（或解析后的 key/version）、`businessKey`、路由变量、`startUserSelectAssignees`。
 - [ ] 约定 `startUserSelectAssignees` 中只允许最终用户 String ID；Portal 在调用前完成角色到用户的展开。
@@ -79,24 +79,24 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 
 ### 4.1 身份与权限替换
 
-- [ ] 用 `PortalPrincipal` 替换 `getLoginUserId()` 及其 Long 类型调用链。
+- [x] 用 `BpmPortalPrincipalUtils` 替换 BPM Controller、Flowable Filter 中的 `getLoginUserId()` 及其 Long 类型调用链；模型维护与任务管理页不再传递 Long 登录 ID。生产可信 Principal 的构造仍待阶段 0 验签完成。
 - [ ] 用签名 claims 的 `hasAuthority(...)` 或 API 网关策略替换 `@ss.hasPermission(...)`。
 - [ ] 定义管理员权限，例如 `bpm:definition:manage`；运行用户仅能操作其 String ID 对应的任务。
-- [ ] 流程发起人、任务 owner/assignee、历史返回字段统一为 String。（任务运行接口与用户投影已支持；流程实例、抄送及可选操作仍待迁移）
+- [x] 流程发起人、任务 owner/assignee、历史返回字段统一为 String。（任务运行接口、流程实例、抄送、用户投影、转办、委派、加签、减签、退回、撤回及定义白名单均已迁移；身份 claims 仍待迁移）
 
 ### 4.2 删除本地组织候选人能力
 
 - [x] 仅保留 `START_USER_SELECT` 与 `HEADLESS_REMOTE`；策略枚举保留历史编号，但不再保留旧编号的实现。
 - [x] 删除用户、角色、岗位、部门、部门负责人、用户组、表达式和本地空审批人等候选人策略及其校验；旧模型不再兼容。
-- [ ] 删除 `AdminUserApi`、`DeptApi`、`RoleApi`、`PostApi`、`PermissionApi` 注入。（候选人调用器、任务列表、模型列表和评论已迁移；流程实例、抄送等仍待迁移）
-- [ ] 响应中返回原始 ID，不再由 BPM 补全昵称、部门名称或本地用户信息。（运行任务与评论已通过 Portal 最小投影补全；其余接口待迁移）
+- [x] 删除 BPM 引擎路径中的 `AdminUserApi`、`DeptApi`、`RoleApi`、`PostApi`、`PermissionApi` 注入。（候选人调用器、任务运行/变更、流程实例、抄送、模型列表、流程定义和转换器均改为 Portal 端口；旧 OA 请假样例已下线）
+- [x] 响应中保留原始 ID，昵称、部门名称和头像只由 Portal 最小投影补全；目录缺失时展示对象可为空，调用方回退显示原始 ID。
 
 ### 4.3 处理 system 绑定的可选功能
 
 - [ ] 保留任务创建、完成、超时、流程结束等通知触发语义；本地短信、邮件、站内信投递改为 `BpmPortalNotificationApi` / Portal Webhook。Portal 暂未接入时可 no-op 或记录待投递事件，但不得删除 BPM 事件或状态变更。
-- [ ] 流程管理员、发起人白名单、部门白名单改为 Portal 授权，或移入独立 BPM 配置。
-- [ ] 自动审批、撤回、转办、委派、加签、减签等能力的流程语义和审计记录保留；其主体比较、目标用户校验全部支持 String ID 并委托 Portal。
-- [ ] 抄送节点、`BpmCopyTaskDelegate` 和抄送查询 API 保留；收件人选择与消息投递改由 Portal 适配器完成。
+- [x] 流程管理员、发起人白名单、部门白名单改为 Portal String ID/组织目录解算；旧数值白名单须在生产切换前重新配置。请求级 Portal claims 授权仍属于阶段 1.1 未完成项。
+- [x] 自动审批、撤回、转办、委派、加签、减签等能力的流程语义和审计记录保留；其主体比较、目标用户校验全部支持 String ID 并委托 Portal。发起人部门负责人转交改由 Portal `DEPT_LEADER_OF_USER` 解算。
+- [x] 抄送节点、`BpmCopyTaskDelegate` 和抄送查询 API 保留；收件人使用 Portal String ID，查询展示由 Portal 组织目录投影。生产库需执行迁移脚本后上线。
 
 **验收：** 删除/屏蔽 `system_*` 数据后，服务不发出本地用户、组织、角色、菜单 SQL；核心 walkthrough 仍通过。
 
@@ -117,24 +117,25 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 
 | 表 | 前提 |
 | --- | --- |
-| `bpm_oa_leave` | 删除 OA 示例 Controller、Service、Mapper。 |
+| `bpm_oa_leave` | 已下线旧 OA 请假示例。生产库在确认无待处理或审计保留需求后，执行 [删除脚本](migrations/2026-08-10-remove-bpm-oa-leave-example.sql)。新业务按 [Portal 业务接入模板](PORTAL_BUSINESS_BPM_INTEGRATION_TEMPLATE.md) 实现。 |
 | `bpm_process_instance_copy` | 当前不在删除范围。先保留抄送节点、监听器、查询 API 和审计记录；仅将收件人解算、投递和 Portal 收件箱替换为 Portal 适配器。未来若业务明确下线 BPM 抄送审计，再单独设计迁移和删除。 |
 | `bpm_user_group` | 已完成阶段 1 的本地用户组策略移除。 |
 
-`bpm_process_definition_info` 后续可以裁剪本地用户/部门/管理员相关字段，但必须在替代行为上线后再迁移。
+`bpm_process_definition_info` 已将用户、部门和子流程管理员字段改为 Portal String ID；逗号分隔列的物理类型无需变化。旧数值白名单不允许自动映射，必须在 Portal 侧确认后重新保存。
 
 **验收：** 已下线 API 对应的 Mapper、Service、Controller 与数据库表均不存在；流程定义读取仍能返回 `bpm_form` Schema。
 
 ## 6. 阶段 3：解耦 infra
 
-当前 BPM 源码没有直接依赖 `infra`；它经由 `system` 和 `yudao-server` 引入。因此必须在阶段 1 完成后再处理。
+当前 BPM 源码没有直接依赖 `infra`。`yudao-module-bpm` 对 `yudao-module-system` 的直接 Maven 依赖已移除，因而不再由 BPM 模块传递引入 `infra`；`yudao-server` 仍暂时保留两者，必须在生产认证与后台定义维护入口完成迁移后再处理。
 
 | Infra 能力 | Headless 替代 | 后续表 |
 | --- | --- | --- |
 | 参数配置 | YAML、环境变量、密钥服务 | `infra_config` |
 | 文件与附件 | Portal 文件服务；BPM 只保存业务引用 | `infra_file*` |
 | Quartz 定时任务 | Flowable 自身 `ACT_RU_TIMER_JOB` 等能力 | `infra_job*`、`qrtz_*` |
-| API 审计日志 | 应用日志、OTel 或外部日志平台 | `infra_api_*` |
+| API 审计日志 | 应用日志、OTel 或外部日志平台；当前 Web starter 经 `PortalApplicationLogApi` 输出待投递事件，不写本地表 | `infra_api_*` |
+| 部门数据权限 | Portal 在调用 BPM 前完成数据范围授权；BPM 不执行本地部门规则 | `system_dept`、本地部门权限关系 |
 | 代码生成、动态数据源 | 不提供 | `infra_codegen_*`、`infra_data_source_config` |
 
 **验收：** 从 `yudao-server` 删除 `yudao-module-infra` 后，核心 API 可启动并通过 walkthrough；无 `infra_*` SQL。
@@ -143,8 +144,8 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 
 按以下顺序执行，禁止反向操作：
 
-1. 移除 `yudao-module-bpm` 对 `yudao-module-system` 的依赖，并完成构建与 walkthrough。
-2. 从 `yudao-server` 移除 `system`、`infra` 依赖；再从根 `pom.xml` 移除对应 Reactor 模块。
+1. [x] 移除 `yudao-module-bpm` 对 `yudao-module-system` 的依赖，并完成构建与 walkthrough。
+2. [x] 从 `yudao-server` 和根 `pom.xml` 移除 `system`、`infra` 依赖与 Reactor 模块；源码目录暂保留在仓库中，不参与 headless 默认构建。
 3. 清理 system/infra 配置、自动装配、测试夹具和无效 REST API。
 4. 在新建的最小 PostgreSQL schema 上验证启动，确认仅创建保留表。
 5. 备份生产数据后，以可回滚迁移删除候选表；不要以手工 `DROP TABLE` 替代迁移。

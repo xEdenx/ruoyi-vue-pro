@@ -40,19 +40,19 @@ class BpmPortalAuthControllerTest extends BaseMockitoUnitTest {
         BpmPortalOrganizationApi.PortalUser user = new BpmPortalOrganizationApi.PortalUser(
                 "portal-requester-a1f2", "申请人", null, "portal-dept-general", "通用部门", true,
                 Set.of("ROLE_USER"), Set.of());
-        when(portalOrganizationApi.getUser(user.id())).thenReturn(user);
+        when(portalOrganizationApi.getUser(user.getId())).thenReturn(user);
 
         BpmPortalMockLoginReqVO reqVO = new BpmPortalMockLoginReqVO();
-        reqVO.setUserId(user.id());
+        reqVO.setUserId(user.getId());
         reqVO.setPassword("portal-local-dev");
         BpmPortalMockLoginRespVO response = controller.login(reqVO).getCheckedData();
 
-        assertEquals(user.id(), response.getUser().getId());
-        assertEquals(user.displayName(), response.getUser().getDisplayName());
+        assertEquals(user.getId(), response.getUser().getId());
+        assertEquals(user.getDisplayName(), response.getUser().getDisplayName());
         assertEquals(1L, response.getTenantId());
         String payload = new String(Base64.getUrlDecoder().decode(response.getAccessToken().split("\\.")[1]),
                 StandardCharsets.UTF_8);
-        assertEquals(user.id(), JSONUtil.parseObj(payload).getStr("userId"));
+        assertEquals(user.getId(), JSONUtil.parseObj(payload).getStr("userId"));
         assertTrue(JSONUtil.parseObj(payload).getBool("headlessMock"));
     }
 

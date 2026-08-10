@@ -10,7 +10,7 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface BpmProcessInstanceCopyMapper extends BaseMapperX<BpmProcessInstanceCopyDO> {
 
-    default PageResult<BpmProcessInstanceCopyDO> selectPage(Long loginUserId, BpmProcessInstanceCopyPageReqVO reqVO) {
+    default PageResult<BpmProcessInstanceCopyDO> selectPage(String loginUserId, BpmProcessInstanceCopyPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<BpmProcessInstanceCopyDO>()
                 .eqIfPresent(BpmProcessInstanceCopyDO::getUserId, loginUserId)
                 .likeIfPresent(BpmProcessInstanceCopyDO::getProcessInstanceName, reqVO.getProcessInstanceName())

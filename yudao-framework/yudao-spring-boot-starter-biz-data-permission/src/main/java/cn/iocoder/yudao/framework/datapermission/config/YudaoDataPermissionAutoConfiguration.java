@@ -8,10 +8,9 @@ import cn.iocoder.yudao.framework.datapermission.core.rule.DataPermissionRuleFac
 import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
-
-import java.util.List;
 
 /**
  * 数据权限的自动配置类
@@ -22,8 +21,8 @@ import java.util.List;
 public class YudaoDataPermissionAutoConfiguration {
 
     @Bean
-    public DataPermissionRuleFactory dataPermissionRuleFactory(List<DataPermissionRule> rules) {
-        return new DataPermissionRuleFactoryImpl(rules);
+    public DataPermissionRuleFactory dataPermissionRuleFactory(ObjectProvider<DataPermissionRule> ruleProvider) {
+        return new DataPermissionRuleFactoryImpl(ruleProvider.orderedStream().toList());
     }
 
     @Bean

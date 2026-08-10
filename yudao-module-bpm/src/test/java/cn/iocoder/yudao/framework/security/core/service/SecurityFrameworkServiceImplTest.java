@@ -1,12 +1,9 @@
 package cn.iocoder.yudao.framework.security.core.service;
 
-import cn.iocoder.yudao.framework.common.biz.system.permission.PermissionCommonApi;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter;
-import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -14,12 +11,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verifyNoInteractions;
 
-class SecurityFrameworkServiceImplTest extends BaseMockitoUnitTest {
-
-    @Mock
-    private PermissionCommonApi permissionApi;
+class SecurityFrameworkServiceImplTest {
 
     @AfterEach
     void clearSecurityContext() {
@@ -30,33 +23,29 @@ class SecurityFrameworkServiceImplTest extends BaseMockitoUnitTest {
     void shouldAuthorizeBpmPortalApiForJwtWithRoleWithoutLocalUserRole() {
         setPortalJwtLoginUser("ROLE_SUPPLIER");
 
-        assertTrue(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("bpm:task:update"));
-        verifyNoInteractions(permissionApi);
+        assertTrue(createSecurityService().hasPermission("bpm:task:update"));
     }
 
     @Test
     void shouldRejectPortalJwtWithoutRole() {
         setPortalJwtLoginUser(null);
 
-        assertFalse(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("bpm:task:update"));
-        verifyNoInteractions(permissionApi);
+        assertFalse(createSecurityService().hasPermission("bpm:task:update"));
     }
 
     @Test
     void shouldNotGrantSystemPermissionToPortalJwt() {
         setPortalJwtLoginUser("ROLE_ADMIN");
 
-        assertFalse(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("system:user:query"));
-        verifyNoInteractions(permissionApi);
+        assertFalse(createSecurityService().hasPermission("system:user:query"));
     }
 
     @Test
     void shouldGrantAllBpmPermissionsToPortalModelManagerMock() {
         setPortalJwtLoginUser("ROLE_BPM_MODEL_MANAGER");
 
-        assertTrue(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("bpm:model:update"));
-        assertFalse(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("system:user:query"));
-        verifyNoInteractions(permissionApi);
+        assertTrue(createSecurityService().hasPermission("bpm:model:update"));
+        assertFalse(createSecurityService().hasPermission("system:user:query"));
     }
 
     private static void setPortalJwtLoginUser(String role) {
@@ -68,6 +57,10 @@ class SecurityFrameworkServiceImplTest extends BaseMockitoUnitTest {
         LoginUser loginUser = new LoginUser().setId("portal-user-102").setInfo(info);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(loginUser, null));
+    }
+
+    private SecurityFrameworkServiceImpl createSecurityService() {
+        return new SecurityFrameworkServiceImpl();
     }
 
 }

@@ -54,6 +54,8 @@ public interface BpmTaskService {
      */
     BpmTaskRespVO getTodoTask(Long userId, String taskId, String processInstanceId);
 
+    BpmTaskRespVO getTodoTask(String userId, String taskId, String processInstanceId);
+
     /**
      * 获得已办的流程任务分页
      *
@@ -71,11 +73,10 @@ public interface BpmTaskService {
     /**
      * 获得全部的流程任务分页
      *
-     * @param userId    用户编号
      * @param pageReqVO 分页请求
      * @return 流程任务分页
      */
-    PageResult<HistoricTaskInstance> getTaskPage(Long userId, BpmTaskPageReqVO pageReqVO);
+    PageResult<HistoricTaskInstance> getTaskPage(BpmTaskPageReqVO pageReqVO);
 
     /**
      * 获得流程任务 Map
@@ -267,6 +268,8 @@ public interface BpmTaskService {
      */
     void transferTask(Long userId, BpmTaskTransferReqVO reqVO);
 
+    void transferTask(String userId, BpmTaskTransferReqVO reqVO);
+
     /**
      * 将指定流程实例的、进行中的流程任务，移动到结束节点
      *
@@ -283,6 +286,8 @@ public interface BpmTaskService {
      */
     void returnTask(Long userId, BpmTaskReturnReqVO reqVO);
 
+    void returnTask(String userId, BpmTaskReturnReqVO reqVO);
+
     /**
      * 将指定任务委派给其他人处理，等接收人处理后再回到原审批人手中审批
      *
@@ -290,6 +295,8 @@ public interface BpmTaskService {
      * @param reqVO  被委派人和被委派的任务编号理由参数
      */
     void delegateTask(Long userId, BpmTaskDelegateReqVO reqVO);
+
+    void delegateTask(String userId, BpmTaskDelegateReqVO reqVO);
 
     /**
      * 任务加签
@@ -299,6 +306,8 @@ public interface BpmTaskService {
      */
     void createSignTask(Long userId, BpmTaskSignCreateReqVO reqVO);
 
+    void createSignTask(String userId, BpmTaskSignCreateReqVO reqVO);
+
     /**
      * 任务减签
      *
@@ -306,6 +315,8 @@ public interface BpmTaskService {
      * @param reqVO  被减签的任务 ID，理由
      */
     void deleteSignTask(Long userId, BpmTaskSignDeleteReqVO reqVO);
+
+    void deleteSignTask(String userId, BpmTaskSignDeleteReqVO reqVO);
 
     /**
      * 抄送任务
@@ -316,12 +327,19 @@ public interface BpmTaskService {
     void copyTask(Long userId, @Valid BpmTaskCopyReqVO reqVO);
 
     /**
+     * Portal 用户手动抄送流程任务。
+     */
+    void copyTask(String userId, @Valid BpmTaskCopyReqVO reqVO);
+
+    /**
      * 撤回任务
      *
      * @param userId 用户编号
      * @param taskId 任务编号
      */
     void withdrawTask(Long userId, String taskId);
+
+    void withdrawTask(String userId, String taskId);
 
     // ========== Event 事件相关方法 ==========
 

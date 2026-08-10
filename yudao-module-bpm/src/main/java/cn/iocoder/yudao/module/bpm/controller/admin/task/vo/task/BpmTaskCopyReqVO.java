@@ -14,9 +14,10 @@ public class BpmTaskCopyReqVO {
     @NotEmpty(message = "任务编号不能为空")
     private String id;
 
-    @Schema(description = "抄送的用户编号数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "[1,2]")
+    @Schema(description = "抄送的 Portal 用户 ID 数组", requiredMode = Schema.RequiredMode.REQUIRED,
+            example = "[\"portal-a1f2\",\"portal-b3c4\"]")
     @NotEmpty(message = "抄送用户不能为空")
-    private Collection<Long> copyUserIds;
+    private Collection<String> copyUserIds;
 
     @Schema(description = "抄送意见", example = "帮忙看看！")
     private String reason;

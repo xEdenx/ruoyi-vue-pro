@@ -7,8 +7,9 @@ import lombok.Data;
 @Data
 public class DeptSimpleBaseVO {
 
-    @Schema(description = "部门编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    private Long id;
+    @Schema(description = "部门编号。Portal 部门使用其原始 String ID", requiredMode = Schema.RequiredMode.REQUIRED,
+            example = "portal-dept-general")
+    private String id;
     @Schema(description = "部门名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "技术部")
     private String name;
 

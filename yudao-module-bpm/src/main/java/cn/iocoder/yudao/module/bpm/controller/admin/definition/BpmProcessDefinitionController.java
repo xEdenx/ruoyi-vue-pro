@@ -42,8 +42,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
+import static cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalPrincipalUtils.getCurrentUserId;
 import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.PROCESS_DEFINITION_DEPLOY_FILE_EMPTY;
 
@@ -99,7 +98,7 @@ public class BpmProcessDefinitionController {
         // 1.2 移除不可见的流程定义
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(list, ProcessDefinition::getId));
-        Long userId = getLoginUserLongId();
+        String userId = getCurrentUserId();
         list.removeIf(processDefinition -> {
             BpmProcessDefinitionInfoDO processDefinitionInfo = processDefinitionMap.get(processDefinition.getId());
             return processDefinitionInfo == null // 不存在
@@ -146,7 +145,7 @@ public class BpmProcessDefinitionController {
     public CommonResult<String> deployProcessDefinitionXml(
             @RequestPart("file") MultipartFile file,
             @Valid @RequestPart("model") BpmModelSaveReqVO modelReqVO) throws IOException {
-        String userId = getLoginUserId();
+        String userId = getCurrentUserId();
         if (userId == null) {
             throw exception(UNAUTHORIZED);
         }

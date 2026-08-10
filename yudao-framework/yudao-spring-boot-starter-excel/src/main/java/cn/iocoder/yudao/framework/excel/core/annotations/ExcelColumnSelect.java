@@ -5,7 +5,7 @@ import java.lang.annotation.*;
 /**
  * 给 Excel 列添加下拉选择数据
  *
- * 其中 {@link #dictType()} 和 {@link #functionName()} 二选一
+ * 数据源由 {@link #functionName()} 指向的 Spring Bean 提供。
  *
  * @author HUIHUI
  */
@@ -15,13 +15,8 @@ import java.lang.annotation.*;
 public @interface ExcelColumnSelect {
 
     /**
-     * @return 字典类型
-     */
-    String dictType() default "";
-
-    /**
      * @return 获取下拉数据源的方法名称
      */
-    String functionName() default "";
+    String functionName();
 
 }

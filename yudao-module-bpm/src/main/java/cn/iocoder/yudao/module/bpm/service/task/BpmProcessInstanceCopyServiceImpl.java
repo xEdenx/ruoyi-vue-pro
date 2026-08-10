@@ -1,11 +1,13 @@
 package cn.iocoder.yudao.module.bpm.service.task;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstanceCopyPageReqVO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.task.BpmProcessInstanceCopyDO;
 import cn.iocoder.yudao.module.bpm.dal.mysql.task.BpmProcessInstanceCopyMapper;
 import cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmProcessDefinitionService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -45,9 +47,11 @@ public class BpmProcessInstanceCopyServiceImpl implements BpmProcessInstanceCopy
     @Resource
     @Lazy // 延迟加载，避免循环依赖
     private BpmProcessDefinitionService processDefinitionService;
+    @Resource
+    private BpmPortalOrganizationApi portalOrganizationApi;
 
     @Override
-    public void createProcessInstanceCopy(Collection<Long> userIds, String reason, String taskId) {
+    public void createProcessInstanceCopy(Collection<String> userIds, String reason, String taskId) {
         Task task = taskService.getTask(taskId);
         if (ObjectUtil.isNull(task)) {
             throw exception(ErrorCodeConstants.TASK_NOT_EXISTS);
@@ -58,8 +62,9 @@ public class BpmProcessInstanceCopyServiceImpl implements BpmProcessInstanceCopy
     }
 
     @Override
-    public void createProcessInstanceCopy(Collection<Long> userIds, String reason, String processInstanceId,
+    public void createProcessInstanceCopy(Collection<String> userIds, String reason, String processInstanceId,
                                           String activityId, String activityName, String taskId) {
+        validCopyUserIds(userIds);
         // 1.1 校验流程实例存在
         ProcessInstance processInstance = processInstanceService.getProcessInstance(processInstanceId);
         if (processInstance == null) {
@@ -74,7 +79,7 @@ public class BpmProcessInstanceCopyServiceImpl implements BpmProcessInstanceCopy
 
         // 2. 创建抄送流程
         List<BpmProcessInstanceCopyDO> copyList = convertList(userIds, userId -> new BpmProcessInstanceCopyDO()
-                .setUserId(userId).setReason(reason).setStartUserId(Long.valueOf(processInstance.getStartUserId()))
+                .setUserId(userId).setReason(reason).setStartUserId(processInstance.getStartUserId())
                 .setProcessInstanceId(processInstanceId).setProcessInstanceName(processInstance.getName())
                 .setCategory(processDefinition.getCategory()).setTaskId(taskId)
                 .setActivityId(activityId).setActivityName(activityName)
@@ -82,8 +87,18 @@ public class BpmProcessInstanceCopyServiceImpl implements BpmProcessInstanceCopy
         processInstanceCopyMapper.insertBatch(copyList);
     }
 
+    /**
+     * 手动抄送的收件人由 Portal 负责；BPM 仅校验其为可参与工作流的最终用户。
+     */
+    private void validCopyUserIds(Collection<String> userIds) {
+        if (userIds == null || userIds.isEmpty()
+                || userIds.stream().anyMatch(userId -> StrUtil.isBlank(userId) || !portalOrganizationApi.isUserActive(userId))) {
+            throw new IllegalArgumentException("抄送用户不存在、未启用或未由 Portal 返回");
+        }
+    }
+
     @Override
-    public PageResult<BpmProcessInstanceCopyDO> getProcessInstanceCopyPage(Long userId,
+    public PageResult<BpmProcessInstanceCopyDO> getProcessInstanceCopyPage(String userId,
                                                                            BpmProcessInstanceCopyPageReqVO pageReqVO) {
         return processInstanceCopyMapper.selectPage(userId, pageReqVO);
     }

@@ -14,6 +14,6 @@ public interface BpmPortalIdentityApi {
 
     default boolean hasAnyRole(String userId, Collection<String> roleCodes) {
         BpmPortalOrganizationApi.PortalUser user = getUser(userId);
-        return user != null && user.roleCodes().stream().anyMatch(roleCodes::contains);
+        return user != null && user.getRoleCodes().stream().anyMatch(roleCodes::contains);
     }
 }

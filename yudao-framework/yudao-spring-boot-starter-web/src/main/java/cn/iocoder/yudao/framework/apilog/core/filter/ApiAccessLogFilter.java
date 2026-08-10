@@ -9,8 +9,8 @@ import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.apilog.core.annotation.ApiAccessLog;
 import cn.iocoder.yudao.framework.apilog.core.enums.OperateTypeEnum;
-import cn.iocoder.yudao.framework.common.biz.infra.logger.ApiAccessLogCommonApi;
-import cn.iocoder.yudao.framework.common.biz.infra.logger.dto.ApiAccessLogCreateReqDTO;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApplicationLogApi;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApiAccessLogEvent;
 import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
@@ -53,12 +53,12 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
 
     private final String applicationName;
 
-    private final ApiAccessLogCommonApi apiAccessLogApi;
+    private final PortalApplicationLogApi applicationLogApi;
 
-    public ApiAccessLogFilter(WebProperties webProperties, String applicationName, ApiAccessLogCommonApi apiAccessLogApi) {
+    public ApiAccessLogFilter(WebProperties webProperties, String applicationName, PortalApplicationLogApi applicationLogApi) {
         super(webProperties);
         this.applicationName = applicationName;
-        this.apiAccessLogApi = apiAccessLogApi;
+        this.applicationLogApi = applicationLogApi;
     }
 
     @Override
@@ -85,19 +85,19 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
 
     private void createApiAccessLog(HttpServletRequest request, LocalDateTime beginTime,
                                     Map<String, String> queryString, String requestBody, Exception ex) {
-        ApiAccessLogCreateReqDTO accessLog = new ApiAccessLogCreateReqDTO();
+        PortalApiAccessLogEvent accessLog = new PortalApiAccessLogEvent();
         try {
             boolean enable = buildApiAccessLog(accessLog, request, beginTime, queryString, requestBody, ex);
             if (!enable) {
                 return;
             }
-            apiAccessLogApi.createApiAccessLogAsync(accessLog);
+            applicationLogApi.createApiAccessLog(accessLog);
         } catch (Throwable th) {
             log.error("[createApiAccessLog][url({}) log({}) 发生异常]", request.getRequestURI(), toJsonString(accessLog), th);
         }
     }
 
-    private boolean buildApiAccessLog(ApiAccessLogCreateReqDTO accessLog, HttpServletRequest request, LocalDateTime beginTime,
+    private boolean buildApiAccessLog(PortalApiAccessLogEvent accessLog, HttpServletRequest request, LocalDateTime beginTime,
                                       Map<String, String> queryString, String requestBody, Exception ex) {
         // 判断：是否要记录操作日志
         HandlerMethod handlerMethod = (HandlerMethod) request.getAttribute(ATTRIBUTE_HANDLER_METHOD);
@@ -110,7 +110,7 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
         }
 
         // 处理用户信息
-        accessLog.setUserId(WebFrameworkUtils.getLoginUserId(request))
+        accessLog.setUserId(WebFrameworkUtils.getLoginUserStringId(request))
                 .setUserType(WebFrameworkUtils.getLoginUserType(request));
         // 设置访问结果
         CommonResult<?> result = WebFrameworkUtils.getCommonResult(request);

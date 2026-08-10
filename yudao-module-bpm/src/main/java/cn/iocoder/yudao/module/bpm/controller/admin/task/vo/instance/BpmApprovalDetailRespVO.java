@@ -67,7 +67,7 @@ public class BpmApprovalDetailRespVO {
 
         @Schema(description = "候选人用户 ID 列表", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "1818")
         @JsonIgnore // 不返回，只是方便后续读取，赋值给 candidateUsers
-        private List<Long> candidateUserIds;
+        private List<String> candidateUserIds;
 
         @Schema(description = "候选人用户列表")
         private List<UserSimpleBaseVO> candidateUsers; // 只包含未生成 ApprovalTaskInfo 的用户列表

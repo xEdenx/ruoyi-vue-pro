@@ -1,7 +1,9 @@
 package cn.iocoder.yudao.framework.web.config;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.biz.infra.logger.ApiErrorLogCommonApi;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApplicationLogApi;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApiAccessLogEvent;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApiErrorLogEvent;
 import cn.iocoder.yudao.framework.common.enums.WebFilterOrderEnum;
 import cn.iocoder.yudao.framework.web.core.filter.CacheRequestBodyFilter;
 import cn.iocoder.yudao.framework.web.core.filter.DemoFilter;
@@ -27,12 +29,14 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.function.Predicate;
 
 @AutoConfiguration
 @EnableConfigurationProperties(WebProperties.class)
+@Slf4j
 public class YudaoWebAutoConfiguration {
 
     /**
@@ -80,9 +84,28 @@ public class YudaoWebAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
+    public PortalApplicationLogApi portalApplicationLogApi() {
+        // 默认不持久化日志；Portal / OTel 接入后覆盖此 Bean。
+        return new PortalApplicationLogApi() {
+            @Override
+            public void createApiAccessLog(PortalApiAccessLogEvent event) {
+                log.info("[Portal 审计待投递][access][method={}][url={}][userId={}][resultCode={}]",
+                        event.getRequestMethod(), event.getRequestUrl(), event.getUserId(), event.getResultCode());
+            }
+
+            @Override
+            public void createApiErrorLog(PortalApiErrorLogEvent event) {
+                log.error("[Portal 审计待投递][error][method={}][url={}][userId={}][exception={}]",
+                        event.getRequestMethod(), event.getRequestUrl(), event.getUserId(), event.getExceptionName());
+            }
+        };
+    }
+
+    @Bean
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public GlobalExceptionHandler globalExceptionHandler(ApiErrorLogCommonApi apiErrorLogApi) {
-        return new GlobalExceptionHandler(applicationName, apiErrorLogApi);
+    public GlobalExceptionHandler globalExceptionHandler(PortalApplicationLogApi applicationLogApi) {
+        return new GlobalExceptionHandler(applicationName, applicationLogApi);
     }
 
     @Bean

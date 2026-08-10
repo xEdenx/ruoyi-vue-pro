@@ -36,7 +36,7 @@ public class BpmProcessInstanceCopyDO extends BaseDO {
      *
      * 冗余 ProcessInstance 的 startUserId 字段
      */
-    private Long startUserId;
+    private String startUserId;
     /**
      * 流程名
      *
@@ -85,9 +85,9 @@ public class BpmProcessInstanceCopyDO extends BaseDO {
     /**
      * 用户编号（被抄送的用户编号）
      *
-     * 关联 system_users 的 id 属性
+     * Flowable 保存的 Portal 原始 String 用户 ID
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 抄送意见

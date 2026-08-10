@@ -47,23 +47,23 @@ public class BpmModelMetaInfoVO {
     @Schema(description = "表单编号", example = "1024")
     private Long formId; // formType 为 NORMAL 使用，必须非空
 
-    @Schema(description = "自定义表单的提交路径，使用 Vue 的路由地址", example = "/bpm/oa/leave/create")
+    @Schema(description = "自定义表单的提交路径，由 Portal 路由提供", example = "/portal/workflow/purchase/create")
     private String formCustomCreatePath; // 表单类型为 CUSTOM 时，必须非空
-    @Schema(description = "自定义表单的查看路径，使用 Vue 的路由地址", example = "/bpm/oa/leave/view")
+    @Schema(description = "自定义表单的查看路径，由 Portal 路由提供", example = "/portal/workflow/purchase/view")
     private String formCustomViewPath; // 表单类型为 CUSTOM 时，必须非空
 
     @Schema(description = "是否可见", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
     @NotNull(message = "是否可见不能为空")
     private Boolean visible;
 
-    @Schema(description = "可发起用户编号数组", example = "[1,2,3]")
-    private List<Long> startUserIds;
+    @Schema(description = "可发起 Portal 用户 ID 数组", example = "[\"portal-requester-a1f2\"]")
+    private List<String> startUserIds;
 
-    @Schema(description = "可发起部门编号数组", example = "[2,4,6]")
-    private List<Long> startDeptIds;
+    @Schema(description = "可发起 Portal 部门 ID 数组", example = "[\"portal-dept-general\"]")
+    private List<String> startDeptIds;
 
-    @Schema(description = "遗留的可管理本地用户编号数组，仅供 ASSIGN_EMPTY 等本地候选人策略兼容使用", example = "[2,4,6]")
-    private List<Long> managerUserIds;
+    @Schema(description = "子流程管理员 Portal 用户 ID 数组", example = "[\"portal-manager-b3c4\"]")
+    private List<String> managerUserIds;
 
     @Schema(description = "可管理该流程的 Portal 角色编码数组", requiredMode = Schema.RequiredMode.REQUIRED,
             example = "[\"ROLE_BPM_MODEL_MANAGER\"]")

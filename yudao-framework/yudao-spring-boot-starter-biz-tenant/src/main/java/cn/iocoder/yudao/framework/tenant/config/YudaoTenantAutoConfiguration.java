@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.framework.tenant.config;
 
-import cn.iocoder.yudao.framework.common.biz.system.tenant.TenantCommonApi;
+import cn.iocoder.yudao.framework.common.biz.portal.tenant.PortalTenantApi;
 import cn.iocoder.yudao.framework.common.enums.WebFilterOrderEnum;
 import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
 import cn.iocoder.yudao.framework.redis.config.YudaoCacheProperties;
@@ -58,7 +58,7 @@ public class YudaoTenantAutoConfiguration {
     private ApplicationContext applicationContext;
 
     @Bean
-    public TenantFrameworkService tenantFrameworkService(TenantCommonApi tenantApi) {
+    public TenantFrameworkService tenantFrameworkService(PortalTenantApi tenantApi) {
         return new TenantFrameworkServiceImpl(tenantApi);
     }
 

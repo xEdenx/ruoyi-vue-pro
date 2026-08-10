@@ -163,7 +163,14 @@ public interface BpmProcessDefinitionService {
      * @param userId 用户编号
      * @return 是否可以发起流程
      */
-    boolean canUserStartProcessDefinition(BpmProcessDefinitionInfoDO processDefinition, Long userId);
+    boolean canUserStartProcessDefinition(BpmProcessDefinitionInfoDO processDefinition, String userId);
+
+    /**
+     * 兼容仍使用本地数值身份的内部调用；Portal 入口必须使用 String ID 重载。
+     */
+    default boolean canUserStartProcessDefinition(BpmProcessDefinitionInfoDO processDefinition, Long userId) {
+        return canUserStartProcessDefinition(processDefinition, userId == null ? null : String.valueOf(userId));
+    }
 
     /**
      * 获得 ids 对应的 Deployment Map

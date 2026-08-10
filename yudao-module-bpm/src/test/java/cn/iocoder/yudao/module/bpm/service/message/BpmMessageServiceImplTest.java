@@ -1,14 +1,15 @@
 package cn.iocoder.yudao.module.bpm.service.message;
 
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalNotificationApi;
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenProcessInstanceApproveReqDTO;
-import cn.iocoder.yudao.module.system.api.sms.SmsSendApi;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 
 class BpmMessageServiceImplTest extends BaseMockitoUnitTest {
 
@@ -16,16 +17,21 @@ class BpmMessageServiceImplTest extends BaseMockitoUnitTest {
     private BpmMessageServiceImpl messageService;
 
     @Mock
-    private SmsSendApi smsSendApi;
+    private BpmPortalNotificationApi portalNotificationApi;
 
     @Test
-    void shouldNotCallLocalSmsForHeadlessProcessApproval() {
-        ReflectionTestUtils.setField(messageService, "headlessEnabled", true);
-
+    void shouldSendPortalEventForProcessApproval() {
         messageService.sendMessageWhenProcessInstanceApprove(new BpmMessageSendWhenProcessInstanceApproveReqDTO()
-                .setProcessInstanceId("process-001").setProcessInstanceName("无头测试流程").setStartUserId(101L));
+                .setProcessInstanceId("process-001").setProcessInstanceName("无头测试流程")
+                .setStartUserId("portal-requester-a1f2"));
 
-        verifyNoInteractions(smsSendApi);
+        ArgumentCaptor<BpmPortalNotificationApi.Notification> notificationCaptor = ArgumentCaptor.forClass(
+                BpmPortalNotificationApi.Notification.class);
+        verify(portalNotificationApi).notify(notificationCaptor.capture());
+        BpmPortalNotificationApi.Notification notification = notificationCaptor.getValue();
+        assertEquals("bpm_process_instance_approve", notification.getType());
+        assertEquals("portal-requester-a1f2", notification.getRecipientUserId());
+        assertEquals("process-001", notification.getProcessInstanceId());
     }
 
 }

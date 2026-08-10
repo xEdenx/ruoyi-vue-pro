@@ -9,10 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
-import java.util.List;
 
 import static cn.iocoder.yudao.module.bpm.framework.flowable.core.listener.BpmTriggerTaskDelegate.BEAN_NAME;
 
@@ -31,13 +31,13 @@ public class BpmTriggerTaskDelegate implements JavaDelegate {
     public static final String BEAN_NAME = "bpmTriggerTaskDelegate";
 
     @Resource
-    private List<BpmTrigger> triggers;
+    private ObjectProvider<BpmTrigger> triggerProvider;
 
     private final EnumMap<BpmTriggerTypeEnum, BpmTrigger> triggerMap = new EnumMap<>(BpmTriggerTypeEnum.class);
 
     @PostConstruct
     private void init() {
-        triggers.forEach(trigger -> triggerMap.put(trigger.getType(), trigger));
+        triggerProvider.orderedStream().forEach(trigger -> triggerMap.put(trigger.getType(), trigger));
     }
 
     @Override

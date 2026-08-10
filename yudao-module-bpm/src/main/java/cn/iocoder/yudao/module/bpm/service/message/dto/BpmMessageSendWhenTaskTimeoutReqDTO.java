@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.bpm.service.message.dto;
 
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -35,7 +35,7 @@ public class BpmMessageSendWhenTaskTimeoutReqDTO {
     /**
      * 审批人的用户编号
      */
-    @NotNull(message = "审批人的用户编号不能为空")
-    private Long assigneeUserId;
+    @NotBlank(message = "审批人的用户编号不能为空")
+    private String assigneeUserId;
 
 }

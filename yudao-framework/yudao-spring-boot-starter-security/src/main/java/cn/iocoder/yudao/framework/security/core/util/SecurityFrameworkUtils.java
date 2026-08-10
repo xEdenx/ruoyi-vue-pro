@@ -138,8 +138,7 @@ public class SecurityFrameworkUtils {
         // 额外设置到 request 中，用于 ApiAccessLogFilter 可以获取到用户编号；
         // 原因是，Spring Security 的 Filter 在 ApiAccessLogFilter 后面，在它记录访问日志时，线上上下文已经没有用户编号等信息
         if (request != null) {
-            // 访问日志等遗留表仍是 Long 主键；Portal 的字符串身份不写入这些字段。
-            WebFrameworkUtils.setLoginUserId(request, getLoginUserLongId());
+            WebFrameworkUtils.setLoginUserId(request, loginUser.getId());
             WebFrameworkUtils.setLoginUserType(request, loginUser.getUserType());
         }
     }

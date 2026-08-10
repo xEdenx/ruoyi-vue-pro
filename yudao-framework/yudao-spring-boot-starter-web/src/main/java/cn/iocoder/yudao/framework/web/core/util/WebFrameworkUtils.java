@@ -67,6 +67,10 @@ public class WebFrameworkUtils {
         request.setAttribute(REQUEST_ATTRIBUTE_LOGIN_USER_ID, userId);
     }
 
+    public static void setLoginUserId(ServletRequest request, String userId) {
+        request.setAttribute(REQUEST_ATTRIBUTE_LOGIN_USER_ID, userId);
+    }
+
     /**
      * 设置用户类型
      *
@@ -89,6 +93,15 @@ public class WebFrameworkUtils {
             return null;
         }
         return (Long) request.getAttribute(REQUEST_ATTRIBUTE_LOGIN_USER_ID);
+    }
+
+    /** 获得当前用户的原始字符串 ID，供 Portal 身份链路使用。 */
+    public static String getLoginUserStringId(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Object userId = request.getAttribute(REQUEST_ATTRIBUTE_LOGIN_USER_ID);
+        return userId != null ? String.valueOf(userId) : null;
     }
 
     /**

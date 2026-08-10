@@ -4,6 +4,7 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.json.JSONObject;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
+import cn.iocoder.yudao.framework.security.config.SecurityProperties;
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -32,13 +33,14 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
 
     @Test
     public void testParseLoginUserFromJwt_successWithUuidAndRole() {
-        TokenAuthenticationFilter filter = new TokenAuthenticationFilter(null, null, null);
+        TokenAuthenticationFilter filter = new TokenAuthenticationFilter(createHeadlessMockSecurityProperties(), null);
 
         // 构造 JWT 载荷 (Payload)
         JSONObject payload = new JSONObject();
         payload.set("userId", "b943f25d-4064-4f5f-8b8f-70437e4d6fd3");
         payload.set("role", "ROLE_ADMIN");
         payload.set("deptId", 100);
+        payload.set("headlessMock", true);
 
         String header = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
         String payloadBase64 = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
@@ -55,12 +57,13 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
 
     @Test
     public void testParseLoginUserFromJwt_successWithNumericUserId() {
-        TokenAuthenticationFilter filter = new TokenAuthenticationFilter(null, null, null);
+        TokenAuthenticationFilter filter = new TokenAuthenticationFilter(createHeadlessMockSecurityProperties(), null);
 
         // 构造 JWT 载荷 (Payload)
         JSONObject payload = new JSONObject();
         payload.set("sub", "102");
         payload.set("roles", "ROLE_MANAGER");
+        payload.set("headlessMock", true);
 
         String header = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
         String payloadBase64 = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
@@ -71,6 +74,26 @@ public class TokenAuthenticationFilterTest extends BaseMockitoUnitTest {
         assertEquals("102", loginUser.getId());
         assertEquals("102", loginUser.getInfo().get("portalUserId"));
         assertEquals("ROLE_MANAGER", loginUser.getInfo().get("role"));
+    }
+
+    @Test
+    public void testParseLoginUserFromJwt_rejectsTokenWithoutLocalMockMarker() {
+        TokenAuthenticationFilter filter = new TokenAuthenticationFilter(createHeadlessMockSecurityProperties(), null);
+        JSONObject payload = new JSONObject();
+        payload.set("userId", "portal-user-7e11");
+
+        String header = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"none\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+        String payloadBase64 = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
+
+        assertNull(filter.parseLoginUserFromJwt(header + "." + payloadBase64 + ".unsigned", 1));
+    }
+
+    private static SecurityProperties createHeadlessMockSecurityProperties() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setMockEnable(true);
+        return properties;
     }
 
 }

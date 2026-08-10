@@ -1,10 +1,6 @@
 package cn.iocoder.yudao.framework.security.core.filter;
 
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.OAuth2TokenCommonApi;
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
@@ -17,7 +13,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -37,8 +32,6 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private final SecurityProperties securityProperties;
 
     private final GlobalExceptionHandler globalExceptionHandler;
-
-    private final OAuth2TokenCommonApi oauth2TokenApi;
 
     @Override
     @SuppressWarnings("NullableProblems")
@@ -72,35 +65,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private LoginUser buildLoginUserByToken(String token, Integer userType) {
-        // 1. 尝试直接解包 Portal 传入的 Bearer JWT Token (Payload 包含 userId 与 role 声明)
-        LoginUser jwtLoginUser = parseLoginUserFromJwt(token, userType);
-        if (jwtLoginUser != null) {
-            return jwtLoginUser;
-        }
-
-        // 2. 尝试基于系统表中的 OAuth2 AccessToken 校验
-        try {
-            OAuth2AccessTokenCheckRespDTO accessToken = oauth2TokenApi.checkAccessToken(token);
-            if (accessToken == null) {
-                return null;
-            }
-            // 用户类型不匹配，无权限
-            // 注意：只有 /admin-api/* 和 /app-api/* 有 userType，才需要比对用户类型
-            // 类似 WebSocket 的 /ws/* 连接地址，是不需要比对用户类型的
-            if (userType != null
-                    && ObjectUtil.notEqual(accessToken.getUserType(), userType)) {
-                throw new AccessDeniedException("错误的用户类型");
-            }
-            // 构建登录用户
-            return new LoginUser().setId(String.valueOf(accessToken.getUserId()))
-                    .setUserType(accessToken.getUserType())
-                    .setInfo(accessToken.getUserInfo()) // 额外的用户信息
-                    .setTenantId(accessToken.getTenantId()).setScopes(accessToken.getScopes())
-                    .setExpiresTime(accessToken.getExpiresTime());
-        } catch (ServiceException serviceException) {
-            // 校验 Token 不通过时，考虑到一些接口是无需登录的，所以直接返回 null 即可
-            return null;
-        }
+        // 仅本地 Mock 允许读取未签名开发 token；生产 Portal 必须在网关或替换适配器中先完成验签。
+        return parseLoginUserFromJwt(token, userType);
     }
 
     /**
@@ -111,7 +77,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
      * @return 解析成功返回 LoginUser，否则返回 null
      */
     LoginUser parseLoginUserFromJwt(String token, Integer userType) {
-        if (StrUtil.isEmpty(token)) {
+        if (!Boolean.TRUE.equals(securityProperties.getMockEnable()) || StrUtil.isEmpty(token)) {
             return null;
         }
         String[] parts = token.split("\\.");
@@ -130,6 +96,9 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 return null;
             }
             cn.hutool.json.JSONObject payload = cn.hutool.json.JSONUtil.parseObj(payloadJsonStr);
+            if (!Boolean.TRUE.equals(payload.getBool("headlessMock"))) {
+                return null;
+            }
 
             // 1. 提取 userId 声明（兼容 userId, user_id, sub, id）
             String userIdStr = payload.getStr("userId");

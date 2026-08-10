@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.bpm.framework.web.core;
 
-import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.FlowableUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,7 +21,7 @@ public class FlowableWebFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             // 设置工作流的用户
-            String userId = SecurityFrameworkUtils.getLoginUserId();
+            String userId = cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalPrincipalUtils.getCurrentUserId();
             if (userId != null) {
                 FlowableUtils.setAuthenticatedUserId(userId);
             }

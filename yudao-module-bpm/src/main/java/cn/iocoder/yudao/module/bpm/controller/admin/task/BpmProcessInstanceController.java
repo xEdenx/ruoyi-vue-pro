@@ -5,7 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
+import cn.iocoder.yudao.module.bpm.controller.admin.base.user.BpmPortalUserProjection;
 import cn.iocoder.yudao.module.bpm.controller.admin.base.user.UserSimpleBaseVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.*;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.task.BpmTaskRespVO;
@@ -17,10 +17,6 @@ import cn.iocoder.yudao.module.bpm.service.definition.BpmCategoryService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmProcessDefinitionService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmTaskService;
-import cn.iocoder.yudao.module.system.api.dept.DeptApi;
-import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,8 +37,7 @@ import java.util.Set;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserLongId;
-import static cn.iocoder.yudao.module.bpm.controller.admin.task.BpmPortalUserIdUtils.getCurrentUserId;
+import static cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalPrincipalUtils.getCurrentUserId;
 import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.PROCESS_INSTANCE_NOT_EXISTS;
 
 @Tag(name = "管理后台 - 流程实例") // 流程实例，通过流程定义创建的一次“申请”
@@ -61,11 +56,9 @@ public class BpmProcessInstanceController {
     private BpmCategoryService categoryService;
 
     @Resource
-    private AdminUserApi adminUserApi;
-    @Resource
-    private DeptApi deptApi;
-    @Resource
     private BpmPortalOrganizationApi portalOrganizationApi;
+    @Resource
+    private BpmPortalUserProjection portalUserProjection;
 
     @GetMapping("/my-page")
     @Operation(summary = "获得我的实例分页列表", description = "在【我的流程】菜单中，进行调用")
@@ -87,16 +80,10 @@ public class BpmProcessInstanceController {
                 convertSet(processDefinitionMap.values(), ProcessDefinition::getCategory));
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
-        Set<Long> userIds = convertSet(pageResult.getList(), processInstance -> NumberUtils.parseLong(processInstance.getStartUserId()));
-        userIds.remove(null);
-        userIds.addAll(convertSetByFlatMap(taskMap.values(),
-                tasks -> tasks.stream().map(Task::getAssignee).filter(StrUtil::isNotBlank)
-                        .map(NumberUtils::parseLong).filter(java.util.Objects::nonNull)));
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(userIds);
-        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
-                convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
-        return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePage(pageResult,
-                processDefinitionMap, categoryMap, taskMap, userMap, deptMap, processDefinitionInfoMap));
+        PageResult<BpmProcessInstanceRespVO> response = BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePage(pageResult,
+                processDefinitionMap, categoryMap, taskMap, Map.of(), Map.of(), processDefinitionInfoMap);
+        enrichPortalUsers(response.getList());
+        return success(response);
     }
 
     @GetMapping("/manager-page")
@@ -117,15 +104,12 @@ public class BpmProcessInstanceController {
                 convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
         Map<String, BpmCategoryDO> categoryMap = categoryService.getCategoryMap(
                 convertSet(processDefinitionMap.values(), ProcessDefinition::getCategory));
-        // 发起人信息
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
-                convertSet(pageResult.getList(), processInstance -> NumberUtils.parseLong(processInstance.getStartUserId())));
-        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
-                convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
-        return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePage(pageResult,
-                processDefinitionMap, categoryMap, taskMap, userMap, deptMap, processDefinitionInfoMap));
+        PageResult<BpmProcessInstanceRespVO> response = BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePage(pageResult,
+                processDefinitionMap, categoryMap, taskMap, Map.of(), Map.of(), processDefinitionInfoMap);
+        enrichPortalUsers(response.getList());
+        return success(response);
     }
 
     @PostMapping("/create")
@@ -150,13 +134,10 @@ public class BpmProcessInstanceController {
                 processInstance.getProcessDefinitionId());
         BpmProcessDefinitionInfoDO processDefinitionInfo = processDefinitionService.getProcessDefinitionInfo(
                 processInstance.getProcessDefinitionId());
-        AdminUserRespDTO startUser = adminUserApi.getUser(NumberUtils.parseLong(processInstance.getStartUserId()));
-        DeptRespDTO dept = null;
-        if (startUser != null && startUser.getDeptId() != null) {
-            dept = deptApi.getDept(startUser.getDeptId());
-        }
-        return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstance(processInstance,
-                processDefinition, processDefinitionInfo, startUser, dept));
+        BpmProcessInstanceRespVO response = BpmProcessInstanceConvert.INSTANCE.buildProcessInstance(processInstance,
+                processDefinition, processDefinitionInfo, null, null);
+        enrichPortalUsers(response);
+        return success(response);
     }
 
     @DeleteMapping("/cancel-by-start-user")
@@ -164,7 +145,7 @@ public class BpmProcessInstanceController {
     @PreAuthorize("@ss.hasPermission('bpm:process-instance:cancel')")
     public CommonResult<Boolean> cancelProcessInstanceByStartUser(
             @Valid @RequestBody BpmProcessInstanceCancelReqVO cancelReqVO) {
-        processInstanceService.cancelProcessInstanceByStartUser(getLoginUserLongId(), cancelReqVO);
+        processInstanceService.cancelProcessInstanceByStartUser(getCurrentUserId(), cancelReqVO);
         return success(true);
     }
 
@@ -173,7 +154,7 @@ public class BpmProcessInstanceController {
     @PreAuthorize("@ss.hasPermission('bpm:process-instance:cancel-by-admin')")
     public CommonResult<Boolean> cancelProcessInstanceByManager(
             @Valid @RequestBody BpmProcessInstanceCancelReqVO cancelReqVO) {
-        processInstanceService.cancelProcessInstanceByAdmin(getLoginUserLongId(), cancelReqVO);
+        processInstanceService.cancelProcessInstanceByAdmin(getCurrentUserId(), cancelReqVO);
         return success(true);
     }
 
@@ -199,7 +180,10 @@ public class BpmProcessInstanceController {
         if (StrUtil.isNotEmpty(reqVO.getProcessVariablesStr())) {
             reqVO.setProcessVariables(JsonUtils.parseObject(reqVO.getProcessVariablesStr(), Map.class));
         }
-        return success(processInstanceService.getNextApprovalNodes(getLoginUserLongId(), reqVO));
+        List<BpmApprovalDetailRespVO.ActivityNode> response = processInstanceService.getNextApprovalNodes(
+                getCurrentUserId(), reqVO);
+        enrichPortalCandidateUsers(response);
+        return success(response);
     }
 
     @GetMapping("/get-bpmn-model-view")
@@ -215,7 +199,6 @@ public class BpmProcessInstanceController {
 
     /**
      * Flowable 持久化 Portal 原始用户 ID；展示时再由 Portal 组织目录投影显示信息。
-     * 数值 ID 仍属于旧 system 链路，保持已有的 system 用户投影，不访问 Portal。
      */
     private void enrichPortalUsers(BpmApprovalDetailRespVO response) {
         if (response == null) {
@@ -247,22 +230,82 @@ public class BpmProcessInstanceController {
         enrichPortalUser(response.getTodoTask(), userMap);
     }
 
-    private void enrichPortalUsers(BpmProcessInstanceBpmnModelViewRespVO response) {
-        if (response == null || response.getTasks() == null) {
+    private void enrichPortalUsers(List<BpmProcessInstanceRespVO> processInstances) {
+        if (CollUtil.isEmpty(processInstances)) {
             return;
         }
         Set<String> userIds = new java.util.LinkedHashSet<>();
-        response.getTasks().forEach(task -> {
-            addPortalUserId(userIds, task.getAssignee());
-            addPortalUserId(userIds, task.getOwner());
+        processInstances.forEach(processInstance -> {
+            addPortalUserId(userIds, processInstance.getStartUserId());
+            if (processInstance.getTasks() != null) {
+                processInstance.getTasks().forEach(task -> addPortalUserId(userIds, task.getAssignee()));
+            }
         });
         Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalOrganizationApi.getUserMap(userIds);
-        response.getTasks().forEach(task -> enrichPortalUser(task, userMap));
+        processInstances.forEach(processInstance -> enrichPortalUser(processInstance, userMap));
+    }
+
+    private void enrichPortalUsers(BpmProcessInstanceRespVO processInstance) {
+        if (processInstance == null) {
+            return;
+        }
+        Set<String> userIds = new java.util.LinkedHashSet<>();
+        addPortalUserId(userIds, processInstance.getStartUserId());
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalOrganizationApi.getUserMap(userIds);
+        enrichPortalUser(processInstance, userMap);
+    }
+
+    private void enrichPortalCandidateUsers(List<BpmApprovalDetailRespVO.ActivityNode> activityNodes) {
+        if (CollUtil.isEmpty(activityNodes)) {
+            return;
+        }
+        Set<String> userIds = new java.util.LinkedHashSet<>();
+        activityNodes.forEach(node -> {
+            if (node.getCandidateUserIds() != null) {
+                node.getCandidateUserIds().forEach(userId -> addPortalUserId(userIds, userId));
+            }
+        });
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalOrganizationApi.getUserMap(userIds);
+        activityNodes.forEach(node -> {
+            if (node.getCandidateUserIds() != null) {
+                node.setCandidateUsers(node.getCandidateUserIds().stream().map(String::valueOf)
+                        .map(userId -> buildPortalUser(userId, userMap)).filter(java.util.Objects::nonNull).toList());
+            }
+        });
+    }
+
+    private void enrichPortalUsers(BpmProcessInstanceBpmnModelViewRespVO response) {
+        if (response == null) {
+            return;
+        }
+        Set<String> userIds = new java.util.LinkedHashSet<>();
+        if (response.getProcessInstance() != null) {
+            addPortalUserId(userIds, response.getProcessInstance().getStartUserId());
+        }
+        if (response.getTasks() != null) {
+            response.getTasks().forEach(task -> {
+                addPortalUserId(userIds, task.getAssignee());
+                addPortalUserId(userIds, task.getOwner());
+            });
+        }
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalOrganizationApi.getUserMap(userIds);
+        if (response.getProcessInstance() != null) {
+            enrichPortalUser(response.getProcessInstance(), userMap);
+        }
+        if (response.getTasks() != null) {
+            response.getTasks().forEach(task -> enrichPortalUser(task, userMap));
+        }
     }
 
     private static void addPortalUserId(Set<String> userIds, String userId) {
-        if (StrUtil.isNotBlank(userId) && NumberUtils.parseLong(userId) == null) {
+        if (StrUtil.isNotBlank(userId)) {
             userIds.add(userId);
+        }
+    }
+
+    private static void addPortalUserId(Set<String> userIds, Long userId) {
+        if (userId != null) {
+            userIds.add(String.valueOf(userId));
         }
     }
 
@@ -271,12 +314,8 @@ public class BpmProcessInstanceController {
         if (task == null) {
             return;
         }
-        if (task.getAssigneeUser() == null) {
-            task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
-        }
-        if (task.getOwnerUser() == null) {
-            task.setOwnerUser(buildPortalUser(task.getOwner(), userMap));
-        }
+        task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
+        task.setOwnerUser(buildPortalUser(task.getOwner(), userMap));
     }
 
     private static void enrichPortalUser(BpmTaskRespVO task,
@@ -284,19 +323,25 @@ public class BpmProcessInstanceController {
         if (task == null) {
             return;
         }
-        if (task.getAssigneeUser() == null) {
-            task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
-        }
-        if (task.getOwnerUser() == null) {
-            task.setOwnerUser(buildPortalUser(task.getOwner(), userMap));
+        task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
+        task.setOwnerUser(buildPortalUser(task.getOwner(), userMap));
+    }
+
+    private static void enrichPortalUser(BpmProcessInstanceRespVO processInstance,
+                                         Map<String, BpmPortalOrganizationApi.PortalUser> userMap) {
+        processInstance.setStartUser(buildPortalUser(processInstance.getStartUserId(), userMap));
+        if (processInstance.getTasks() != null) {
+            processInstance.getTasks().forEach(task -> {
+                task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
+            });
         }
     }
 
     private static UserSimpleBaseVO buildPortalUser(String userId,
                                                      Map<String, BpmPortalOrganizationApi.PortalUser> userMap) {
         BpmPortalOrganizationApi.PortalUser user = userMap.get(userId);
-        return user == null ? null : new UserSimpleBaseVO().setNickname(user.displayName())
-                .setAvatar(user.avatar()).setDeptName(user.departmentName());
+        return user == null ? null : new UserSimpleBaseVO().setId(user.getId()).setNickname(user.getDisplayName())
+                .setAvatar(user.getAvatar()).setDeptName(user.getDepartmentName());
     }
 
     @GetMapping("/get-print-data")
@@ -309,15 +354,16 @@ public class BpmProcessInstanceController {
         if (historicProcessInstance == null) {
             throw exception(PROCESS_INSTANCE_NOT_EXISTS);
         }
-        AdminUserRespDTO startUser = adminUserApi.getUser(Long.valueOf(historicProcessInstance.getStartUserId()));
-        DeptRespDTO dept = deptApi.getDept(startUser.getDeptId());
         List<HistoricTaskInstance> tasks = taskService.getFinishedTaskListByProcessInstanceIdWithoutCancel(processInstanceId);
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
-                convertSet(tasks, item -> Long.valueOf(item.getAssignee())));
+        Set<String> userIds = convertSet(tasks, HistoricTaskInstance::getAssignee);
+        userIds.add(historicProcessInstance.getStartUserId());
+        Map<String, BpmPortalOrganizationApi.PortalUser> portalUserMap = portalOrganizationApi.getUserMap(userIds);
+        Map<String, UserSimpleBaseVO> userMap = new java.util.LinkedHashMap<>();
+        portalUserMap.forEach((userId, user) -> userMap.put(userId, portalUserProjection.buildUser(userId, portalUserMap)));
         return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePrintData(historicProcessInstance,
                 processDefinitionService.getProcessDefinitionInfo(historicProcessInstance.getProcessDefinitionId()),
                 tasks, userMap,
-                new UserSimpleBaseVO().setNickname(startUser.getNickname()).setDeptName(dept.getName())));
+                userMap.get(historicProcessInstance.getStartUserId())));
     }
 
 }

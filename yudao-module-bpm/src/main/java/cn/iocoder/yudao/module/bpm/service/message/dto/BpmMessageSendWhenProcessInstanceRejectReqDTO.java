@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.bpm.service.message.dto;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * BPM 发送流程实例被不通过 Request DTO
@@ -21,8 +21,8 @@ public class BpmMessageSendWhenProcessInstanceRejectReqDTO {
      */
     @NotEmpty(message = "流程实例的名字不能为空")
     private String processInstanceName;
-    @NotNull(message = "发起人的用户编号")
-    private Long startUserId;
+    @NotBlank(message = "发起人的用户编号不能为空")
+    private String startUserId;
 
     /**
      * 不通过理由

@@ -64,4 +64,17 @@ class HeadlessRemoteCandidateStrategyTest extends BaseMockitoUnitTest {
                 () -> strategy.calculateAssigneeIdsByActivity(null, "activity-1", "ROLE_ADMIN", 100L, null, null));
     }
 
+    @Test
+    void calculateAssigneeIdsByActivity_keepsPortalStartUserId() {
+        HeadlessRemoteCandidateStrategy.PortalCandidateApi portalCandidateApi =
+                mock(HeadlessRemoteCandidateStrategy.PortalCandidateApi.class);
+        when(portalCandidateApi.resolveAssigneeIds("portal-requester-a1f2", "activity-1", "ROLE_ADMIN", null))
+                .thenReturn(new LinkedHashSet<>(List.of("portal-admin-d5e6")));
+        HeadlessRemoteCandidateStrategy strategy = new HeadlessRemoteCandidateStrategy(
+                Optional.of(portalCandidateApi), mock(BpmProcessInstanceService.class));
+
+        assertEquals(Set.of("portal-admin-d5e6"), strategy.calculateAssigneeIdsByActivity(null,
+                "activity-1", "ROLE_ADMIN", "portal-requester-a1f2", null, null));
+    }
+
 }

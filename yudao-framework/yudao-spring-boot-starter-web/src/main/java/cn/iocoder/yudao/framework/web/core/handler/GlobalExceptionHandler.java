@@ -5,8 +5,8 @@ import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.biz.infra.logger.ApiErrorLogCommonApi;
-import cn.iocoder.yudao.framework.common.biz.infra.logger.dto.ApiErrorLogCreateReqDTO;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApplicationLogApi;
+import cn.iocoder.yudao.framework.common.biz.portal.logging.PortalApiErrorLogEvent;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final String applicationName;
 
-    private final ApiErrorLogCommonApi apiErrorLogApi;
+    private final PortalApplicationLogApi applicationLogApi;
 
     /**
      * 处理所有异常，主要是提供给 Filter 使用
@@ -343,20 +343,20 @@ public class GlobalExceptionHandler {
 
     private void createExceptionLog(HttpServletRequest req, Throwable e) {
         // 插入错误日志
-        ApiErrorLogCreateReqDTO errorLog = new ApiErrorLogCreateReqDTO();
+        PortalApiErrorLogEvent errorLog = new PortalApiErrorLogEvent();
         try {
             // 初始化 errorLog
             buildExceptionLog(errorLog, req, e);
             // 执行插入 errorLog
-            apiErrorLogApi.createApiErrorLogAsync(errorLog);
+            applicationLogApi.createApiErrorLog(errorLog);
         } catch (Throwable th) {
             log.error("[createExceptionLog][url({}) log({}) 发生异常]", req.getRequestURI(),  JsonUtils.toJsonString(errorLog), th);
         }
     }
 
-    private void buildExceptionLog(ApiErrorLogCreateReqDTO errorLog, HttpServletRequest request, Throwable e) {
+    private void buildExceptionLog(PortalApiErrorLogEvent errorLog, HttpServletRequest request, Throwable e) {
         // 处理用户信息
-        errorLog.setUserId(WebFrameworkUtils.getLoginUserId(request));
+        errorLog.setUserId(WebFrameworkUtils.getLoginUserStringId(request));
         errorLog.setUserType(WebFrameworkUtils.getLoginUserType(request));
         // 设置异常字段
         errorLog.setExceptionName(e.getClass().getName());

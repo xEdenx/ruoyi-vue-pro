@@ -12,8 +12,7 @@ import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitio
 import cn.iocoder.yudao.module.bpm.dal.mysql.definition.BpmProcessDefinitionInfoMapper;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmnModelConstants;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.FlowableUtils;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.BpmnModel;
@@ -55,7 +54,7 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
     private BpmProcessDefinitionInfoMapper processDefinitionMapper;
 
     @Resource
-    private AdminUserApi adminUserApi;
+    private BpmPortalOrganizationApi portalOrganizationApi;
 
     @Resource
     @org.springframework.context.annotation.Lazy
@@ -96,7 +95,7 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
     }
 
     @Override
-    public boolean canUserStartProcessDefinition(BpmProcessDefinitionInfoDO processDefinition, Long userId) {
+    public boolean canUserStartProcessDefinition(BpmProcessDefinitionInfoDO processDefinition, String userId) {
         if (processDefinition == null) {
             return false;
         }
@@ -108,10 +107,11 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
 
         // 校验用户是否在允许发起的部门列表中
         if (CollUtil.isNotEmpty(processDefinition.getStartDeptIds())) {
-            AdminUserRespDTO user = adminUserApi.getUser(userId);
+            BpmPortalOrganizationApi.PortalUser user = portalOrganizationApi.getUser(userId);
             return user != null
-                    && user.getDeptId() != null
-                    && processDefinition.getStartDeptIds().contains(user.getDeptId());
+                    && user.isActive()
+                    && StrUtil.isNotBlank(user.getDepartmentId())
+                    && processDefinition.getStartDeptIds().contains(user.getDepartmentId());
         }
 
         // 都为空，则所有人都可以发起

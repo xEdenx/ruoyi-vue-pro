@@ -1,6 +1,10 @@
 package cn.iocoder.yudao.module.bpm.framework.portal;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 import java.util.Collection;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +19,20 @@ public interface BpmPortalOrganizationApi {
 
     PortalUser getUser(String userId);
 
+    PortalDepartment getDepartment(String departmentId);
+
+    /**
+     * 返回当前调用方可选择的 Portal 用户目录。
+     *
+     * <p>供 BPM 管理端的动态选人控件使用；生产实现应由 Portal 按调用方权限过滤。</p>
+     */
+    List<PortalUser> listSelectableUsers();
+
+    /**
+     * 返回当前调用方可选择的 Portal 部门目录。
+     */
+    List<PortalDepartment> listSelectableDepartments();
+
     default Map<String, PortalUser> getUserMap(Collection<String> userIds) {
         Map<String, PortalUser> result = new LinkedHashMap<>();
         if (userIds == null) {
@@ -24,6 +42,20 @@ public interface BpmPortalOrganizationApi {
             PortalUser user = getUser(userId);
             if (user != null) {
                 result.put(userId, user);
+            }
+        });
+        return result;
+    }
+
+    default Map<String, PortalDepartment> getDepartmentMap(Collection<String> departmentIds) {
+        Map<String, PortalDepartment> result = new LinkedHashMap<>();
+        if (departmentIds == null) {
+            return result;
+        }
+        departmentIds.forEach(departmentId -> {
+            PortalDepartment department = getDepartment(departmentId);
+            if (department != null) {
+                result.put(departmentId, department);
             }
         });
         return result;
@@ -40,10 +72,28 @@ public interface BpmPortalOrganizationApi {
      */
     default boolean isUserActive(String userId) {
         PortalUser user = getUser(userId);
-        return user != null && user.active();
+        return user != null && user.isActive();
     }
 
-    record PortalUser(String id, String displayName, String avatar, String departmentId, String departmentName, boolean active,
-                      Set<String> roleCodes, Set<String> postCodes) {
+    @Getter
+    @AllArgsConstructor
+    class PortalUser {
+
+        private final String id;
+        private final String displayName;
+        private final String avatar;
+        private final String departmentId;
+        private final String departmentName;
+        private final boolean active;
+        private final Set<String> roleCodes;
+        private final Set<String> postCodes;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    class PortalDepartment {
+
+        private final String id;
+        private final String name;
     }
 }

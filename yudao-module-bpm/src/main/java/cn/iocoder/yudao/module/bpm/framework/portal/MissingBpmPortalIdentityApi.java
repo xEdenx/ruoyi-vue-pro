@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.bpm.framework.portal;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @ConditionalOnProperty(prefix = "yudao.bpm.headless-mock", name = "enabled", havingValue = "false", matchIfMissing = true)
-@ConditionalOnMissingBean(BpmPortalIdentityApi.class)
 public class MissingBpmPortalIdentityApi implements BpmPortalIdentityApi {
 
     @Override

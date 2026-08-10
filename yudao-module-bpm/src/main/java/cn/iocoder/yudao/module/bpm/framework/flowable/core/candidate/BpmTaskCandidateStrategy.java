@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate;
 
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmTaskCandidateStrategyEnum;
+import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.engine.delegate.DelegateExecution;
 
@@ -104,6 +105,16 @@ public interface BpmTaskCandidateStrategy {
         calculateUsersByActivity(bpmnModel, activityId, param, startUserId, processDefinitionId, processVariables)
                 .forEach(userId -> result.add(String.valueOf(userId)));
         return result;
+    }
+
+    /**
+     * 使用 Portal 原始发起人 ID 预测候选人。旧本地策略仍要求数值 ID，默认仅在可转换时调用旧实现。
+     */
+    default Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId, String param,
+                                                        String startUserId, String processDefinitionId,
+                                                        Map<String, Object> processVariables) {
+        return calculateAssigneeIdsByActivity(bpmnModel, activityId, param, NumberUtils.parseLong(startUserId),
+                processDefinitionId, processVariables);
     }
 
 }

@@ -127,8 +127,8 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
         reqVO.setCategory("OA");
         reqVO.setType(BpmModelTypeEnum.BPMN.getType());
         reqVO.setBpmnXml("<definitions />");
-        reqVO.setStartUserIds(Arrays.asList(10L, 20L));
-        reqVO.setStartDeptIds(Collections.singletonList(30L));
+        reqVO.setStartUserIds(Arrays.asList("portal-user-10", "portal-user-20"));
+        reqVO.setStartDeptIds(Collections.singletonList("portal-dept-30"));
         reqVO.setManagerRoleCodes(Collections.singletonList("ROLE_BPM_MODEL_MANAGER"));
         Model model = mock(Model.class);
         when(model.getId()).thenReturn(MODEL_ID);
@@ -152,8 +152,8 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
         verify(model).setMetaInfo(metaInfoCaptor.capture());
         BpmModelMetaInfoVO metaInfo = JsonUtils.parseObject(metaInfoCaptor.getValue(), BpmModelMetaInfoVO.class);
         assertNotNull(metaInfo);
-        assertEquals(Arrays.asList(10L, 20L), metaInfo.getStartUserIds());
-        assertEquals(Collections.singletonList(30L), metaInfo.getStartDeptIds());
+        assertEquals(Arrays.asList("portal-user-10", "portal-user-20"), metaInfo.getStartUserIds());
+        assertEquals(Collections.singletonList("portal-dept-30"), metaInfo.getStartDeptIds());
         assertEquals(Collections.singletonList("ROLE_BPM_MODEL_MANAGER"), metaInfo.getManagerRoleCodes());
     }
 

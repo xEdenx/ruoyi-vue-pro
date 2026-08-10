@@ -1,12 +1,11 @@
 package cn.iocoder.yudao.module.bpm.dal.dataobject.definition;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
+import cn.iocoder.yudao.framework.mybatis.core.type.StringListTypeHandler;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelMetaInfoVO;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmAutoApproveTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelFormTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelTypeEnum;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -140,7 +139,7 @@ public class BpmProcessDefinitionInfoDO extends BaseDO {
     /**
      * 可发起用户编号数组
      *
-     * 关联 {@link AdminUserRespDTO#getId()} 字段的数组
+     * Portal 原始用户 ID 数组
      *
      * 如果为空，则表示“全部可以发起”！
      *
@@ -148,24 +147,24 @@ public class BpmProcessDefinitionInfoDO extends BaseDO {
      * 1. {@link #visible} 只是决定是否可见。即使不可见，还是可以发起
      * 2. startUserIds 决定某个用户是否可以发起。如果该用户不可发起，则他也是不可见的
      */
-    @TableField(typeHandler = LongListTypeHandler.class) // 为了可以使用 find_in_set 进行过滤
-    private List<Long> startUserIds;
+    @TableField(typeHandler = StringListTypeHandler.class)
+    private List<String> startUserIds;
 
     /**
      * 可发起部门编号数组
      *
-     * 关联 {@link AdminUserRespDTO#getDeptId()} 字段的数组
+     * Portal 原始部门 ID 数组
      */
-    @TableField(typeHandler = LongListTypeHandler.class)
-    private List<Long> startDeptIds;
+    @TableField(typeHandler = StringListTypeHandler.class)
+    private List<String> startDeptIds;
 
     /**
      * 可管理用户编号数组
      *
-     * 关联 {@link AdminUserRespDTO#getId()} 字段的数组
+     * Portal 原始用户 ID 数组
      */
-    @TableField(typeHandler = LongListTypeHandler.class) // 为了可以使用 find_in_set 进行过滤
-    private List<Long> managerUserIds;
+    @TableField(typeHandler = StringListTypeHandler.class)
+    private List<String> managerUserIds;
 
     /**
      * 是否允许撤销审批中的申请
