@@ -239,9 +239,14 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     public PageResult<HistoricTaskInstance> getTaskDonePage(Long userId, BpmTaskPageReqVO pageVO) {
+        return getTaskDonePage(userId == null ? null : String.valueOf(userId), pageVO);
+    }
+
+    @Override
+    public PageResult<HistoricTaskInstance> getTaskDonePage(String userId, BpmTaskPageReqVO pageVO) {
         HistoricTaskInstanceQuery taskQuery = historyService.createHistoricTaskInstanceQuery()
                 .finished() // 已完成
-                .taskAssignee(String.valueOf(userId)) // 分配给自己
+                .taskAssignee(userId) // 分配给自己
                 .includeTaskLocalVariables()
                 .orderByHistoricTaskInstanceEndTime().desc(); // 审批时间倒序
         if (StrUtil.isNotBlank(pageVO.getName())) {

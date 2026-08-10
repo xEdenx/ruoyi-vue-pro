@@ -1,6 +1,6 @@
 # Headless BPM 解耦路线图
 
-> 状态：Proposed
+> 状态：In progress
 >
 > 范围：将当前 RuoYi-Vue-Pro BPM 服务收敛为 Portal 驱动的无头工作流服务。
 > 本文不删除任何代码或表；每一阶段必须通过本阶段验收后才可进入下一阶段。
@@ -28,6 +28,19 @@ Flowable 运行
 ```
 
 为避免 BPM 成为业务数据副本，`variables` 只应包含网关判断、节点标题等流程必需字段，以及业务引用；完整业务表单由 Portal 通过 `businessKey` 查询。
+
+### 1.1 范围锁定：替换依赖，不删除 BPM 业务能力
+
+本路线图的“移除”仅指移除 BPM 对本地 `system` / `infra` 的数据读取、认证、通知投递和组织解算实现；**不授权删除已有 BPM 业务语义、Flowable 节点或运行 API**。下列能力必须保留，并通过 Portal 适配器完成外部协作：
+
+| BPM 能力 | BPM 必须保留的职责 | Portal 替换的职责 |
+| --- | --- | --- |
+| 审批、会签、或签、依次审批、拒绝、回退、撤回 | Flowable 状态机、任务创建/取消、历史轨迹与权限时序 | 最终审批人解算、用户展示与身份授权 |
+| 抄送节点 | 节点触发时机、流程上下文、抄送事件与查询 API | 收件人解算、消息投递、Portal 侧收件箱/展示 |
+| 转办、委派、加签、减签 | 任务状态变更、审计记录、并行/串行规则 | 目标用户检索、可用性与权限校验 |
+| 任务创建、完成、超时、流程结束等监听器 | 监听器执行时机及流程变量/状态回调 | 通知、业务回调和外部消息投递 |
+
+任何删除 BPM 节点、监听器、Controller、Service 或 `bpm_*` 表的提案，都必须单独说明被替代的能力、Portal 接口、数据迁移、回归用例和明确审批；不得以“解耦 system”为理由直接删除。
 
 ## 2. 最终模块边界
 
@@ -69,20 +82,21 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 - [ ] 用 `PortalPrincipal` 替换 `getLoginUserId()` 及其 Long 类型调用链。
 - [ ] 用签名 claims 的 `hasAuthority(...)` 或 API 网关策略替换 `@ss.hasPermission(...)`。
 - [ ] 定义管理员权限，例如 `bpm:definition:manage`；运行用户仅能操作其 String ID 对应的任务。
-- [ ] 流程发起人、任务 owner/assignee、历史返回字段统一为 String。
+- [ ] 流程发起人、任务 owner/assignee、历史返回字段统一为 String。（任务运行接口与用户投影已支持；流程实例、抄送及可选操作仍待迁移）
 
 ### 4.2 删除本地组织候选人能力
 
-- [ ] 保留 `START_USER_SELECT`；按需保留读取表单内最终 String 用户 ID 的策略。
-- [ ] 删除用户、角色、岗位、部门、部门负责人、用户组等本地候选人策略及其校验。
-- [ ] 删除 `AdminUserApi`、`DeptApi`、`RoleApi`、`PostApi`、`PermissionApi` 注入。
-- [ ] 响应中返回原始 ID，不再由 BPM 补全昵称、部门名称或本地用户信息。
+- [x] 仅保留 `START_USER_SELECT` 与 `HEADLESS_REMOTE`；策略枚举保留历史编号，但不再保留旧编号的实现。
+- [x] 删除用户、角色、岗位、部门、部门负责人、用户组、表达式和本地空审批人等候选人策略及其校验；旧模型不再兼容。
+- [ ] 删除 `AdminUserApi`、`DeptApi`、`RoleApi`、`PostApi`、`PermissionApi` 注入。（候选人调用器、任务列表、模型列表和评论已迁移；流程实例、抄送等仍待迁移）
+- [ ] 响应中返回原始 ID，不再由 BPM 补全昵称、部门名称或本地用户信息。（运行任务与评论已通过 Portal 最小投影补全；其余接口待迁移）
 
 ### 4.3 处理 system 绑定的可选功能
 
-- [ ] 本地短信、邮件、站内信改为 Portal Webhook，或先禁用。
+- [ ] 保留任务创建、完成、超时、流程结束等通知触发语义；本地短信、邮件、站内信投递改为 `BpmPortalNotificationApi` / Portal Webhook。Portal 暂未接入时可 no-op 或记录待投递事件，但不得删除 BPM 事件或状态变更。
 - [ ] 流程管理员、发起人白名单、部门白名单改为 Portal 授权，或移入独立 BPM 配置。
-- [ ] 自动审批、撤回、转办、委派等能力的主体比较全部支持 String ID。
+- [ ] 自动审批、撤回、转办、委派、加签、减签等能力的流程语义和审计记录保留；其主体比较、目标用户校验全部支持 String ID 并委托 Portal。
+- [ ] 抄送节点、`BpmCopyTaskDelegate` 和抄送查询 API 保留；收件人选择与消息投递改由 Portal 适配器完成。
 
 **验收：** 删除/屏蔽 `system_*` 数据后，服务不发出本地用户、组织、角色、菜单 SQL；核心 walkthrough 仍通过。
 
@@ -99,12 +113,12 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 | `bpm_process_listener` | 短期保留流程监听器的后台配置能力。 |
 | `ACT_RE_*`、`ACT_RU_*`、`ACT_HI_*`、`ACT_GE_*` | Flowable 的模型、部署、运行、变量和历史审计。 |
 
-**先移除代码，再删除表：**
+**仅在业务能力被明确下线后，才可移除代码和表：**
 
 | 表 | 前提 |
 | --- | --- |
 | `bpm_oa_leave` | 删除 OA 示例 Controller、Service、Mapper。 |
-| `bpm_process_instance_copy` | Portal 负责抄送/通知，删除抄送监听器和 API。 |
+| `bpm_process_instance_copy` | 当前不在删除范围。先保留抄送节点、监听器、查询 API 和审计记录；仅将收件人解算、投递和 Portal 收件箱替换为 Portal 适配器。未来若业务明确下线 BPM 抄送审计，再单独设计迁移和删除。 |
 | `bpm_user_group` | 已完成阶段 1 的本地用户组策略移除。 |
 
 `bpm_process_definition_info` 后续可以裁剪本地用户/部门/管理员相关字段，但必须在替代行为上线后再迁移。

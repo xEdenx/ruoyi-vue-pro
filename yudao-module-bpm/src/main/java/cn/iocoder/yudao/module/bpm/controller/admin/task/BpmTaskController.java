@@ -1,22 +1,22 @@
 package cn.iocoder.yudao.module.bpm.controller.admin.task;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
+import cn.iocoder.yudao.module.bpm.controller.admin.base.user.BpmPortalUserProjection;
+import cn.iocoder.yudao.module.bpm.controller.admin.base.user.UserSimpleBaseVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.task.*;
 import cn.iocoder.yudao.module.bpm.convert.task.BpmTaskConvert;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmFormDO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
 import cn.iocoder.yudao.module.bpm.enums.task.BpmAttachmentTypeEnum;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmFormService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmProcessDefinitionService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmTaskService;
-import cn.iocoder.yudao.module.system.api.dept.DeptApi;
-import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,8 +36,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
@@ -60,9 +60,7 @@ public class BpmTaskController {
     private BpmProcessDefinitionService processDefinitionService;
 
     @Resource
-    private AdminUserApi adminUserApi;
-    @Resource
-    private DeptApi deptApi;
+    private BpmPortalUserProjection portalUserProjection;
 
     @GetMapping("todo-page")
     @Operation(summary = "获取 Todo 待办任务分页")
@@ -78,15 +76,18 @@ public class BpmTaskController {
                 convertSet(pageResult.getList(), Task::getProcessInstanceId));
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), Task::getProcessDefinitionId));
-        // Portal 负责由自身用户字典补全姓名与部门；BPM 不再将外部 ID 转成本地 Long 用户编号。
-        return success(BpmTaskConvert.INSTANCE.buildTodoTaskPage(pageResult, processInstanceMap, Map.of(), processDefinitionInfoMap));
+        PageResult<BpmTaskRespVO> result = BpmTaskConvert.INSTANCE.buildTodoTaskPage(pageResult, processInstanceMap,
+                Map.of(), processDefinitionInfoMap);
+        projectTaskUsers(result.getList(), convertMap(processInstanceMap.values(),
+                org.flowable.engine.runtime.ProcessInstance::getId, org.flowable.engine.runtime.ProcessInstance::getStartUserId));
+        return success(result);
     }
 
     @GetMapping("done-page")
     @Operation(summary = "获取 Done 已办任务分页")
     @PreAuthorize("@ss.hasPermission('bpm:task:query')")
     public CommonResult<PageResult<BpmTaskRespVO>> getTaskDonePage(@Valid BpmTaskPageReqVO pageVO) {
-        PageResult<HistoricTaskInstance> pageResult = taskService.getTaskDonePage(getLoginUserId(), pageVO);
+        PageResult<HistoricTaskInstance> pageResult = taskService.getTaskDonePage(getCurrentUserId(), pageVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(PageResult.empty());
         }
@@ -94,13 +95,14 @@ public class BpmTaskController {
         // 拼接数据
         Map<String, HistoricProcessInstance> processInstanceMap = processInstanceService.getHistoricProcessInstanceMap(
                 convertSet(pageResult.getList(), HistoricTaskInstance::getProcessInstanceId));
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
-                convertSet(processInstanceMap.values(), instance -> Long.valueOf(instance.getStartUserId())));
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), HistoricTaskInstance::getProcessDefinitionId));
         Map<String, List<Attachment>> taskAttachmentMap = getTaskAttachmentMap(pageResult.getList());
-        return success(BpmTaskConvert.INSTANCE.buildTaskPage(pageResult, processInstanceMap, userMap, null,
-                processDefinitionInfoMap, taskAttachmentMap));
+        PageResult<BpmTaskRespVO> result = BpmTaskConvert.INSTANCE.buildTaskPage(pageResult, processInstanceMap, Map.of(), Map.of(),
+                processDefinitionInfoMap, taskAttachmentMap);
+        projectTaskUsers(result.getList(), convertMap(processInstanceMap.values(),
+                HistoricProcessInstance::getId, HistoricProcessInstance::getStartUserId));
+        return success(result);
     }
 
     @GetMapping("manager-page")
@@ -115,17 +117,14 @@ public class BpmTaskController {
         // 拼接数据
         Map<String, HistoricProcessInstance> processInstanceMap = processInstanceService.getHistoricProcessInstanceMap(
                 convertSet(pageResult.getList(), HistoricTaskInstance::getProcessInstanceId));
-        // 获得 User 和 Dept Map
-        Set<Long> userIds = convertSet(processInstanceMap.values(), instance -> Long.valueOf(instance.getStartUserId()));
-        userIds.addAll(convertSet(pageResult.getList(), task -> NumberUtils.parseLong(task.getAssignee())));
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(userIds);
-        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
-                convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), HistoricTaskInstance::getProcessDefinitionId));
         Map<String, List<Attachment>> taskAttachmentMap = getTaskAttachmentMap(pageResult.getList());
-        return success(BpmTaskConvert.INSTANCE.buildTaskPage(pageResult, processInstanceMap, userMap, deptMap,
-                processDefinitionInfoMap, taskAttachmentMap));
+        PageResult<BpmTaskRespVO> result = BpmTaskConvert.INSTANCE.buildTaskPage(pageResult, processInstanceMap, Map.of(), Map.of(),
+                processDefinitionInfoMap, taskAttachmentMap);
+        projectTaskUsers(result.getList(), convertMap(processInstanceMap.values(),
+                HistoricProcessInstance::getId, HistoricProcessInstance::getStartUserId));
+        return success(result);
     }
 
     @GetMapping("/list-by-process-instance-id")
@@ -140,17 +139,14 @@ public class BpmTaskController {
         }
 
         // 拼接数据
-        Set<Long> userIds = convertSetByFlatMap(taskList, task ->
-                Stream.of(NumberUtils.parseLong(task.getAssignee()), NumberUtils.parseLong(task.getOwner())));
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(userIds);
-        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
-                convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
         // 获得 Form Map
         Map<Long, BpmFormDO> formMap = formService.getFormMap(
                 convertSet(taskList, task -> NumberUtils.parseLong(task.getFormKey())));
         Map<String, List<Attachment>> taskAttachmentMap = getTaskAttachmentMap(taskList);
-        return success(BpmTaskConvert.INSTANCE.buildTaskListByProcessInstanceId(taskList,
-                formMap, userMap, deptMap, taskAttachmentMap));
+        List<BpmTaskRespVO> result = BpmTaskConvert.INSTANCE.buildTaskListByProcessInstanceId(taskList,
+                formMap, Map.of(), Map.of(), taskAttachmentMap);
+        projectTaskUsers(result, Map.of());
+        return success(result);
     }
 
     @PutMapping("/approve")
@@ -245,11 +241,9 @@ public class BpmTaskController {
             return success(Collections.emptyList());
         }
         // 拼接数据
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(convertSetByFlatMap(taskList,
-                user -> Stream.of(NumberUtils.parseLong(user.getAssignee()), NumberUtils.parseLong(user.getOwner()))));
-        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
-                convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
-        return success(BpmTaskConvert.INSTANCE.buildTaskListByParentTaskId(taskList, userMap, deptMap));
+        List<BpmTaskRespVO> result = BpmTaskConvert.INSTANCE.buildTaskListByParentTaskId(taskList, Map.of(), Map.of());
+        projectTaskUsers(result, Map.of());
+        return success(result);
     }
 
     /**
@@ -268,6 +262,49 @@ public class BpmTaskController {
                 processInstanceId, convertSet(tasks, HistoricTaskInstance::getId), BpmAttachmentTypeEnum.TASK_ATTACHMENT)));
         // 2. 返回 Map
         return convertMultiMap(attachments, Attachment::getTaskId);
+    }
+
+    private void projectTaskUsers(List<BpmTaskRespVO> tasks, Map<String, String> processStartUserIds) {
+        Set<String> userIds = new LinkedHashSet<>();
+        processStartUserIds.values().stream().filter(StrUtil::isNotBlank).forEach(userIds::add);
+        tasks.forEach(task -> collectTaskUserIds(task, userIds));
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalUserProjection.getUserMap(userIds);
+        tasks.forEach(task -> fillTaskUsers(task, userMap, processStartUserIds));
+    }
+
+    private void collectTaskUserIds(BpmTaskRespVO task, Set<String> userIds) {
+        if (task == null) {
+            return;
+        }
+        if (StrUtil.isNotBlank(task.getAssignee())) {
+            userIds.add(task.getAssignee());
+        }
+        if (StrUtil.isNotBlank(task.getOwner())) {
+            userIds.add(task.getOwner());
+        }
+        if (task.getChildren() != null) {
+            task.getChildren().forEach(child -> collectTaskUserIds(child, userIds));
+        }
+    }
+
+    private void fillTaskUsers(BpmTaskRespVO task, Map<String, BpmPortalOrganizationApi.PortalUser> userMap,
+                               Map<String, String> processStartUserIds) {
+        if (task == null) {
+            return;
+        }
+        if (task.getAssigneeUser() == null) {
+            task.setAssigneeUser(portalUserProjection.buildUser(task.getAssignee(), userMap));
+        }
+        if (task.getOwnerUser() == null) {
+            task.setOwnerUser(portalUserProjection.buildUser(task.getOwner(), userMap));
+        }
+        if (task.getProcessInstance() != null && task.getProcessInstance().getStartUser() == null) {
+            task.getProcessInstance().setStartUser(portalUserProjection.buildUser(
+                    processStartUserIds.get(task.getProcessInstanceId()), userMap));
+        }
+        if (task.getChildren() != null) {
+            task.getChildren().forEach(child -> fillTaskUsers(child, userMap, processStartUserIds));
+        }
     }
 
 }

@@ -64,6 +64,11 @@ public interface BpmTaskService {
     PageResult<HistoricTaskInstance> getTaskDonePage(Long userId, BpmTaskPageReqVO pageReqVO);
 
     /**
+     * 获得外部 Portal 用户的已办任务。用户 ID 与 Flowable 的 assignee 字段一致。
+     */
+    PageResult<HistoricTaskInstance> getTaskDonePage(String userId, BpmTaskPageReqVO pageReqVO);
+
+    /**
      * 获得全部的流程任务分页
      *
      * @param userId    用户编号

@@ -4,6 +4,12 @@
 >
 > 目的：集中记录 BPM 对 Portal 的所有外部依赖。BPM 内的业务代码只能依赖本文定义的适配端口；后续接入 Portal 时替换适配器实现，而不是再次修改候选人、任务、流程实例或 Controller 业务逻辑。
 
+## 0. 能力保留约束
+
+解耦只替换外部依赖，不能删除 BPM 业务能力。审批、会签、或签、退回、撤回、转办、委派、加签、减签、抄送、任务监听器、流程事件、审计轨迹及其运行 API 均由 BPM/Flowable 继续负责。
+
+Portal 适配器只负责下列边界能力：身份与权限 claims、组织目录和最终用户解算、用户展示投影、通知/抄送投递、业务回调。任何拟删除 BPM 节点、监听器、Controller、Service 或 `bpm_*` 表的变更，必须另行获得业务下线授权；不得将“Portal 接管用户或通知”理解为“删除流程语义”。
+
 ## 1. 边界与不变量
 
 - Portal 是用户、角色、部门、岗位、权限、通知和业务单据的唯一来源；BPM 不同步这些数据。
@@ -20,7 +26,7 @@
 | `BpmPortalOrganizationApi` | 用户展示、启用状态、角色/岗位/部门到最终用户的解算 | `LocalBpmPortalIdentityApiMock` | HTTP/mTLS 调 Portal 组织目录 API |
 | `HeadlessRemoteCandidateStrategy.PortalCandidateApi` | BPMN 策略 70 的节点级候选人解算 | `LocalPortalCandidateApiMock` | HTTP/mTLS 调 Portal 节点选人策略 API |
 | `PortalPrincipal`（待实现） | 请求认证、当前用户和权限 claims | `BpmPortalAuthController` 本地 Mock 登录 + 临时 JWT 解析 | 校验 Portal JWT 或网关透传的可信身份 |
-| `BpmPortalNotificationApi`（待实现） | 待办、审批结果、抄送等通知 | 记录事件或 no-op Mock | Portal Webhook / 消息入口 |
+| `BpmPortalNotificationApi`（待实现） | 待办、审批结果、抄送等通知投递 | 记录事件或 no-op Mock；不影响 BPM 状态和审计 | Portal Webhook / 消息入口 |
 
 本地 Mock 开关：
 
@@ -93,11 +99,18 @@ Set<String> resolveUserIds(
 | `POST` | Portal 岗位编码 | `POST_PROCUREMENT` |
 | `DEPT` | Portal 部门 ID | `portal-dept-admin` |
 
-返回值必须是去重、非空的最终用户 String ID。BPM 根据节点的审批方式处理返回集合：随机单人选一个；或签为每人建任务且首人完成即结束；会签为每人建任务并按全员/比例条件继续。`startUserId` 和 `processInstanceId` 用于 Portal 实现“发起人所在部门”“项目成员”“动态组织快照”等策略。
+该接口保留给 Portal 远程选人适配器使用；BPMN 不再直接配置 `USER`、`ROLE`、`POST` 或 `DEPT` 等本地策略。返回值必须是去重、非空的最终用户 String ID。BPM 根据节点的审批方式处理返回集合：随机单人选一个；或签为每人建任务且首人完成即结束；会签为每人建任务并按全员/比例条件继续。`startUserId` 和 `processInstanceId` 用于 Portal 实现“发起人所在部门”“项目成员”“动态组织快照”等策略。
 
 流程任务只持久化 Portal 原始用户 ID。查询审批详情和 BPMN 流程图时，BPM 会批量调用组织目录，将 Portal 返回的 `displayName`、`avatar` 和部门名称投影到响应的 `assigneeUser`、`ownerUser` 字段；姓名不是 BPM 的持久化快照，Portal 更名会在后续查询中即时体现。若审计要求保留历史姓名，Portal 应另行提供不可变的审计名称字段或版本化目录查询能力。
 
 ## 4. BPMN 节点级选人 SPI
+
+### 4.1 当前 BPMN 候选人策略边界
+
+- `BpmTaskCandidateStrategyEnum` 保留全部历史编号，只作为 BPMN 元数据和错误诊断的稳定目录；保留枚举值不代表存在可执行实现。
+- Spring 仅注册 `START_USER_SELECT`（35）与 `HEADLESS_REMOTE`（70）两个候选人实现。Vue 两套建模器也只提供这两个选项。
+- 旧策略编号对应的实现已删除。包含旧编号的流程模型发布时会因找不到策略实现而失败，不能再隐式读取 `system_user`、角色、岗位或部门。
+- 候选人为空时不再执行本地 `ASSIGN_EMPTY` 回退。Portal 必须在发起时提供 `startUserSelectAssignees`，或由远程策略返回有效的最终用户 String ID；否则失败关闭。
 
 策略 70 的入口是 `HeadlessRemoteCandidateStrategy.PortalCandidateApi`：
 
@@ -127,14 +140,15 @@ Set<String> resolveAssigneeIds(
 
 | 范围 | 当前本地依赖 | Portal 替代 | 目标状态 |
 | --- | --- | --- | --- |
-| BPMN 本地用户/角色/岗位/部门候选人策略 | `AdminUserApi`、`RoleApi`、`PostApi`、`DeptApi`、`PermissionApi` | `BpmPortalOrganizationApi.resolveUserIds` | 待迁移 |
-| 候选人禁用过滤 | `AdminUserApi.getUserMap` | `BpmPortalOrganizationApi.isUserActive` | 待迁移 |
-| 模型、待办、已办、轨迹的姓名/部门补全 | `AdminUserApi`、`DeptApi` | `getUser` / `getUserMap`；Portal 可自行渲染 | 待迁移 |
+| BPMN 本地用户/角色/岗位/部门候选人策略 | 已删除 | `START_USER_SELECT` 或 `HEADLESS_REMOTE` | 已移除 |
+| 候选人禁用过滤 | `AdminUserApi.getUserMap` | `BpmPortalOrganizationApi.isUserActive` | 已迁移（候选人为空时失败关闭） |
+| 待办、已办、任务明细与评论的姓名/部门补全 | `AdminUserApi`、`DeptApi` | `BpmPortalUserProjection` + `getUserMap`；Portal 可自行渲染 | 已迁移 |
+| 模型、流程实例详情/打印、审批轨迹的姓名/部门补全 | `AdminUserApi`、`DeptApi` | `getUser` / `getUserMap`；Portal 可自行渲染 | 待迁移 |
 | 模型管理员校验 | 本地用户/角色已不再是权威来源 | `BpmPortalIdentityApi.hasAnyRole` | 已迁移（Mock） |
 | 发起权限、部门白名单 | 本地用户/部门判断 | Portal claims 或 Portal 授权接口 | 待迁移 |
 | 当前登录用户与菜单权限 | `SecurityFrameworkUtils`、`@ss.hasPermission` | `PortalPrincipal` + Portal claims | 本地 Mock 已提供登录与 `/me`；生产待迁移 |
-| 短信、邮件、站内信 | `SmsSendApi` 等 system 能力 | `BpmPortalNotificationApi` / Portal Webhook | 待迁移 |
-| 抄送、转办、委派、加签目标用户校验 | `AdminUserApi` | Portal 组织目录用户校验 | 待迁移 |
+| 短信、邮件、站内信 | `SmsSendApi` 等 system 能力 | `BpmPortalNotificationApi` / Portal Webhook；保留 BPM 通知触发时机 | 待迁移 |
+| 抄送、转办、委派、加签目标用户校验 | `AdminUserApi` | Portal 组织目录用户校验；保留 BPM 动作、监听器、查询 API 与审计 | 待迁移 |
 
 ## 6. 生产 HTTP 实现要求
 

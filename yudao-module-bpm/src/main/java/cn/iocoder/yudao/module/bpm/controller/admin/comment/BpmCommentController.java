@@ -3,15 +3,13 @@ package cn.iocoder.yudao.module.bpm.controller.admin.comment;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.bpm.controller.admin.base.user.UserSimpleBaseVO;
+import cn.iocoder.yudao.module.bpm.controller.admin.base.user.BpmPortalUserProjection;
 import cn.iocoder.yudao.module.bpm.controller.admin.comment.vo.BpmCommentCreateReqVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.comment.vo.BpmCommentRespVO;
 import cn.iocoder.yudao.module.bpm.service.comment.BpmCommentService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmTaskService;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,7 +41,7 @@ public class BpmCommentController {
     private BpmTaskService taskService;
 
     @Resource
-    private AdminUserApi adminUserApi;
+    private BpmPortalUserProjection portalUserProjection;
 
     @GetMapping("/list-by-process-instance-id")
     @Operation(summary = "获得指定流程实例的评论列表")
@@ -60,13 +58,13 @@ public class BpmCommentController {
         // 拼接 VO
         Map<String, HistoricTaskInstance> taskMap = taskService.getHistoricTaskMap(
                 convertSet(commentList, Comment::getTaskId));
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
-                convertSet(commentList, comment -> NumberUtils.parseLong(comment.getUserId())));
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalUserProjection.getUserMap(
+                convertSet(commentList, Comment::getUserId));
         return success(convertList(commentList, comment -> BeanUtils.toBean(comment, BpmCommentRespVO.class, commentVO -> {
             commentVO.setMessage(comment.getFullMessage())
                     .setCreateTime(DateUtils.of(comment.getTime()))
                     .setTask(BeanUtils.toBean(taskMap.get(comment.getTaskId()), BpmCommentRespVO.Task.class))
-                    .setUser(BeanUtils.toBean(userMap.get(NumberUtils.parseLong(comment.getUserId())), UserSimpleBaseVO.class));
+                    .setUser(portalUserProjection.buildUser(comment.getUserId(), userMap));
         })));
     }
 

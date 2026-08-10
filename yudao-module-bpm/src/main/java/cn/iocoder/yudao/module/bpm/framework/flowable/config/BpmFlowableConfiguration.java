@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.bpm.framework.flowable.core.behavior.BpmActivityB
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.BpmTaskCandidateInvoker;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.BpmTaskCandidateStrategy;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.event.BpmProcessInstanceEventPublisher;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import org.flowable.common.engine.api.delegate.FlowableFunctionDelegate;
 import org.flowable.common.engine.api.delegate.event.FlowableEventListener;
 import org.flowable.spring.SpringProcessEngineConfiguration;
@@ -79,10 +79,9 @@ public class BpmFlowableConfiguration {
     }
 
     @Bean
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") // adminUserApi 可以注入成功
     public BpmTaskCandidateInvoker bpmTaskCandidateInvoker(List<BpmTaskCandidateStrategy> strategyList,
-                                                           AdminUserApi adminUserApi) {
-        return new BpmTaskCandidateInvoker(strategyList, adminUserApi);
+                                                           BpmPortalOrganizationApi portalOrganizationApi) {
+        return new BpmTaskCandidateInvoker(strategyList, portalOrganizationApi);
     }
 
     // =========== 自己拓展的 Bean ==========

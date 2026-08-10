@@ -5,7 +5,6 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
@@ -15,8 +14,7 @@ import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmTaskCandidat
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.BpmnModelUtils;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.FlowableUtils;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.*;
@@ -38,15 +36,15 @@ public class BpmTaskCandidateInvoker {
 
     private final Map<BpmTaskCandidateStrategyEnum, BpmTaskCandidateStrategy> strategyMap = new HashMap<>();
 
-    private final AdminUserApi adminUserApi;
+    private final BpmPortalOrganizationApi portalOrganizationApi;
 
     public BpmTaskCandidateInvoker(List<BpmTaskCandidateStrategy> strategyList,
-                                   AdminUserApi adminUserApi) {
+                                   BpmPortalOrganizationApi portalOrganizationApi) {
         strategyList.forEach(strategy -> {
             BpmTaskCandidateStrategy oldStrategy = strategyMap.put(strategy.getStrategy(), strategy);
             Assert.isNull(oldStrategy, "策略(%s) 重复", strategy.getStrategy());
         });
-        this.adminUserApi = adminUserApi;
+        this.portalOrganizationApi = portalOrganizationApi;
     }
 
     /**
@@ -110,14 +108,8 @@ public class BpmTaskCandidateInvoker {
             // 1.2 移除被禁用的用户
             removeDisableUsers(userIds);
 
-            // 2. 候选人为空时，根据“审批人为空”的配置补充
-            if (CollUtil.isEmpty(userIds)) {
-                userIds = getCandidateStrategy(BpmTaskCandidateStrategyEnum.ASSIGN_EMPTY.getStrategy())
-                        .calculateUsersByTask(execution, param);
-                // ASSIGN_EMPTY 策略，不需要移除被禁用的用户。原因是，再移除，可能会出现更没审批人了！！！
-            }
-
-            // 3. 移除发起人的用户
+            // 2. 移除发起人的用户。候选人为空时不再回退到本地“审批人为空”策略，
+            // 由 Portal 在发起/远程解算时显式补全或让任务创建失败。
             ProcessInstance processInstance = SpringUtil.getBean(BpmProcessInstanceService.class)
                     .getProcessInstance(execution.getProcessInstanceId());
             Assert.notNull(processInstance, "流程实例({}) 不存在", execution.getProcessInstanceId());
@@ -132,17 +124,16 @@ public class BpmTaskCandidateInvoker {
     /**
      * 计算写入 Flowable 任务的处理人 ID。
      *
-     * 发起人自选的 ID 由 Portal 管理，必须原样保留；其余内置策略仍使用本地 Long 用户 ID。
+     * Portal 解算后的 ID 由 Flowable 原样保存。任何禁用或不存在用户由 Portal 组织目录过滤。
      */
     public Set<String> calculateAssigneeIdsByTask(DelegateExecution execution) {
         Integer strategy = BpmnModelUtils.parseCandidateStrategy(execution.getCurrentFlowElement());
         BpmTaskCandidateStrategy candidateStrategy = getCandidateStrategy(strategy);
         Set<String> assigneeIds = candidateStrategy.calculateAssigneeIdsByTask(execution,
                 BpmnModelUtils.parseCandidateParam(execution.getCurrentFlowElement()));
-        if (CollUtil.isNotEmpty(assigneeIds)) {
-            return assigneeIds;
-        }
-        return convertToStringSet(calculateUsersByTask(execution));
+        removeInactiveAssignees(assigneeIds);
+        removeStartUserIfSkip(assigneeIds, execution.getCurrentFlowElement(), getStartUserId(execution));
+        return assigneeIds;
     }
 
     @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致找不到候选人
@@ -169,14 +160,7 @@ public class BpmTaskCandidateInvoker {
         // 1.2 移除被禁用的用户
         removeDisableUsers(userIds);
 
-        // 2. 候选人为空时，根据“审批人为空”的配置补充
-        if (CollUtil.isEmpty(userIds)) {
-            userIds = getCandidateStrategy(BpmTaskCandidateStrategyEnum.ASSIGN_EMPTY.getStrategy())
-                    .calculateUsersByActivity(bpmnModel, activityId, param, startUserId, processDefinitionId, processVariables);
-            // ASSIGN_EMPTY 策略，不需要移除被禁用的用户。原因是，再移除，可能会出现更没审批人了！！！
-        }
-
-        // 3. 移除发起人的用户
+        // 2. 移除发起人的用户。候选人为空时不再回退到本地“审批人为空”策略。
         removeStartUserIfSkip(userIds, flowElement, startUserId);
         return userIds;
     }
@@ -192,20 +176,10 @@ public class BpmTaskCandidateInvoker {
             BpmTaskCandidateStrategy strategy = getCandidateStrategy(BpmnModelUtils.parseCandidateStrategy(flowElement));
             Set<String> assigneeIds = strategy.calculateAssigneeIdsByActivity(bpmnModel, activityId,
                     BpmnModelUtils.parseCandidateParam(flowElement), startUserId, processDefinitionId, processVariables);
-            if (CollUtil.isNotEmpty(assigneeIds)) {
-                return assigneeIds;
-            }
+            removeInactiveAssignees(assigneeIds);
+            return assigneeIds;
         }
-        return convertToStringSet(calculateUsersByActivity(bpmnModel, activityId, startUserId,
-                processDefinitionId, processVariables));
-    }
-
-    private Set<String> convertToStringSet(Collection<Long> userIds) {
-        LinkedHashSet<String> result = new LinkedHashSet<>();
-        if (CollUtil.isNotEmpty(userIds)) {
-            userIds.forEach(userId -> result.add(String.valueOf(userId)));
-        }
-        return result;
+        return new LinkedHashSet<>();
     }
 
     @VisibleForTesting
@@ -213,11 +187,7 @@ public class BpmTaskCandidateInvoker {
         if (CollUtil.isEmpty(assigneeUserIds)) {
             return;
         }
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(assigneeUserIds);
-        assigneeUserIds.removeIf(id -> {
-            AdminUserRespDTO user = userMap.get(id);
-            return user == null || CommonStatusEnum.isDisable(user.getStatus());
-        });
+        assigneeUserIds.removeIf(userId -> !portalOrganizationApi.isUserActive(String.valueOf(userId)));
     }
 
     /**
@@ -239,6 +209,28 @@ public class BpmTaskCandidateInvoker {
             return;
         }
         assigneeUserIds.remove(startUserId);
+    }
+
+    private void removeInactiveAssignees(Set<String> assigneeIds) {
+        assigneeIds.removeIf(userId -> StrUtil.isBlank(userId) || !portalOrganizationApi.isUserActive(userId));
+    }
+
+    private String getStartUserId(DelegateExecution execution) {
+        ProcessInstance processInstance = SpringUtil.getBean(BpmProcessInstanceService.class)
+                .getProcessInstance(execution.getProcessInstanceId());
+        Assert.notNull(processInstance, "流程实例({}) 不存在", execution.getProcessInstanceId());
+        return processInstance.getStartUserId();
+    }
+
+    private void removeStartUserIfSkip(Set<String> assigneeIds, FlowElement flowElement, String startUserId) {
+        if (CollUtil.size(assigneeIds) <= 1) {
+            return;
+        }
+        Integer assignStartUserHandlerType = BpmnModelUtils.parseAssignStartUserHandlerType(flowElement);
+        if (ObjectUtil.notEqual(assignStartUserHandlerType, BpmUserTaskAssignStartUserHandlerTypeEnum.SKIP.getType())) {
+            return;
+        }
+        assigneeIds.remove(startUserId);
     }
 
     private BpmTaskCandidateStrategy getCandidateStrategy(Integer strategy) {

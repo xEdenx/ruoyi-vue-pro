@@ -6,9 +6,11 @@
 
 ## 1. 当前事实
 
-仓库中的 `yudao-ui-admin-vue3` 是 RuoYi 管理端，不是最终业务 Portal。它目前仍：
+仓库中的 `yudao-ui-admin-vue3` 是 RuoYi 管理端，不是最终业务 Portal。它仍包含部分本地用户选择页面（转办、委派、加签等），但流程建模已经收敛：
 
-- 通过本地用户选择器选择发起人自选、转办、委派、加签等用户；
+- 审批节点仅可选择“发起人自选”或“Portal 远程候选人”；不再显示本地用户、角色、岗位、部门、用户组、表达式或审批人自选策略；
+- “Portal 远程候选人”只编辑 Portal 规则编码/选择器，不请求任何 system 组织接口；
+- 转办、委派、加签等遗留本地选择器仍待 Portal 化；
 - 假定部分用户和部门 ID 是数值；
 - 直接显示 BPM 响应中的 `startUser`、`assigneeUser`、`ownerUser`、`candidateUsers` 的昵称、头像和部门名称；
 - 通过前端权限 `bpm:*` 控制管理菜单和按钮。
@@ -71,4 +73,4 @@ type BpmUser = {
 - 使用 `portal-requester-a1f2`、`portal-supplier-e7f8` 等非数值 ID 跑 V5 walkthrough。
 - 页面不因用户 ID 为 String 而报 TypeScript 或渲染错误。
 - 一个会签节点返回多个 Portal 用户时，时间线正确展示多个候选人或任务。
-- RuoYi 管理端的本地数值用户选择与现有流程仍可提交，直至对应页面切换至 Portal 选择器。
+- 新建或重新发布的流程只能使用策略 35/70；带旧策略编号的模型会被后端发布校验拒绝。

@@ -15,10 +15,6 @@ import cn.iocoder.yudao.module.bpm.service.definition.BpmCategoryService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmFormService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmModelService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmProcessDefinitionService;
-import cn.iocoder.yudao.module.system.api.dept.DeptApi;
-import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -38,7 +34,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
@@ -60,11 +55,6 @@ public class BpmModelController {
     private BpmCategoryService categoryService;
     @Resource
     private BpmProcessDefinitionService processDefinitionService;
-
-    @Resource
-    private AdminUserApi adminUserApi;
-    @Resource
-    private DeptApi deptApi;
 
     @GetMapping("/list")
     @Operation(summary = "获得模型分页")
@@ -91,19 +81,9 @@ public class BpmModelController {
         List<ProcessDefinition> processDefinitions = processDefinitionService.getProcessDefinitionListByDeploymentIds(
                 deploymentMap.keySet());
         Map<String, ProcessDefinition> processDefinitionMap = convertMap(processDefinitions, ProcessDefinition::getDeploymentId);
-        // 获得 User Map、Dept Map
-        Set<Long> userIds = convertSetByFlatMap(list, model -> {
-            BpmModelMetaInfoVO metaInfo = BpmModelConvert.INSTANCE.parseMetaInfo(model);
-            return metaInfo != null ? metaInfo.getStartUserIds().stream() : Stream.empty();
-        });
-        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(userIds);
-        Set<Long> deptIds = convertSetByFlatMap(list, model -> {
-            BpmModelMetaInfoVO metaInfo = BpmModelConvert.INSTANCE.parseMetaInfo(model);
-            return metaInfo != null && metaInfo.getStartDeptIds() != null ? metaInfo.getStartDeptIds().stream() : Stream.empty();
-        });
-        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(deptIds);
+        // 发起人和部门白名单将由 Portal 授权替代，避免在模型列表读取本地 system 组织数据。
         return success(BpmModelConvert.INSTANCE.buildModelList(list,
-                formMap, categoryMap, deploymentMap, processDefinitionMap, userMap, deptMap));
+                formMap, categoryMap, deploymentMap, processDefinitionMap, Map.of(), Map.of()));
     }
 
     @GetMapping("/get")

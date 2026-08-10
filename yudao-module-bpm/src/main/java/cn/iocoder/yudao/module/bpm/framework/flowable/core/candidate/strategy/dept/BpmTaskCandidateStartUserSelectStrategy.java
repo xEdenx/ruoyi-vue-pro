@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.d
 
 import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
-import cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.user.BpmTaskCandidateUserStrategy;
+import cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.BpmTaskCandidateStrategy;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmTaskCandidateStrategyEnum;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.FlowableUtils;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
@@ -19,12 +19,12 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 发起人自选 {@link BpmTaskCandidateUserStrategy} 实现类
+ * 发起人自选 {@link BpmTaskCandidateStrategy} 实现类
  *
  * @author 芋道源码
  */
 @Component
-public class BpmTaskCandidateStartUserSelectStrategy extends AbstractBpmTaskCandidateDeptLeaderStrategy {
+public class BpmTaskCandidateStartUserSelectStrategy implements BpmTaskCandidateStrategy {
 
     @Resource
     @Lazy // 延迟加载，避免循环依赖
