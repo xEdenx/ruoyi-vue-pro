@@ -50,6 +50,15 @@ class SecurityFrameworkServiceImplTest extends BaseMockitoUnitTest {
         verifyNoInteractions(permissionApi);
     }
 
+    @Test
+    void shouldGrantAllBpmPermissionsToPortalModelManagerMock() {
+        setPortalJwtLoginUser("ROLE_BPM_MODEL_MANAGER");
+
+        assertTrue(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("bpm:model:update"));
+        assertFalse(new SecurityFrameworkServiceImpl(permissionApi).hasPermission("system:user:query"));
+        verifyNoInteractions(permissionApi);
+    }
+
     private static void setPortalJwtLoginUser(String role) {
         Map<String, String> info = new java.util.HashMap<>();
         info.put(TokenAuthenticationFilter.PORTAL_JWT_INFO_KEY, "true");

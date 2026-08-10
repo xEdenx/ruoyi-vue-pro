@@ -1506,14 +1506,14 @@ public class BpmTaskServiceImpl implements BpmTaskService {
         Task task = getTask(taskId);
         // 1. 可能只是活动，不是任务，所以查询不到
         if (task == null) {
-            log.error("[updateTaskStatusWhenCanceled][taskId({}) 任务不存在]", taskId);
+            log.debug("[updateTaskStatusWhenCanceled][taskId({}) 任务不存在，跳过重复取消]", taskId);
             return;
         }
 
         // 2. 更新 task 状态 + 原因
         Integer status = (Integer) task.getTaskLocalVariables().get(BpmnVariableConstants.TASK_VARIABLE_STATUS);
         if (BpmTaskStatusEnum.isEndStatus(status)) {
-            log.error("[updateTaskStatusWhenCanceled][taskId({}) 处于结果({})，无需进行更新]", taskId, status);
+            log.debug("[updateTaskStatusWhenCanceled][taskId({}) 已处于结束状态({})，跳过重复取消]", taskId, status);
             return;
         }
         updateTaskStatusAndReason(taskId, BpmTaskStatusEnum.CANCEL.getStatus(), BpmReasonEnum.CANCEL_BY_SYSTEM.getReason());

@@ -1,0 +1,74 @@
+# BPM 前端与 Portal 兼容性约定
+
+> 状态：In progress
+>
+> 本文规定 Headless BPM 解耦期间的前端兼容策略。它与 [Portal 适配契约](PORTAL_ADAPTER_INTEGRATION_CONTRACT.md) 配套使用：前者定义 BPM 与 Portal 服务间的边界，本文定义现有 Vue 管理端和未来 Portal 前端的边界。
+
+## 1. 当前事实
+
+仓库中的 `yudao-ui-admin-vue3` 是 RuoYi 管理端，不是最终业务 Portal。它目前仍：
+
+- 通过本地用户选择器选择发起人自选、转办、委派、加签等用户；
+- 假定部分用户和部门 ID 是数值；
+- 直接显示 BPM 响应中的 `startUser`、`assigneeUser`、`ownerUser`、`candidateUsers` 的昵称、头像和部门名称；
+- 通过前端权限 `bpm:*` 控制管理菜单和按钮。
+
+因此不能在后端改用 Portal String ID 后直接删除这些字段或让页面改读 Portal 私有 API，否则当前管理端会出现空审批人、选择器失效或 TypeScript 类型错误。
+
+## 2. 双轨兼容策略
+
+| 调用方 | 身份/组织来源 | 用户 ID | 用户展示 | 当前处理 |
+| --- | --- | --- | --- | --- |
+| RuoYi 管理端 | 现有 system 用户选择器 | 数值 ID（过渡期） | BPM 可继续返回已有用户投影 | 保持兼容，逐页迁移 |
+| 外部 Portal | Portal 用户目录 | 原始 String ID | Portal 自己的用户字典；BPM 可选返回最小投影 | Headless 主路径 |
+
+前端 API 类型允许 `string | number` 只是一项过渡措施，保证旧管理端不会因类型改变立即中断。新的 Portal 集成必须只使用 String ID，且不得依赖将 ID 转为数字。
+
+## 3. 稳定的 BPM 响应形状
+
+在迁移过程中，下列对象继续保留，字段语义不变：
+
+```ts
+type BpmUser = {
+  id: string | number
+  nickname: string
+  avatar?: string
+  deptId?: string | number
+  deptName?: string
+}
+```
+
+涉及对象：
+
+- `processInstance.startUser`
+- `processInstance.tasks[].assigneeUser`
+- `task.assigneeUser`、`task.ownerUser`
+- 审批详情 `activityNodes[].tasks[]` 的 `assigneeUser` / `ownerUser`
+- 审批详情 `activityNodes[].candidateUsers`
+
+在 Portal 用户资料暂时无法读取时，BPM 至少应保留 Flowable 原始的 `startUserId`、`assignee` 或 `owner`。现有页面必须将用户投影视为可空，展示 `nickname ?? id`，而不是假定 `nickname` 必定存在。
+
+## 4. 前端改造顺序
+
+1. **类型兼容**：所有 BPM 用户 ID 类型改为 `string | number`；发起请求的 `startUserSelectAssignees` 接受该联合类型。
+2. **展示兜底**：流程列表、详情时间线、任务表格使用 `nickname || id`，部门、头像可空。
+3. **选择器抽象**：把 `UserSelectForm` 的调用封装为 BPM 用户选择接口。RuoYi 管理端实现调用本地选择器；Portal 实现调用 Portal 用户选择器。
+4. **权限边界**：页面按钮权限从对本地菜单 `bpm:*` 的唯一依赖，逐步改为可信 Portal claims；管理端保留其现有菜单权限直到完全下线。
+5. **删除本地依赖前验收**：Portal 页面完成发起、动态选人、待办、同意/拒绝、轨迹展示；管理端对应功能要么迁移到 Portal，要么标记为仅维护入口。
+
+## 5. 本轮已做的兼容调整
+
+- `src/api/bpm/processInstance/index.ts` 的 BPM 用户 ID 改为 `BpmUserId = string | number`，并补齐可选部门字段。
+- 请假发起页的 `startUserSelectAssignees` 改为接收 String 或数值用户 ID；后端已使用 `Map<String, List<String>>` 接收该字段。
+- 取消流程实例 API 的实例 ID 类型更正为 Flowable 实际使用的 `string`。
+- 登录页在开发环境（或 `VITE_APP_HEADLESS_BPM_LOGIN=true`）提供“Headless BPM 本地登录”。它调用 BPM 的 `/portal-auth/login` 和 `/portal-auth/me`，不调用 `/system/auth/get-permission-info`，也不加载 system 字典。
+- 登录成功后进入原 BPM 的 `/bpm/task/todo` 路由。菜单由前端静态写死为原“工作流程”组，不请求 `system_menu`：运行用户获得“审批中心”，带 `ROLE_BPM_MODEL_MANAGER` 的 Mock 用户获得完整原菜单（OA 示例、流程管理、审批中心）。本地 Mock 中该角色可调用 `bpm:*` API；生产必须由 Portal claims 精确替换，不得沿用此宽泛开发权限。普通 system 登录继续使用自己的动态菜单。
+- 前端对同一 Mock 角色投影 `*:*:*`，仅用于让既有 BPM 页面中的 `v-hasPermi` 按钮与后端的 `bpm:*` Mock 授权一致；它不会放行 backend 的 system API，也不能作为生产权限模型。
+- RuoYi 全局 `UserVO` 仍保留数值 `id`/`deptId`，避免影响大量非 BPM 页面；Headless 模式中该全局投影只用于展示名称，Portal 原始 String ID 始终保留在 Bearer token 与 BPM API 链路中。未来 Portal 页面不能依赖此管理端全局 `UserVO`。
+
+## 6. 联调验收
+
+- 使用 `portal-requester-a1f2`、`portal-supplier-e7f8` 等非数值 ID 跑 V5 walkthrough。
+- 页面不因用户 ID 为 String 而报 TypeScript 或渲染错误。
+- 一个会签节点返回多个 Portal 用户时，时间线正确展示多个候选人或任务。
+- RuoYi 管理端的本地数值用户选择与现有流程仍可提交，直至对应页面切换至 Portal 选择器。

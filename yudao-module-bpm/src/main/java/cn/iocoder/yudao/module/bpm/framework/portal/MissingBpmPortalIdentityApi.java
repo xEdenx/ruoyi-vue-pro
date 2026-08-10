@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class MissingBpmPortalIdentityApi implements BpmPortalIdentityApi {
 
     @Override
-    public PortalUser getUser(String userId) {
+    public BpmPortalOrganizationApi.PortalUser getUser(String userId) {
         throw new IllegalStateException("未配置 Portal 身份适配器，无法校验 BPM 管理角色");
     }
 }

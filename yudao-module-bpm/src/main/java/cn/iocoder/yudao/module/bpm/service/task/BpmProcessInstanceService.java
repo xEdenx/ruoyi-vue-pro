@@ -82,7 +82,7 @@ public interface BpmProcessInstanceService {
      * @param pageReqVO 分页请求
      * @return 流程实例的分页
      */
-    PageResult<HistoricProcessInstance> getProcessInstancePage(Long userId,
+    PageResult<HistoricProcessInstance> getProcessInstancePage(String userId,
                                                                @Valid BpmProcessInstancePageReqVO pageReqVO);
 
     /**

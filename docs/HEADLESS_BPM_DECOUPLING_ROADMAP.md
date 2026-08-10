@@ -50,8 +50,8 @@ Headless BPM Server
 
 **目标：** 在删除依赖前明确 Portal 与 BPM 的可信边界。
 
-- [ ] 定义 `PortalPrincipal`：`userId: String`、可选 `tenantId: String`、`authorities`。
-- [ ] 由 BPM 网关或服务端验证 Portal JWT / mTLS；不得从普通请求头读取用户 ID。
+- [ ] 定义 `PortalPrincipal`：`userId: String`、可选 `tenantId: String`、`authorities`。（本地 Mock 登录与 `/me` 已完成；生产 Principal 尚未实现）
+- [ ] 由 BPM 网关或服务端验证 Portal JWT / mTLS；不得从普通请求头读取用户 ID。（本地 Mock token 仅用于 walkthrough，不能作为验收）
 - [ ] 将运行 API 收敛为：流程定义/表单读取、创建流程、待办/已办、同意/拒绝、审批轨迹；流程图维护 API 仅开放给定义管理员。
 - [ ] 定义流程发起契约：`processDefinitionId`（或解析后的 key/version）、`businessKey`、路由变量、`startUserSelectAssignees`。
 - [ ] 约定 `startUserSelectAssignees` 中只允许最终用户 String ID；Portal 在调用前完成角色到用户的展开。
@@ -61,6 +61,8 @@ Headless BPM Server
 ## 4. 阶段 1：解耦 system 身份、权限和组织
 
 **目标：** BPM 不再读取本地用户、部门、岗位、角色或菜单权限。
+
+Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPTER_INTEGRATION_CONTRACT.md](PORTAL_ADAPTER_INTEGRATION_CONTRACT.md)。任何 system 依赖的替换必须先登记在该契约中，避免将 Portal 对接细节分散进候选人、Controller 和 Service。
 
 ### 4.1 身份与权限替换
 

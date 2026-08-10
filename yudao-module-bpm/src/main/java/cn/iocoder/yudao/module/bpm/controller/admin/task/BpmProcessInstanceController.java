@@ -8,9 +8,11 @@ import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.module.bpm.controller.admin.base.user.UserSimpleBaseVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.*;
+import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.task.BpmTaskRespVO;
 import cn.iocoder.yudao.module.bpm.convert.task.BpmProcessInstanceConvert;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmCategoryDO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
+import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalOrganizationApi;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmCategoryService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmProcessDefinitionService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
@@ -62,6 +64,8 @@ public class BpmProcessInstanceController {
     private AdminUserApi adminUserApi;
     @Resource
     private DeptApi deptApi;
+    @Resource
+    private BpmPortalOrganizationApi portalOrganizationApi;
 
     @GetMapping("/my-page")
     @Operation(summary = "获得我的实例分页列表", description = "在【我的流程】菜单中，进行调用")
@@ -69,7 +73,7 @@ public class BpmProcessInstanceController {
     public CommonResult<PageResult<BpmProcessInstanceRespVO>> getProcessInstanceMyPage(
             @Valid BpmProcessInstancePageReqVO pageReqVO) {
         PageResult<HistoricProcessInstance> pageResult = processInstanceService.getProcessInstancePage(
-                getLoginUserLongId(), pageReqVO);
+                getCurrentUserId(), pageReqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(PageResult.empty(pageResult.getTotal()));
         }
@@ -84,8 +88,10 @@ public class BpmProcessInstanceController {
         Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
                 convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
         Set<Long> userIds = convertSet(pageResult.getList(), processInstance -> NumberUtils.parseLong(processInstance.getStartUserId()));
+        userIds.remove(null);
         userIds.addAll(convertSetByFlatMap(taskMap.values(),
-                tasks -> tasks.stream().map(Task::getAssignee).filter(StrUtil::isNotBlank).map(Long::parseLong)));
+                tasks -> tasks.stream().map(Task::getAssignee).filter(StrUtil::isNotBlank)
+                        .map(NumberUtils::parseLong).filter(java.util.Objects::nonNull)));
         Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(userIds);
         Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
                 convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
@@ -180,7 +186,9 @@ public class BpmProcessInstanceController {
         if (StrUtil.isNotEmpty(reqVO.getProcessVariablesStr())) {
             reqVO.setProcessVariables(JsonUtils.parseObject(reqVO.getProcessVariablesStr(), Map.class));
         }
-        return success(processInstanceService.getApprovalDetail(getCurrentUserId(), reqVO));
+        BpmApprovalDetailRespVO response = processInstanceService.getApprovalDetail(getCurrentUserId(), reqVO);
+        enrichPortalUsers(response);
+        return success(response);
     }
 
     @GetMapping("/get-next-approval-nodes")
@@ -200,7 +208,95 @@ public class BpmProcessInstanceController {
     @PreAuthorize("@ss.hasPermission('bpm:process-instance:query')")
     public CommonResult<BpmProcessInstanceBpmnModelViewRespVO> getProcessInstanceBpmnModelView(
             @RequestParam(value = "id") String id) {
-        return success(processInstanceService.getProcessInstanceBpmnModelView(id));
+        BpmProcessInstanceBpmnModelViewRespVO response = processInstanceService.getProcessInstanceBpmnModelView(id);
+        enrichPortalUsers(response);
+        return success(response);
+    }
+
+    /**
+     * Flowable 持久化 Portal 原始用户 ID；展示时再由 Portal 组织目录投影显示信息。
+     * 数值 ID 仍属于旧 system 链路，保持已有的 system 用户投影，不访问 Portal。
+     */
+    private void enrichPortalUsers(BpmApprovalDetailRespVO response) {
+        if (response == null) {
+            return;
+        }
+        Set<String> userIds = new java.util.LinkedHashSet<>();
+        if (response.getActivityNodes() != null) {
+            response.getActivityNodes().forEach(node -> {
+                if (node.getTasks() != null) {
+                    node.getTasks().forEach(task -> {
+                        addPortalUserId(userIds, task.getAssignee());
+                        addPortalUserId(userIds, task.getOwner());
+                    });
+                }
+            });
+        }
+        if (response.getTodoTask() != null) {
+            addPortalUserId(userIds, response.getTodoTask().getAssignee());
+            addPortalUserId(userIds, response.getTodoTask().getOwner());
+        }
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalOrganizationApi.getUserMap(userIds);
+        if (response.getActivityNodes() != null) {
+            response.getActivityNodes().forEach(node -> {
+                if (node.getTasks() != null) {
+                    node.getTasks().forEach(task -> enrichPortalUser(task, userMap));
+                }
+            });
+        }
+        enrichPortalUser(response.getTodoTask(), userMap);
+    }
+
+    private void enrichPortalUsers(BpmProcessInstanceBpmnModelViewRespVO response) {
+        if (response == null || response.getTasks() == null) {
+            return;
+        }
+        Set<String> userIds = new java.util.LinkedHashSet<>();
+        response.getTasks().forEach(task -> {
+            addPortalUserId(userIds, task.getAssignee());
+            addPortalUserId(userIds, task.getOwner());
+        });
+        Map<String, BpmPortalOrganizationApi.PortalUser> userMap = portalOrganizationApi.getUserMap(userIds);
+        response.getTasks().forEach(task -> enrichPortalUser(task, userMap));
+    }
+
+    private static void addPortalUserId(Set<String> userIds, String userId) {
+        if (StrUtil.isNotBlank(userId) && NumberUtils.parseLong(userId) == null) {
+            userIds.add(userId);
+        }
+    }
+
+    private static void enrichPortalUser(BpmApprovalDetailRespVO.ActivityNodeTask task,
+                                         Map<String, BpmPortalOrganizationApi.PortalUser> userMap) {
+        if (task == null) {
+            return;
+        }
+        if (task.getAssigneeUser() == null) {
+            task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
+        }
+        if (task.getOwnerUser() == null) {
+            task.setOwnerUser(buildPortalUser(task.getOwner(), userMap));
+        }
+    }
+
+    private static void enrichPortalUser(BpmTaskRespVO task,
+                                         Map<String, BpmPortalOrganizationApi.PortalUser> userMap) {
+        if (task == null) {
+            return;
+        }
+        if (task.getAssigneeUser() == null) {
+            task.setAssigneeUser(buildPortalUser(task.getAssignee(), userMap));
+        }
+        if (task.getOwnerUser() == null) {
+            task.setOwnerUser(buildPortalUser(task.getOwner(), userMap));
+        }
+    }
+
+    private static UserSimpleBaseVO buildPortalUser(String userId,
+                                                     Map<String, BpmPortalOrganizationApi.PortalUser> userMap) {
+        BpmPortalOrganizationApi.PortalUser user = userMap.get(userId);
+        return user == null ? null : new UserSimpleBaseVO().setNickname(user.displayName())
+                .setAvatar(user.avatar()).setDeptName(user.departmentName());
     }
 
     @GetMapping("/get-print-data")

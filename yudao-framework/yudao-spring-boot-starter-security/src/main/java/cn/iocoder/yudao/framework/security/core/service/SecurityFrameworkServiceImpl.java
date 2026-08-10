@@ -30,6 +30,7 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
      */
     private static final Set<String> HEADLESS_PORTAL_BPM_PERMISSIONS = Set.of(
             "bpm:process-instance:query", "bpm:task:query", "bpm:task:update");
+    private static final String BPM_MODEL_MANAGER_ROLE = "ROLE_BPM_MODEL_MANAGER";
 
     private final PermissionCommonApi permissionApi;
 
@@ -49,7 +50,10 @@ public class SecurityFrameworkServiceImpl implements SecurityFrameworkService {
         if (isPortalJwt(loginUser)) {
             // Portal JWT 不再读取 system_user_role；没有角色声明时必须拒绝。
             return hasPortalRole(loginUser)
-                    && Arrays.stream(permissions).anyMatch(HEADLESS_PORTAL_BPM_PERMISSIONS::contains);
+                    && Arrays.stream(permissions).anyMatch(permission ->
+                    HEADLESS_PORTAL_BPM_PERMISSIONS.contains(permission)
+                            || (getPortalRoles(loginUser).contains(BPM_MODEL_MANAGER_ROLE)
+                            && permission.startsWith("bpm:")));
         }
 
         // 权限校验

@@ -80,7 +80,8 @@ public class BpmTaskEventListener extends AbstractFlowableEngineEventListener {
     protected void activityCancelled(FlowableActivityCancelledEvent event) {
         List<HistoricActivityInstance> activityList = taskService.getHistoricActivityListByExecutionId(event.getExecutionId());
         if (CollUtil.isEmpty(activityList)) {
-            log.error("[activityCancelled][使用 executionId({}) 查找不到对应的活动实例]", event.getExecutionId());
+            // Flowable 状态迁移时 execution 可能已删除，属于预期的幂等取消事件。
+            log.debug("[activityCancelled][使用 executionId({}) 查找不到对应的活动实例，跳过]", event.getExecutionId());
             return;
         }
         // 遍历处理

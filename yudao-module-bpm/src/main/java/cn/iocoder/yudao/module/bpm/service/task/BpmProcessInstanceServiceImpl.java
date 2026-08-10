@@ -334,7 +334,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
 
     @Override
     @SuppressWarnings("unchecked")
-    public PageResult<HistoricProcessInstance> getProcessInstancePage(Long userId,
+    public PageResult<HistoricProcessInstance> getProcessInstancePage(String userId,
                                                                       BpmProcessInstancePageReqVO pageReqVO) {
         // 1. 构建查询条件
         HistoricProcessInstanceQuery processInstanceQuery = historyService.createHistoricProcessInstanceQuery()
@@ -342,7 +342,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
                 .processInstanceTenantId(FlowableUtils.getTenantId())
                 .orderByProcessInstanceStartTime().desc();
         if (userId != null) { // 【我的流程】菜单时，需要传递该字段
-            processInstanceQuery.startedBy(String.valueOf(userId));
+            processInstanceQuery.startedBy(userId);
         } else if (pageReqVO.getStartUserId() != null) { // 【管理流程】菜单时，才会传递该字段
             processInstanceQuery.startedBy(String.valueOf(pageReqVO.getStartUserId()));
         }

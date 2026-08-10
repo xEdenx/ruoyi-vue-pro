@@ -10,13 +10,10 @@ import java.util.Set;
  */
 public interface BpmPortalIdentityApi {
 
-    PortalUser getUser(String userId);
+    BpmPortalOrganizationApi.PortalUser getUser(String userId);
 
     default boolean hasAnyRole(String userId, Collection<String> roleCodes) {
-        PortalUser user = getUser(userId);
+        BpmPortalOrganizationApi.PortalUser user = getUser(userId);
         return user != null && user.roleCodes().stream().anyMatch(roleCodes::contains);
-    }
-
-    record PortalUser(String id, String displayName, String departmentId, Set<String> roleCodes) {
     }
 }

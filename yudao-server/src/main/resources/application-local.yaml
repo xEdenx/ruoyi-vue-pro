@@ -239,6 +239,9 @@ yudao:
       enabled: true
     headless-mock:
       enabled: true
+      # 仅用于本地 Headless BPM walkthrough；关闭 mock 后登录 API 不会注册。
+      login-password: portal-local-dev
+      tenant-id: 1
   monitor:
     admin-server:
       enable: false
