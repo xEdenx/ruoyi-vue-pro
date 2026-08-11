@@ -14,6 +14,7 @@ set -euo pipefail
 BASE_URL="${1:-http://127.0.0.1:48080}"
 PROCESS_KEY="office_supplies_request_v5"
 PROCESS_NAME="办公用品申请流程 V5"
+PROCESS_CATEGORY="default"
 FORM_CODE="${WALKTHROUGH_FORM_CODE:-office_supplies_request_v5_form}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -201,8 +202,9 @@ ensure_process_definition_published() {
     --arg modelId "${model_id}" \
     --arg key "${PROCESS_KEY}" \
     --arg name "${PROCESS_NAME}" \
+    --arg category "${PROCESS_CATEGORY}" \
     --argjson formId "${FORM_ID}" \
-    '{key: $key, name: $name, category: "无", type: 10, formType: 10, formId: $formId,
+    '{key: $key, name: $name, category: $category, type: 10, formType: 10, formId: $formId,
       visible: true, managerRoleCodes: ["ROLE_BPM_MODEL_MANAGER"]}
      + (if $modelId == "" then {} else {id: $modelId} end)')
 

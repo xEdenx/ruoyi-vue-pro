@@ -130,7 +130,7 @@
   ```text
   key=office_supplies_request_v5
   name=办公用品申请流程 V5
-  category=无
+  category=default
   type=10
   formType=10
   formId=<按 office_supplies_request_v5_form 查询得到的当前数据库 ID>
@@ -147,7 +147,7 @@
 
   curl -X POST 'http://127.0.0.1:48080/admin-api/bpm/process-definition/deploy-xml' \
     -H 'Authorization: Bearer <Portal_JWT>' \
-    -F "model={\"key\":\"office_supplies_request_v5\",\"name\":\"办公用品申请流程 V5\",\"category\":\"无\",\"type\":10,\"formType\":10,\"formId\":${FORM_ID},\"visible\":true,\"managerRoleCodes\":[\"ROLE_BPM_MODEL_MANAGER\"]};type=application/json" \
+    -F "model={\"key\":\"office_supplies_request_v5\",\"name\":\"办公用品申请流程 V5\",\"category\":\"default\",\"type\":10,\"formType\":10,\"formId\":${FORM_ID},\"visible\":true,\"managerRoleCodes\":[\"ROLE_BPM_MODEL_MANAGER\"]};type=application/json" \
     -F 'file=@docs/office_supplies_request_v5.bpmn.xml;type=application/xml'
   ```
 - **响应示例**:

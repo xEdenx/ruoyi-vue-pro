@@ -4,7 +4,8 @@
 -- current schema. Select the target schema before executing it.
 -- Includes the walkthrough form seed identified by office_supplies_request_v5_form.
 -- Source inspection: 2026-08-10, 7 tables and no table/column comments.
--- This bootstrap adds bpm_form_seq so its seed and later inserts receive generated IDs.
+-- This bootstrap adds bpm_category_seq and bpm_form_seq so its seed and later
+-- inserts receive generated IDs.
 
 DROP TABLE IF EXISTS bpm_process_instance_copy;
 DROP TABLE IF EXISTS bpm_process_definition_info;
@@ -13,10 +14,13 @@ DROP TABLE IF EXISTS bpm_process_expression;
 DROP TABLE IF EXISTS bpm_form;
 DROP SEQUENCE IF EXISTS bpm_form_seq;
 DROP TABLE IF EXISTS bpm_category;
+DROP SEQUENCE IF EXISTS bpm_category_seq;
 DROP TABLE IF EXISTS dual;
 
+CREATE SEQUENCE bpm_category_seq AS bigint START WITH 1 INCREMENT BY 1;
+
 CREATE TABLE bpm_category (
-    id bigint NOT NULL,
+    id bigint NOT NULL DEFAULT nextval('bpm_category_seq'),
     name character varying(30) DEFAULT ''::character varying,
     code character varying(30) DEFAULT ''::character varying,
     description character varying(255) DEFAULT ''::character varying NOT NULL,
@@ -29,6 +33,14 @@ CREATE TABLE bpm_category (
     deleted smallint DEFAULT 0 NOT NULL,
     tenant_id bigint DEFAULT 0 NOT NULL,
     CONSTRAINT bpm_category_pkey PRIMARY KEY (id)
+);
+
+INSERT INTO bpm_category (
+    name, code, description, status, sort,
+    creator, create_time, updater, update_time, deleted, tenant_id
+) VALUES (
+    '默认', 'default', '默认流程分类', 0, 0,
+    '1', CURRENT_TIMESTAMP, '1', CURRENT_TIMESTAMP, 0, 1
 );
 
 CREATE SEQUENCE bpm_form_seq AS bigint START WITH 1 INCREMENT BY 1;

@@ -6,7 +6,8 @@
 -- PostgreSQL -> SQL Server mappings: character varying/text -> nvarchar/nvarchar(max),
 -- boolean -> bit, timestamp without time zone -> datetime2(6).
 -- Source inspection: 2026-08-10, 7 tables and no table/column comments.
--- This bootstrap adds bpm_form_seq so its seed and later inserts receive generated IDs.
+-- This bootstrap adds bpm_category_seq and bpm_form_seq so its seed and later
+-- inserts receive generated IDs.
 
 DROP TABLE IF EXISTS [bpm_process_instance_copy];
 DROP TABLE IF EXISTS [bpm_process_definition_info];
@@ -15,11 +16,15 @@ DROP TABLE IF EXISTS [bpm_process_expression];
 DROP TABLE IF EXISTS [bpm_form];
 DROP SEQUENCE IF EXISTS [bpm_form_seq];
 DROP TABLE IF EXISTS [bpm_category];
+DROP SEQUENCE IF EXISTS [bpm_category_seq];
 DROP TABLE IF EXISTS [dual];
 GO
 
+CREATE SEQUENCE [bpm_category_seq] AS bigint START WITH 1 INCREMENT BY 1;
+GO
+
 CREATE TABLE [bpm_category] (
-    [id] bigint NOT NULL,
+    [id] bigint NOT NULL CONSTRAINT [DF_bpm_category_id] DEFAULT (NEXT VALUE FOR [bpm_category_seq]),
     [name] nvarchar(30) NULL CONSTRAINT [DF_bpm_category_name] DEFAULT N'',
     [code] nvarchar(30) NULL CONSTRAINT [DF_bpm_category_code] DEFAULT N'',
     [description] nvarchar(255) NOT NULL CONSTRAINT [DF_bpm_category_description] DEFAULT N'',
@@ -32,6 +37,15 @@ CREATE TABLE [bpm_category] (
     [deleted] smallint NOT NULL CONSTRAINT [DF_bpm_category_deleted] DEFAULT 0,
     [tenant_id] bigint NOT NULL CONSTRAINT [DF_bpm_category_tenant_id] DEFAULT 0,
     CONSTRAINT [bpm_category_pkey] PRIMARY KEY ([id])
+);
+GO
+
+INSERT INTO [bpm_category] (
+    [name], [code], [description], [status], [sort],
+    [creator], [create_time], [updater], [update_time], [deleted], [tenant_id]
+) VALUES (
+    N'默认', N'default', N'默认流程分类', 0, 0,
+    N'1', SYSDATETIME(), N'1', SYSDATETIME(), 0, 1
 );
 GO
 
