@@ -126,24 +126,28 @@
   `createModel`（无 `id`）或 `updateModel`（有 `id`）→ `deployModel`。
   因此会保留 BPMN 合法性、表单配置、候选人策略和模型管理人校验，并自动挂起旧版本。
 - **请求参数**: `model` part 是 JSON 格式的 `BpmModelSaveReqVO`；`file` part 是 UTF-8 编码的 BPMN XML 文件。接口从上传文件读取 BPMN，不接受 `model.bpmnXml` 传入的 XML 文本；`type` 固定为 `10`（BPMN）；新建时不传 `id`，更新时传已有 Flowable model ID。
-- **最小可部署示例**（`formId` 必须是已存在的 `bpm_form` 主键；`managerRoleCodes` 是 Portal 维护角色）：
-  ```json
-  {
-    "key": "office_supplies_request_v5",
-    "name": "办公用品申请流程 V5",
-    "category": "无",
-    "type": 10,
-    "formType": 10,
-    "formId": 1,
-    "visible": true,
-    "managerRoleCodes": ["ROLE_BPM_MODEL_MANAGER"]
-  }
+- **最小可部署示例**（先以稳定的 `bpm_form.code` 查询当前环境的 `formId`；`managerRoleCodes` 是 Portal 维护角色）：
+  ```text
+  key=office_supplies_request_v5
+  name=办公用品申请流程 V5
+  category=无
+  type=10
+  formType=10
+  formId=<按 office_supplies_request_v5_form 查询得到的当前数据库 ID>
+  visible=true
+  managerRoleCodes=[ROLE_BPM_MODEL_MANAGER]
   ```
 - **调用示例**:
   ```bash
+  FORM_CODE='office_supplies_request_v5_form'
+  FORM_ID=$(curl -sS 'http://127.0.0.1:48080/admin-api/bpm/form/list-all-simple' \
+    -H 'Authorization: Bearer <Portal_JWT>' \
+    | jq -er --arg formCode "${FORM_CODE}" \
+      '[.data[] | select(.code == $formCode)] | if length == 1 then .[0].id else error("form code must match exactly once") end')
+
   curl -X POST 'http://127.0.0.1:48080/admin-api/bpm/process-definition/deploy-xml' \
     -H 'Authorization: Bearer <Portal_JWT>' \
-    -F 'model={"key":"office_supplies_request_v5","name":"办公用品申请流程 V5","category":"无","type":10,"formType":10,"formId":1,"visible":true,"managerRoleCodes":["ROLE_BPM_MODEL_MANAGER"]};type=application/json' \
+    -F "model={\"key\":\"office_supplies_request_v5\",\"name\":\"办公用品申请流程 V5\",\"category\":\"无\",\"type\":10,\"formType\":10,\"formId\":${FORM_ID},\"visible\":true,\"managerRoleCodes\":[\"ROLE_BPM_MODEL_MANAGER\"]};type=application/json" \
     -F 'file=@docs/office_supplies_request_v5.bpmn.xml;type=application/xml'
   ```
 - **响应示例**:

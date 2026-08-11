@@ -2,6 +2,8 @@ package cn.iocoder.yudao.module.bpm.service.definition;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
@@ -34,6 +36,7 @@ public class BpmFormServiceImpl implements BpmFormService {
     @Override
     public Long createForm(BpmFormSaveReqVO createReqVO) {
         this.validateFields(createReqVO.getFields());
+        validateFormCodeUnique(createReqVO);
         // 插入
         BpmFormDO form = BeanUtils.toBean(createReqVO, BpmFormDO.class);
         formMapper.insert(form);
@@ -46,6 +49,7 @@ public class BpmFormServiceImpl implements BpmFormService {
         validateFields(updateReqVO.getFields());
         // 校验存在
         validateFormExists(updateReqVO.getId());
+        validateFormCodeUnique(updateReqVO);
         // 更新
         BpmFormDO updateObj = BeanUtils.toBean(updateReqVO, BpmFormDO.class);
         formMapper.updateById(updateObj);
@@ -63,6 +67,17 @@ public class BpmFormServiceImpl implements BpmFormService {
         if (formMapper.selectById(id) == null) {
             throw exception(ErrorCodeConstants.FORM_NOT_EXISTS);
         }
+    }
+
+    private void validateFormCodeUnique(BpmFormSaveReqVO reqVO) {
+        if (StrUtil.isEmpty(reqVO.getCode())) {
+            return;
+        }
+        BpmFormDO form = formMapper.selectByCode(reqVO.getCode());
+        if (form == null || ObjUtil.equal(form.getId(), reqVO.getId())) {
+            return;
+        }
+        throw exception(ErrorCodeConstants.FORM_CODE_DUPLICATE, reqVO.getCode());
     }
 
     @Override

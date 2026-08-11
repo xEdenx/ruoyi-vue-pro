@@ -70,6 +70,7 @@ public interface ErrorCodeConstants {
     // ========== 动态表单模块 1-009-010-000 ==========
     ErrorCode FORM_NOT_EXISTS = new ErrorCode(1_009_010_000, "动态表单不存在");
     ErrorCode FORM_FIELD_REPEAT = new ErrorCode(1_009_010_001, "表单项({}) 和 ({}) 使用了相同的字段名({})");
+    ErrorCode FORM_CODE_DUPLICATE = new ErrorCode(1_009_010_002, "已经存在表单标识为【{}】的动态表单");
 
     // ========== 用户组模块 1-009-011-000 ==========
     ErrorCode USER_GROUP_NOT_EXISTS = new ErrorCode(1_009_011_000, "用户分组不存在");

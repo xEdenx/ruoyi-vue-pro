@@ -68,8 +68,8 @@ public class BpmFormController {
     @Operation(summary = "获得动态表单的精简列表", description = "用于表单下拉框")
     public CommonResult<List<BpmFormRespVO>> getFormSimpleList() {
         List<BpmFormDO> list = formService.getFormList();
-        return success(convertList(list, formDO -> // 只返回 id、name 字段
-                new BpmFormRespVO().setId(formDO.getId()).setName(formDO.getName())));
+        return success(convertList(list, formDO -> // 只返回 id、code、name 字段
+                new BpmFormRespVO().setId(formDO.getId()).setCode(formDO.getCode()).setName(formDO.getName())));
     }
 
     @GetMapping("/page")

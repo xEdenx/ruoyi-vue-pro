@@ -22,6 +22,7 @@ import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEq
 import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
 import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
 import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.FORM_CODE_DUPLICATE;
 import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.FORM_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,6 +55,23 @@ public class BpmFormServiceTest extends BaseDbUnitTest {
         // 校验记录的属性是否正确
         BpmFormDO form = formMapper.selectById(formId);
         assertPojoEquals(reqVO, form);
+    }
+
+    @Test
+    public void testCreateForm_codeDuplicate() {
+        BpmFormDO dbForm = randomPojo(BpmFormDO.class, o -> {
+            o.setCode("office_supplies_request_v5_form");
+            o.setConf("{}");
+            o.setFields(randomFields());
+        });
+        formMapper.insert(dbForm);
+        BpmFormSaveReqVO reqVO = randomPojo(BpmFormSaveReqVO.class, o -> {
+            o.setCode(dbForm.getCode());
+            o.setConf("{}");
+            o.setFields(randomFields());
+        });
+
+        assertServiceException(() -> formService.createForm(reqVO), FORM_CODE_DUPLICATE, dbForm.getCode());
     }
 
     @Test
@@ -121,7 +139,10 @@ public class BpmFormServiceTest extends BaseDbUnitTest {
         });
         formMapper.insert(dbForm);
         // 测试 name 不匹配
-        formMapper.insert(cloneIgnoreId(dbForm, o -> o.setName("源码")));
+        formMapper.insert(cloneIgnoreId(dbForm, o -> {
+            o.setCode(RandomUtil.randomString(10));
+            o.setName("源码");
+        }));
         // 准备参数
         BpmFormPageReqVO reqVO = new BpmFormPageReqVO();
         reqVO.setName("芋道");

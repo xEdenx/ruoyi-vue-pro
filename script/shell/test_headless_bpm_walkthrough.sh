@@ -5,13 +5,19 @@
 # 由本地 Portal mock 在节点到达时按角色参数返回最终 String 用户 ID。
 # 用法：bash script/shell/test_headless_bpm_walkthrough.sh [BASE_URL]
 # 可选环境变量：TODO_PAGE_SIZE、TASK_POLL_ATTEMPTS、TASK_POLL_INTERVAL_SECONDS、
-# RESULT_DIR、RUN_ID。脚本只依赖目标环境公开的 HTTP API 与 curl/jq，不调用 MCP。
+# RESULT_DIR、RUN_ID、WALKTHROUGH_FORM_CODE、WALKTHROUGH_BPMN_FILE。脚本只依赖目标环境
+# 公开的 HTTP API 与 curl/jq，不调用 MCP。
 # ==============================================================================
 
 set -euo pipefail
 
 BASE_URL="${1:-http://127.0.0.1:48080}"
 PROCESS_KEY="office_supplies_request_v5"
+PROCESS_NAME="办公用品申请流程 V5"
+FORM_CODE="${WALKTHROUGH_FORM_CODE:-office_supplies_request_v5_form}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BPMN_FILE="${WALKTHROUGH_BPMN_FILE:-${REPO_ROOT}/docs/office_supplies_request_v5.bpmn.xml}"
 TODO_PAGE_SIZE="${TODO_PAGE_SIZE:-100}"
 TASK_POLL_ATTEMPTS="${TASK_POLL_ATTEMPTS:-15}"
 TASK_POLL_INTERVAL_SECONDS="${TASK_POLL_INTERVAL_SECONDS:-1}"
@@ -89,6 +95,15 @@ trap 'on_unexpected_error $?' ERR
 require_command curl
 require_command jq
 
+[ -r "${BPMN_FILE}" ] || {
+  echo "缺少或无法读取 BPMN 文件: ${BPMN_FILE}" >&2
+  exit 1
+}
+[[ -n "${FORM_CODE}" ]] || {
+  echo "WALKTHROUGH_FORM_CODE 不能为空" >&2
+  exit 1
+}
+
 # 颜色控制
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -126,6 +141,80 @@ echo -e "${BOLD}${MAGENTA}>>> [V5 流程节点确定模式说明]:${RESET}"
 echo -e "  1. 部门经理节点 (Activity_Manager) : START_USER_SELECT，发起时传入 [\"portal-manager-b3c4\"]"
 echo -e "  2. 行政管理员节点 (Activity_Admin)  : HEADLESS_REMOTE + ROLE_ADMIN -> mock 返回 [\"portal-admin-d5e6\"]"
 echo -e "  3. 供应商节点 (Activity_Supplier)   : HEADLESS_REMOTE + ROLE_SUPPLIER -> mock 返回 [\"portal-supplier-e7f8\", \"portal-supplier-f9a0\"]\n"
+
+# ==============================================================================
+# 前置检查：读取可发起的最新定义；未发布时上传当前 BPMN 并一键保存、发布。
+# ==============================================================================
+get_published_definition() {
+  CURRENT_STEP="检查流程定义 ${PROCESS_KEY} 是否已发布"
+  DEF_RESP=$(curl -X GET "${BASE_URL}/admin-api/bpm/process-definition/get?key=${PROCESS_KEY}" \
+    -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
+  assert_api_success "${DEF_RESP}" "检查流程定义 ${PROCESS_KEY}"
+  DEF_ID=$(echo "${DEF_RESP}" | jq -r '.data.id // empty')
+}
+
+resolve_form_id() {
+  CURRENT_STEP="按表单 code ${FORM_CODE} 查询动态表单"
+  local form_list_resp form_matches form_match_count
+  form_list_resp=$(curl -X GET "${BASE_URL}/admin-api/bpm/form/list-all-simple" \
+    -H "Authorization: Bearer ${TOKEN_PORTAL_MANAGER}")
+  assert_api_success "${form_list_resp}" "查询动态表单 ${FORM_CODE}"
+  form_matches=$(echo "${form_list_resp}" | jq -c --arg formCode "${FORM_CODE}" \
+    '[.data[]? | select(.code == $formCode)]')
+  form_match_count=$(echo "${form_matches}" | jq 'length')
+  if [ "${form_match_count}" != "1" ]; then
+    fail "表单 code ${FORM_CODE} 应唯一匹配一个 bpm_form，实际匹配数量: ${form_match_count}"
+  fi
+  FORM_ID=$(echo "${form_matches}" | jq -r '.[0].id // empty')
+  [[ "${FORM_ID}" =~ ^[0-9]+$ ]] || fail "表单 code ${FORM_CODE} 未返回有效的表单 ID"
+  echo -e "${GREEN}✓ 已按表单 code 解析动态表单: ${FORM_CODE} -> ID = ${FORM_ID}${RESET}"
+}
+
+ensure_process_definition_published() {
+  get_published_definition
+  if [ -n "${DEF_ID}" ]; then
+    echo -e "${GREEN}✓ 流程定义已发布，跳过创建和发布: key = ${PROCESS_KEY}, ID = ${DEF_ID}${RESET}"
+    return 0
+  fi
+
+  echo -e "${YELLOW}⚠ 流程定义未发布，准备上传并发布 BPMN: ${BPMN_FILE}${RESET}"
+  resolve_form_id
+  CURRENT_STEP="查找流程模型 ${PROCESS_KEY}"
+  local model_list_resp model_id model_json deploy_resp deployed_definition_id
+  model_list_resp=$(curl -X GET "${BASE_URL}/admin-api/bpm/model/list?name=${PROCESS_NAME}" \
+    -H "Authorization: Bearer ${TOKEN_PORTAL_MANAGER}")
+  assert_api_success "${model_list_resp}" "查找流程模型 ${PROCESS_KEY}"
+  model_id=$(echo "${model_list_resp}" | jq -r --arg processKey "${PROCESS_KEY}" \
+    '.data[]? | select(.key == $processKey) | .id' | head -n 1)
+
+  if [ -n "${model_id}" ]; then
+    echo -e "${YELLOW}  - 找到未发布模型，复用模型 ID: ${model_id}${RESET}"
+  else
+    echo -e "${YELLOW}  - 未找到流程模型，将创建新模型。${RESET}"
+  fi
+
+  model_json=$(jq -cn \
+    --arg modelId "${model_id}" \
+    --arg key "${PROCESS_KEY}" \
+    --arg name "${PROCESS_NAME}" \
+    --argjson formId "${FORM_ID}" \
+    '{key: $key, name: $name, category: "无", type: 10, formType: 10, formId: $formId,
+      visible: true, managerRoleCodes: ["ROLE_BPM_MODEL_MANAGER"]}
+     + (if $modelId == "" then {} else {id: $modelId} end)')
+
+  CURRENT_STEP="发布流程定义 ${PROCESS_KEY}"
+  deploy_resp=$(curl -X POST "${BASE_URL}/admin-api/bpm/process-definition/deploy-xml" \
+    -H "Authorization: Bearer ${TOKEN_PORTAL_MANAGER}" \
+    -F "model=${model_json};type=application/json" \
+    -F "file=@${BPMN_FILE};type=application/xml")
+  assert_api_success "${deploy_resp}" "发布流程定义 ${PROCESS_KEY}"
+  deployed_definition_id=$(echo "${deploy_resp}" | jq -r '.data // empty')
+  [ -n "${deployed_definition_id}" ] || fail "发布流程定义 ${PROCESS_KEY} 未返回流程定义 ID"
+
+  get_published_definition
+  [ -n "${DEF_ID}" ] || fail "流程定义 ${PROCESS_KEY} 发布后仍不可发起"
+  echo -e "${GREEN}✓ 流程定义创建并发布成功: ID = ${DEF_ID}${RESET}"
+}
 
 # ==============================================================================
 # 核心函数：根据 Bearer Token 包含的用户与角色在待办列表中寻找并审批任务
@@ -235,20 +324,11 @@ fetch_and_reject_task() {
 }
 
 # ==============================================================================
-# 步骤 1：Portal API 动态拉取流程定义与表单 Schema
+# 步骤 1：确认 BPMN 流程图已发布，再由 Portal API 拉取流程定义与表单 Schema
 # ==============================================================================
-echo -e "${BOLD}${YELLOW}>>> 步骤 1：Portal 拉取流程定义与动态表单 Schema${RESET}"
-CURRENT_STEP="读取流程定义 ${PROCESS_KEY}"
-DEF_RESP=$(curl -X GET "${BASE_URL}/admin-api/bpm/process-definition/get?key=${PROCESS_KEY}" \
-  -H "Authorization: Bearer ${TOKEN_PORTAL_REQUESTER}")
-assert_api_success "${DEF_RESP}" "读取流程定义 ${PROCESS_KEY}"
-
-DEF_ID=$(echo "${DEF_RESP}" | jq -r '.data.id // empty')
+echo -e "${BOLD}${YELLOW}>>> 步骤 1：检查/发布 BPMN，再拉取流程定义与动态表单 Schema${RESET}"
+ensure_process_definition_published
 FORM_FIELDS=$(echo "${DEF_RESP}" | jq -c '.data.formFields // []')
-
-if [ -z "${DEF_ID}" ]; then
-  fail "流程定义 ${PROCESS_KEY} 不存在或未发布"
-fi
 echo -e "${GREEN}✓ 流程定义拉取成功: ID = ${DEF_ID}${RESET}"
 echo -e "  - 表单 Schema 字段: ${FORM_FIELDS}\n"
 

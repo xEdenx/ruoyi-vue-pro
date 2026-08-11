@@ -1,12 +1,21 @@
 -- Live schema snapshot generated from the Supabase PostgreSQL `bpm` schema via DBX.
 -- Scope: base tables except act_*, flw_*, and bak_*.
--- This is a reference/bootstrap DDL, not an incremental migration. Do not execute it
--- directly against an existing bpm schema because CREATE TABLE statements are not idempotent.
--- Source inspection: 2026-08-10, 7 tables, no table-owned sequences, no table/column comments.
+-- This is destructive bootstrap DDL: it drops and recreates these tables in the
+-- current schema. Select the target schema before executing it.
+-- Includes the walkthrough form seed identified by office_supplies_request_v5_form.
+-- Source inspection: 2026-08-10, 7 tables and no table/column comments.
+-- This bootstrap adds bpm_form_seq so its seed and later inserts receive generated IDs.
 
-CREATE SCHEMA IF NOT EXISTS bpm;
+DROP TABLE IF EXISTS bpm_process_instance_copy;
+DROP TABLE IF EXISTS bpm_process_definition_info;
+DROP TABLE IF EXISTS bpm_process_listener;
+DROP TABLE IF EXISTS bpm_process_expression;
+DROP TABLE IF EXISTS bpm_form;
+DROP SEQUENCE IF EXISTS bpm_form_seq;
+DROP TABLE IF EXISTS bpm_category;
+DROP TABLE IF EXISTS dual;
 
-CREATE TABLE bpm.bpm_category (
+CREATE TABLE bpm_category (
     id bigint NOT NULL,
     name character varying(30) DEFAULT ''::character varying,
     code character varying(30) DEFAULT ''::character varying,
@@ -22,8 +31,11 @@ CREATE TABLE bpm.bpm_category (
     CONSTRAINT bpm_category_pkey PRIMARY KEY (id)
 );
 
-CREATE TABLE bpm.bpm_form (
-    id bigint NOT NULL,
+CREATE SEQUENCE bpm_form_seq AS bigint START WITH 1 INCREMENT BY 1;
+
+CREATE TABLE bpm_form (
+    id bigint NOT NULL DEFAULT nextval('bpm_form_seq'),
+    code character varying(64),
     name character varying(64) NOT NULL,
     status smallint NOT NULL,
     conf text NOT NULL,
@@ -38,7 +50,27 @@ CREATE TABLE bpm.bpm_form (
     CONSTRAINT bpm_form_pkey PRIMARY KEY (id)
 );
 
-CREATE TABLE bpm.bpm_process_definition_info (
+INSERT INTO bpm_form (
+    code, name, status, conf, fields, remark,
+    creator, create_time, updater, update_time, deleted, tenant_id
+) VALUES (
+    'office_supplies_request_v5_form', '办公用品申请流程 V5表单',
+    0,
+    $${"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"100px"}}$$,
+    $$[
+        "{\"type\":\"input\",\"field\":\"name\",\"title\":\"申请事项\",\"$required\":true}",
+        "{\"type\":\"inputNumber\",\"field\":\"count\",\"title\":\"数量\",\"$required\":true}",
+        "{\"type\":\"input\",\"field\":\"price\",\"title\":\"单价\",\"$required\":true}",
+        "{\"type\":\"input\",\"field\":\"totalAmount\",\"title\":\"总金额\",\"$required\":true}"
+    ]$$,
+    '系统自动生成的表单 Schema',
+    '1', CURRENT_TIMESTAMP, '1', CURRENT_TIMESTAMP, 0, 1
+);
+
+CREATE UNIQUE INDEX bpm_form_code_uq
+    ON bpm_form (code) WHERE code IS NOT NULL AND deleted = 0;
+
+CREATE TABLE bpm_process_definition_info (
     id bigint NOT NULL,
     process_definition_id character varying(64) NOT NULL,
     model_id character varying(64) NOT NULL,
@@ -79,7 +111,7 @@ CREATE TABLE bpm.bpm_process_definition_info (
     CONSTRAINT idx_process_definition_id UNIQUE (process_definition_id)
 );
 
-CREATE TABLE bpm.bpm_process_expression (
+CREATE TABLE bpm_process_expression (
     id bigint NOT NULL,
     name character varying(64) DEFAULT ''::character varying NOT NULL,
     status smallint NOT NULL,
@@ -93,7 +125,7 @@ CREATE TABLE bpm.bpm_process_expression (
     CONSTRAINT bpm_process_expression_pkey PRIMARY KEY (id)
 );
 
-CREATE TABLE bpm.bpm_process_instance_copy (
+CREATE TABLE bpm_process_instance_copy (
     id bigint NOT NULL,
     user_id bigint DEFAULT 0 NOT NULL,
     start_user_id bigint DEFAULT 0 NOT NULL,
@@ -114,7 +146,7 @@ CREATE TABLE bpm.bpm_process_instance_copy (
     CONSTRAINT bpm_process_instance_copy_pkey PRIMARY KEY (id)
 );
 
-CREATE TABLE bpm.bpm_process_listener (
+CREATE TABLE bpm_process_listener (
     id bigint NOT NULL,
     name character varying(30) DEFAULT ''::character varying NOT NULL,
     type character varying(255) NOT NULL,
@@ -131,15 +163,15 @@ CREATE TABLE bpm.bpm_process_listener (
     CONSTRAINT bpm_process_listener_pkey PRIMARY KEY (id)
 );
 
-CREATE TABLE bpm.dual (
+CREATE TABLE dual (
     id smallint
 );
 
 CREATE INDEX bpm_process_definition_info_idx_model_id
-    ON bpm.bpm_process_definition_info USING btree (model_id);
+    ON bpm_process_definition_info USING btree (model_id);
 
 CREATE INDEX bpm_process_instance_copy_idx_process_instance_id
-    ON bpm.bpm_process_instance_copy USING btree (process_instance_id);
+    ON bpm_process_instance_copy USING btree (process_instance_id);
 
 CREATE INDEX bpm_process_instance_copy_idx_user_id
-    ON bpm.bpm_process_instance_copy USING btree (user_id);
+    ON bpm_process_instance_copy USING btree (user_id);

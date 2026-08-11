@@ -33,6 +33,10 @@ public class BpmFormDO extends BaseDO {
     @TableId
     private Long id;
     /**
+     * 机器可读的表单标识
+     */
+    private String code;
+    /**
      * 表单名
      */
     private String name;

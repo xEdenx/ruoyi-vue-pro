@@ -22,4 +22,8 @@ public interface BpmFormMapper extends BaseMapperX<BpmFormDO> {
                 .orderByDesc("id"));
     }
 
+    default BpmFormDO selectByCode(String code) {
+        return selectOne(BpmFormDO::getCode, code);
+    }
+
 }

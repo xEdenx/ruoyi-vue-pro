@@ -28,8 +28,9 @@ description: 根据自然语言业务流程描述，自动生成 Flowable BPMN 2
 3. **Bean 表达式绑定监听器**：在 BPMN XML 的 `<extensionElements>` 中使用 `delegateExpression="${<beanName>.<methodName>}"` 或 `delegateExpression="${<beanName>}"` 进行解耦绑定。
 4. **监听器编写范式**：完全采用 `OfficeSuppliesListeners` 模式，每个流程独立一个以 `<ProcessName>Listeners` 命名的组件文件，内部定义静态内部类监听器并通过 `PREFIX` 区分 Bean 名称。
 5. **主流 DB 方言精准适配 (PostgreSQL / MySQL / SQL Server)**：
-   - 自动检查 `application.yaml` / 数据库驱动，优先适配 **PostgreSQL** (使用 `'[...]':jsonb` 或 `NOW()`)、**MySQL** (使用 `NOW()`) 或 **SQL Server** (使用 `GETDATE()`)。
+   - 自动检查 `application.yaml` / 数据库驱动，优先适配 **PostgreSQL** (使用 `NOW()`)、**MySQL** (使用 `NOW()`) 或 **SQL Server** (使用 `SYSDATETIME()`)。
    - 仅生成 `sql/<process_key>_form.sql` 文件，绝不在目标数据库自动执行。
+6. **表单机器关联**：`bpm_form.code` 是程序化的唯一标识，推荐固定为 `<process_key>_form`；`name` 仅用于前端展示。流程定义仍保存数据库生成的 `formId`，但初始化、walkthrough 和发布脚本必须先按 `code` 查询当前环境的实际 ID，禁止写死 `formId` 或表单主键。
 
 ---
 
@@ -54,10 +55,11 @@ description: 根据自然语言业务流程描述，自动生成 Flowable BPMN 2
 
 #### 示例 1: PostgreSQL 方言 (本工程默认 Supabase 环境)
 ```sql
-INSERT INTO bpm.bpm_form (
-    name, status, conf, fields, remark, 
+INSERT INTO bpm_form (
+    code, name, status, conf, fields, remark,
     creator, create_time, updater, update_time, deleted, tenant_id
 ) VALUES (
+    '<process_key>_form',
     '<process_name>表单',
     0,
     '{"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"100px"}}',
@@ -66,18 +68,19 @@ INSERT INTO bpm.bpm_form (
         "{\"type\":\"inputNumber\",\"field\":\"count\",\"title\":\"数量\",\"$required\":true}",
         "{\"type\":\"input\",\"field\":\"price\",\"title\":\"单价\",\"$required\":true}",
         "{\"type\":\"input\",\"field\":\"totalAmount\",\"title\":\"总金额\",\"$required\":true}"
-    ]'::jsonb,
+    ]',
     '系统自动生成的表单 Schema',
-    '1', NOW(), '1', NOW(), false, 1
-);
+    '1', NOW(), '1', NOW(), 0, 1
+) RETURNING id;
 ```
 
 #### 示例 2: MySQL 方言
 ```sql
 INSERT INTO `bpm_form` (
-    `name`, `status`, `conf`, `fields`, `remark`, 
+    `code`, `name`, `status`, `conf`, `fields`, `remark`,
     `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`
 ) VALUES (
+    '<process_key>_form',
     '<process_name>表单',
     0,
     '{"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"100px"}}',
@@ -91,6 +94,31 @@ INSERT INTO `bpm_form` (
     '1', NOW(), '1', NOW(), 0, 1
 );
 ```
+
+#### 示例 3: SQL Server 方言
+```sql
+INSERT INTO [bpm_form] (
+    [code], [name], [status], [conf], [fields], [remark],
+    [creator], [create_time], [updater], [update_time], [deleted], [tenant_id]
+)
+OUTPUT INSERTED.[id]
+VALUES (
+    N'<process_key>_form',
+    N'<process_name>表单',
+    0,
+    N'{"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"100px"}}',
+    N'[
+        "{\"type\":\"input\",\"field\":\"name\",\"title\":\"申请事项\",\"$required\":true}",
+        "{\"type\":\"inputNumber\",\"field\":\"count\",\"title\":\"数量\",\"$required\":true}",
+        "{\"type\":\"input\",\"field\":\"price\",\"title\":\"单价\",\"$required\":true}",
+        "{\"type\":\"input\",\"field\":\"totalAmount\",\"title\":\"总金额\",\"$required\":true}"
+    ]',
+    N'系统自动生成的表单 Schema',
+    N'1', SYSDATETIME(), N'1', SYSDATETIME(), 0, 1
+);
+```
+
+上述 SQL 均由数据库生成主键。后续发布时使用 `<process_key>_form` 查询 `bpm_form.code` 取得实际 `id`，不要假设插入顺序或主键数值。
 
 ---
 
