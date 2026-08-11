@@ -234,6 +234,9 @@ wx:
 
 # 芋道配置项，设置当前项目所有自定义的配置
 yudao:
+  tenant:
+    # Headless BPM 为单租户部署：禁用租户上下文、租户校验和 MyBatis 租户条件。
+    enable: false
   bpm:
     headless:
       enabled: true

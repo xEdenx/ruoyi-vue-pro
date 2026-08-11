@@ -188,7 +188,6 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
         Model model = modelService.getModel(modelId);
         ProcessDefinition definition = repositoryService.createProcessDefinitionQuery()
                 .deploymentId(model.getDeploymentId())
-                .processDefinitionTenantId(FlowableUtils.getTenantId())
                 .singleResult();
         return definition != null ? definition.getId() : null;
     }
