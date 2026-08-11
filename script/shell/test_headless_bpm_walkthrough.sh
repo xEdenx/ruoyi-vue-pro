@@ -67,7 +67,11 @@ record_scenario() {
       updated_results+=("${existing}")
     fi
   done
-  SCENARIO_RESULTS=("${updated_results[@]}")
+  if [ "${#updated_results[@]}" -gt 0 ]; then
+    SCENARIO_RESULTS=("${updated_results[@]}")
+  else
+    SCENARIO_RESULTS=()
+  fi
   SCENARIO_RESULTS+=("$(jq -cn --arg name "$name" --arg processInstanceId "$process_instance_id" --argjson status "$status" \
     '{name: $name, processInstanceId: $processInstanceId, status: $status}')")
   write_result_file "running" "已完成 ${name}"
@@ -181,7 +185,7 @@ ensure_process_definition_published() {
   resolve_form_id
   CURRENT_STEP="查找流程模型 ${PROCESS_KEY}"
   local model_list_resp model_id model_json deploy_resp deployed_definition_id
-  model_list_resp=$(curl -X GET "${BASE_URL}/admin-api/bpm/model/list?name=${PROCESS_NAME}" \
+  model_list_resp=$(curl -X GET "${BASE_URL}/admin-api/bpm/model/list" \
     -H "Authorization: Bearer ${TOKEN_PORTAL_MANAGER}")
   assert_api_success "${model_list_resp}" "查找流程模型 ${PROCESS_KEY}"
   model_id=$(echo "${model_list_resp}" | jq -r --arg processKey "${PROCESS_KEY}" \
