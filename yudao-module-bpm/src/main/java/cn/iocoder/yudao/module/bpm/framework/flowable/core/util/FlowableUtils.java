@@ -6,8 +6,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.core.KeyValue;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
-import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.form.BpmFormFieldVO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelFormTypeEnum;
@@ -31,7 +29,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -81,29 +78,16 @@ public class FlowableUtils {
     }
 
     public static String getTenantId() {
-        Long tenantId = TenantContextHolder.getTenantId();
-        return tenantId != null ? String.valueOf(tenantId) : ProcessEngineConfiguration.NO_TENANT_ID;
+        return ProcessEngineConfiguration.NO_TENANT_ID;
     }
 
-    public static void execute(String tenantIdStr, Runnable runnable) {
-        if (ObjectUtil.isEmpty(tenantIdStr)
-                || Objects.equals(tenantIdStr, ProcessEngineConfiguration.NO_TENANT_ID)) {
-            runnable.run();
-        } else {
-            Long tenantId = Long.valueOf(tenantIdStr);
-            TenantUtils.execute(tenantId, runnable);
-        }
+    public static void execute(String ignoredTenantId, Runnable runnable) {
+        runnable.run();
     }
 
     @SneakyThrows
-    public static <V> V execute(String tenantIdStr, Callable<V> callable) {
-        if (ObjectUtil.isEmpty(tenantIdStr)
-                || Objects.equals(tenantIdStr, ProcessEngineConfiguration.NO_TENANT_ID)) {
-            return callable.call();
-        } else {
-            Long tenantId = Long.valueOf(tenantIdStr);
-            return TenantUtils.execute(tenantId, callable);
-        }
+    public static <V> V execute(String ignoredTenantId, Callable<V> callable) {
+        return callable.call();
     }
 
     // ========== Execution 相关的工具方法 ==========

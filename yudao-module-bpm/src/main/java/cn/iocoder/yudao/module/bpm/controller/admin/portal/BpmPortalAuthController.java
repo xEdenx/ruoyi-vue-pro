@@ -5,7 +5,6 @@ import cn.hutool.json.JSONUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
-import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalMockLoginReqVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalMockLoginRespVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalUserRespVO;
@@ -43,7 +42,6 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/bpm/portal-auth")
 @Validated
-@TenantIgnore
 @ConditionalOnProperty(prefix = "yudao.bpm.headless-mock", name = "enabled", havingValue = "true")
 public class BpmPortalAuthController {
 
@@ -54,9 +52,6 @@ public class BpmPortalAuthController {
 
     @Value("${yudao.bpm.headless-mock.login-password}")
     private String loginPassword;
-    @Value("${yudao.bpm.headless-mock.tenant-id:1}")
-    private Long tenantId;
-
     @PostMapping("/login")
     @PermitAll
     @Operation(summary = "使用 Portal 用户 ID 登录本地 Headless BPM Mock")
@@ -67,7 +62,6 @@ public class BpmPortalAuthController {
         }
         BpmPortalMockLoginRespVO response = new BpmPortalMockLoginRespVO();
         response.setAccessToken(issueLocalMockToken(user));
-        response.setTenantId(tenantId);
         response.setUser(convertUser(user));
         return success(response);
     }
@@ -100,7 +94,6 @@ public class BpmPortalAuthController {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("userId", user.getId());
         payload.put("role", String.join(",", user.getRoleCodes()));
-        payload.put("tenantId", tenantId);
         payload.put(LOCAL_MOCK_CLAIM, true);
         payload.put("iss", "local-headless-bpm-mock");
         String header = encodeBase64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}");

@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 /**
@@ -30,6 +31,14 @@ public class YudaoRedisAutoConfiguration {
         template.setValueSerializer(redisSerializer);
         template.setHashValueSerializer(redisSerializer);
         return template;
+    }
+
+    /**
+     * 为使用 Spring Data Redis 字符串命令的模块提供标准模板。
+     */
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
+        return new StringRedisTemplate(factory);
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")

@@ -234,9 +234,6 @@ wx:
 
 # 芋道配置项，设置当前项目所有自定义的配置
 yudao:
-  tenant:
-    # Headless BPM 为单租户部署：禁用租户上下文、租户校验和 MyBatis 租户条件。
-    enable: false
   bpm:
     headless:
       enabled: true
@@ -244,14 +241,6 @@ yudao:
       enabled: true
       # 仅用于本地 Headless BPM walkthrough；关闭 mock 后登录 API 不会注册。
       login-password: portal-local-dev
-      tenant-id: 1
-  monitor:
-    admin-server:
-      enable: false
-  metrics:
-    enable: false
-  tracer:
-    enable: false
   captcha:
     enable: false # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；
   security:

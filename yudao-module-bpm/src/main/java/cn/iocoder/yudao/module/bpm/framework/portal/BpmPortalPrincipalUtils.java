@@ -21,7 +21,6 @@ public class BpmPortalPrincipalUtils {
             return null;
         }
         return BpmPortalPrincipal.of(loginUser.getId(),
-                loginUser.getTenantId() == null ? null : String.valueOf(loginUser.getTenantId()),
                 CollUtil.isEmpty(loginUser.getScopes()) ? new LinkedHashSet<>() : new LinkedHashSet<>(loginUser.getScopes()));
     }
 

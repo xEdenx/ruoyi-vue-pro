@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * BPM 运行时认可的 Portal 调用主体。
  *
- * <p>用户和租户标识均保留 Portal 提供的原始字符串。当前由本地安全上下文适配，
+ * <p>用户标识保留 Portal 提供的原始字符串。当前由本地安全上下文适配，
  * 后续接入 Portal 的已验证 JWT 或 mTLS 时只替换适配器，不应让 Controller 或 Flowable 再感知具体认证实现。</p>
  */
 @Getter
@@ -18,11 +18,10 @@ import java.util.Set;
 public class BpmPortalPrincipal {
 
     private final String userId;
-    private final String tenantId;
     private final Set<String> authorities;
 
-    public static BpmPortalPrincipal of(String userId, String tenantId, Set<String> authorities) {
-        return new BpmPortalPrincipal(userId, tenantId,
+    public static BpmPortalPrincipal of(String userId, Set<String> authorities) {
+        return new BpmPortalPrincipal(userId,
                 authorities == null ? Collections.emptySet() : Collections.unmodifiableSet(new LinkedHashSet<>(authorities)));
     }
 

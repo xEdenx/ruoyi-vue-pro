@@ -3,7 +3,6 @@ package cn.iocoder.yudao.module.bpm.controller.admin.portal;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
-import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalDepartmentRespVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalDirectoryRespVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalUserRespVO;
@@ -26,7 +25,6 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/bpm/portal-directory")
 @Validated
-@TenantIgnore
 public class BpmPortalDirectoryController {
 
     @Resource

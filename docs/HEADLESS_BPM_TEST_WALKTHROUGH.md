@@ -41,7 +41,7 @@
 
 ### 1.1 HTTP 请求
 - **URL**: `GET /admin-api/bpm/process-definition/get?key=office_supplies_request_v5`
-- **Header**: `Authorization: Bearer <Portal_User_Token>`, `tenant-id: 1`
+- **Header**: `Authorization: Bearer <Portal_User_Token>`
 
 ### 1.2 返回的数据结构
 ```json

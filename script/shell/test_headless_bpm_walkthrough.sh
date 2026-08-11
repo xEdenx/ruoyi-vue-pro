@@ -131,7 +131,7 @@ make_jwt() {
   local user_id="$1"
   local role="$2"
   local header_b64=$(echo -n '{"alg":"HS256","typ":"JWT"}' | base64 | tr -d '\n=' | tr '+/' '-_')
-  local payload_b64=$(echo -n "{\"userId\":\"${user_id}\",\"tenantId\":1,\"role\":\"${role}\",\"headlessMock\":true}" | base64 | tr -d '\n=' | tr '+/' '-_')
+  local payload_b64=$(echo -n "{\"userId\":\"${user_id}\",\"role\":\"${role}\",\"headlessMock\":true}" | base64 | tr -d '\n=' | tr '+/' '-_')
   echo "${header_b64}.${payload_b64}.fake_signature"
 }
 

@@ -25,9 +25,8 @@ Portal 适配器只负责下列边界能力：身份与权限 claims、组织目
 | `BpmPortalIdentityApi` | 模型管理员角色校验 | `LocalBpmPortalIdentityApiMock` | 由 Portal 返回用户及其角色编码 |
 | `BpmPortalOrganizationApi` | 用户/部门展示、启用状态、角色/岗位/部门到最终用户的解算 | `LocalBpmPortalIdentityApiMock` | HTTP/mTLS 调 Portal 组织目录 API |
 | `BpmPortalConfigurationApi` | Headless 管理端固定枚举、地区树等展示配置 | `LocalBpmPortalConfigurationApi`：直接投影 BPM 枚举，地区树为空 | HTTP/mTLS 调 Portal 配置 API；直接替换该实现 |
-| `PortalTenantApi` | 请求租户合法性和定时任务租户范围 | `LocalBpmPortalTenantApiMock`：只接受配置的本地租户 | 由已验证的 Portal 租户边界实现 |
 | `PortalRoleCandidateStrategy.PortalRoleCandidateApi` | BPMN 策略 70 的节点级角色候选人解算 | `LocalPortalRoleCandidateApiMock` | HTTP/mTLS 调 Portal 角色选人 API |
-| `BpmPortalPrincipal` / `BpmPortalPrincipalUtils` | 请求主体的 String ID、租户和权限 claims | 将现有安全上下文适配为 BPM 主体；`BpmPortalAuthController` 提供本地 Mock 登录 | 校验 Portal JWT 或网关透传的可信身份后在此适配器构造主体 |
+| `BpmPortalPrincipal` / `BpmPortalPrincipalUtils` | 请求主体的 String ID 和权限 claims | 将现有安全上下文适配为 BPM 主体；`BpmPortalAuthController` 提供本地 Mock 登录 | 校验 Portal JWT 或网关透传的可信身份后在此适配器构造主体 |
 | `BpmPortalNotificationApi` | 待办、审批结果、抄送等通知投递 | `LoggingBpmPortalNotificationApi`：只记录待投递事件，不影响 BPM 状态和审计 | HTTP/mTLS 调 Portal Webhook / 消息入口 |
 | `PortalApplicationLogApi` | API 访问与异常审计 | 应用日志输出待投递事件；不写 `infra_api_*` | Portal 审计入口或 OTel 日志管道 |
 
@@ -39,7 +38,6 @@ yudao:
     headless-mock:
       enabled: true
       login-password: portal-local-dev
-      tenant-id: 1
 ```
 
 关闭该开关后，如果没有注册生产实现，`MissingBpmPortalIdentityApi` 和 `MissingBpmPortalOrganizationApi` 会抛出异常。这样可以确保生产环境不会在 Portal 故障时错误访问本地 system 数据。当前用户读取已统一经过 `BpmPortalPrincipalUtils`；Controller、Flowable Filter 和任务服务不得重新直接读取或转换框架登录 ID。
@@ -50,10 +48,10 @@ yudao:
 
 | API | 用途 | 输入/输出 |
 | --- | --- | --- |
-| `POST /admin-api/bpm/portal-auth/login` | 以已配置的 Portal Mock 用户登录 | `userId`、固定 `password` → `accessToken`、`tenantId`、最小 `PortalUser` 投影 |
+| `POST /admin-api/bpm/portal-auth/login` | 以已配置的 Portal Mock 用户登录 | `userId`、固定 `password` → `accessToken`、最小 `PortalUser` 投影 |
 | `GET /admin-api/bpm/portal-auth/me` | 获取当前 Mock 登录用户 | Bearer token → 最小 `PortalUser` 投影 |
 
-登录端点本身忽略租户过滤，以便浏览器在尚未持有租户上下文时建立会话；登录响应中的 `tenantId` 必须被前端写入后续 BPM 请求头。该 token 是为了复用现有 BPM API 过滤器而生成的本地开发占位 token，**不是生产认证方案**：它没有可用于生产的签名、刷新、吊销或跨服务验证语义。安全过滤器仅在 `yudao.security.mock-enable=true` 且 payload 含 `headlessMock=true` 时才接受这类未签名 token。生产接入必须在构造 `BpmPortalPrincipal` 前验证 Portal JWT 的签名、`iss`、`aud`、有效期和租户边界，或使用受信任网关的 mTLS 身份透传；完成前不得在任何非本地环境开启 `headless-mock` 或 `security.mock-enable`。
+系统采用全局单租户，不接受或转发租户请求头。该 token 是为了复用现有 BPM API 过滤器而生成的本地开发占位 token，**不是生产认证方案**：它没有可用于生产的签名、刷新、吊销或跨服务验证语义。安全过滤器仅在 `yudao.security.mock-enable=true` 且 payload 含 `headlessMock=true` 时才接受这类未签名 token。生产接入必须在构造 `BpmPortalPrincipal` 前验证 Portal JWT 的签名、`iss`、`aud` 和有效期，或使用受信任网关的 mTLS 身份透传；完成前不得在任何非本地环境开启 `headless-mock` 或 `security.mock-enable`。
 
 ## 3. 组织目录 SPI
 
@@ -170,7 +168,6 @@ Set<String> resolveRoleAssigneeIds(
 | 模型管理员校验 | 本地用户/角色已不再是权威来源 | `BpmPortalIdentityApi.hasAnyRole` | 已迁移（Mock） |
 | 流程发起用户/部门白名单、子流程管理员 | `LongListTypeHandler`、`AdminUserApi`、`DeptApi` | `List<String>` + `StringListTypeHandler` + `BpmPortalOrganizationApi.getUser`；模型列表用 `getUserMap` / `getDepartmentMap` 展示 | 已迁移；旧数值白名单须由 Portal 映射后重新配置 |
 | 当前登录用户与菜单权限 | 仅本地 Mock token；`@ss.hasPermission` 只识别其 BPM claims | `BpmPortalPrincipal` + 已验证 Portal claims | 已移除 system OAuth2 token 与 system 权限回退；BPM 代码中的当前用户读取已迁移到唯一适配点，生产验签与精确授权待迁移 |
-| 多租户校验与定时任务租户范围 | `TenantCommonApi` | `PortalTenantApi`；本地 Mock 仅允许配置的 tenantId | 已迁移；生产 Portal 必须注册已验证的租户边界实现 |
 | 短信、邮件、站内信 | `SmsSendApi` 等 system 能力 | `BpmPortalNotificationApi`；当前日志兜底，后续替换为 Portal Webhook；保留 BPM 通知触发时机 | 适配端口已迁移，生产投递待接入 |
 | API 与操作审计 | `OperateLogCommonApi`、`Api*LogCommonApi` | `PortalApplicationLogApi`；本地只输出待投递日志 | 已迁移；Portal 审计或 OTel 接入待实现 |
 | 本地部门数据权限 | `PermissionCommonApi`、部门数据权限规则 | BPM 不再创建或执行本地部门规则；Portal 在调用 BPM 前完成数据范围授权 | 已移除；不得回退读取 system 部门权限 |
@@ -185,7 +182,7 @@ Set<String> resolveRoleAssigneeIds(
 
 1. 使用 mTLS 或服务间签名调用 Portal；不得信任浏览器传入的用户 ID、角色或部门。
 2. 为每个请求设置连接和读取超时、有限重试及熔断；组织解算与任务创建不得使用无限重试。
-3. 仅传递本次操作所需的最小上下文：发起人 ID、流程实例 ID、节点 ID、受控选择器和租户边界。
+3. 仅传递本次操作所需的最小上下文：发起人 ID、流程实例 ID、节点 ID 和受控选择器。
 4. 对角色、岗位和部门的选择器使用 Portal 原生稳定编码，禁止引入 BPM 到 Portal 的数字 ID 映射表。
 5. 记录不含敏感字段的审计事件：适配器类型、选择器、返回用户数量、实例/节点 ID、耗时和失败原因。
 6. Portal 不可用、返回空审批人或返回空白 ID 时失败关闭；禁止使用缓存的过期人员名单继续创建审批任务。

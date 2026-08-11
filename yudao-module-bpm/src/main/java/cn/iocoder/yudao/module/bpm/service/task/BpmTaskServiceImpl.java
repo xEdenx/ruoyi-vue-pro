@@ -13,7 +13,6 @@ import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
 import cn.iocoder.yudao.framework.common.util.object.PageUtils;
-import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelMetaInfoVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.task.*;
 import cn.iocoder.yudao.module.bpm.convert.task.BpmTaskConvert;
@@ -598,14 +597,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void approveTask(Long userId, @Valid BpmTaskApproveReqVO reqVO) {
         approveTask(userId == null ? null : String.valueOf(userId), reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void approveTask(String userId, @Valid BpmTaskApproveReqVO reqVO) {
         // 1.1 校验任务存在
         Task task = validateTask(userId, reqVO.getId());
@@ -864,14 +861,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void rejectTask(Long userId, @Valid BpmTaskRejectReqVO reqVO) {
         rejectTask(userId == null ? null : String.valueOf(userId), reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void rejectTask(String userId, @Valid BpmTaskRejectReqVO reqVO) {
         // 1.1 校验任务存在
         Task task = validateTask(userId, reqVO.getId());
@@ -945,14 +940,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void returnTask(Long userId, BpmTaskReturnReqVO reqVO) {
         returnTask(userId == null ? null : String.valueOf(userId), reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false)
     public void returnTask(String userId, BpmTaskReturnReqVO reqVO) {
         // 1.1 当前任务 task
         Task task = validateTask(userId, reqVO.getId());
@@ -1087,14 +1080,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void delegateTask(Long userId, BpmTaskDelegateReqVO reqVO) {
         delegateTask(userId == null ? null : String.valueOf(userId), reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false)
     public void delegateTask(String userId, BpmTaskDelegateReqVO reqVO) {
         String taskId = reqVO.getId();
         // 1.1 校验任务
@@ -1124,14 +1115,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void transferTask(Long userId, BpmTaskTransferReqVO reqVO) {
         transferTask(userId == null ? null : String.valueOf(userId), reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false)
     public void transferTask(String userId, BpmTaskTransferReqVO reqVO) {
         String taskId = reqVO.getId();
         // 1.1 校验任务
@@ -1161,7 +1150,6 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void moveTaskToEnd(String processInstanceId, String reason) {
         List<Task> taskList = getRunningTaskListByProcessInstanceId(processInstanceId, null, null);
         if (CollUtil.isEmpty(taskList)) {
@@ -1200,14 +1188,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void createSignTask(Long userId, BpmTaskSignCreateReqVO reqVO) {
         createSignTask(userId == null ? null : String.valueOf(userId), reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false)
     public void createSignTask(String userId, BpmTaskSignCreateReqVO reqVO) {
         // 1. 获取和校验任务
         TaskEntityImpl taskEntity = validateTaskCanCreateSign(userId, reqVO);
@@ -1324,7 +1310,6 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     @SuppressWarnings("DataFlowIssue")
     public void deleteSignTask(Long userId, BpmTaskSignDeleteReqVO reqVO) {
         deleteSignTask(userId == null ? null : String.valueOf(userId), reqVO);
@@ -1332,7 +1317,6 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false)
     public void deleteSignTask(String userId, BpmTaskSignDeleteReqVO reqVO) {
         // 1.1 校验 task 可以被减签
         Task task = validateTaskCanSignDelete(reqVO.getId());
@@ -1369,14 +1353,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false) // 关闭数据权限，避免查询不到用户数据。相关案例：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID1UYA
     public void withdrawTask(Long userId, String taskId) {
         withdrawTask(userId == null ? null : String.valueOf(userId), taskId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @DataPermission(enable = false)
     public void withdrawTask(String userId, String taskId) {
         // 1.1 查询本人已办任务
         HistoricTaskInstance taskInstance = historyService.createHistoricTaskInstanceQuery()
@@ -1561,7 +1543,6 @@ public class BpmTaskServiceImpl implements BpmTaskService {
     }
 
     @Override
-    @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致找不到候选人
     public void processTaskAssigned(Task task) {
         // 发送通知。在事务提交时，批量执行操作，所以直接查询会无法查询到 ProcessInstance，所以这里是通过监听事务的提交来实现。
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

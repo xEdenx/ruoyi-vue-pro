@@ -2,7 +2,6 @@ package cn.iocoder.yudao.module.bpm.service.definition;
 
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelMetaInfoVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelSaveReqVO;
@@ -11,10 +10,9 @@ import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmSimpleModelNodeTypeEnum;
 import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalIdentityApi;
 import org.flowable.engine.RepositoryService;
+import org.flowable.engine.ProcessEngineConfiguration;
 import org.flowable.engine.repository.Model;
 import org.flowable.engine.repository.ModelQuery;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -39,7 +37,7 @@ import static org.mockito.Mockito.*;
  */
 public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
 
-    private static final Long TENANT_ID = 1L;
+    private static final String TENANT_ID = ProcessEngineConfiguration.NO_TENANT_ID;
     private static final String MODEL_ID = "model-id";
 
     @InjectMocks
@@ -51,16 +49,6 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
     private ModelQuery modelQuery;
     @Mock
     private BpmPortalIdentityApi portalIdentityApi;
-
-    @BeforeEach
-    public void setUp() {
-        TenantContextHolder.setTenantId(TENANT_ID);
-    }
-
-    @AfterEach
-    public void tearDown() {
-        TenantContextHolder.clear();
-    }
 
     @Test
     public void testExportModel_bpmn() {
@@ -111,7 +99,7 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
         // mock 方法（repositoryService）
         when(repositoryService.createModelQuery()).thenReturn(modelQuery);
         when(modelQuery.modelId(eq(MODEL_ID))).thenReturn(modelQuery);
-        when(modelQuery.modelTenantId(eq(TENANT_ID.toString()))).thenReturn(modelQuery);
+        when(modelQuery.modelTenantId(eq(TENANT_ID))).thenReturn(modelQuery);
         when(modelQuery.singleResult()).thenReturn(null);
 
         // 调用，并断言异常
@@ -134,7 +122,7 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
         when(model.getId()).thenReturn(MODEL_ID);
         // mock 方法（repositoryService）
         when(repositoryService.createModelQuery()).thenReturn(modelQuery);
-        when(modelQuery.modelTenantId(eq(TENANT_ID.toString()))).thenReturn(modelQuery);
+        when(modelQuery.modelTenantId(eq(TENANT_ID))).thenReturn(modelQuery);
         when(modelQuery.modelKey(eq(reqVO.getKey()))).thenReturn(modelQuery);
         when(modelQuery.singleResult()).thenReturn(null);
         when(repositoryService.newModel()).thenReturn(model);
@@ -144,7 +132,7 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
 
         // 断言
         assertEquals(MODEL_ID, result);
-        verify(model).setTenantId(TENANT_ID.toString());
+        verify(model).setTenantId(TENANT_ID);
         verify(repositoryService).saveModel(same(model));
         verify(repositoryService).addModelEditorSource(eq(MODEL_ID),
                 aryEq(StrUtil.utf8Bytes(reqVO.getBpmnXml())));
@@ -188,7 +176,7 @@ public class BpmModelServiceImplTest extends BaseMockitoUnitTest {
     private void mockGetModel(Model model) {
         when(repositoryService.createModelQuery()).thenReturn(modelQuery);
         when(modelQuery.modelId(eq(MODEL_ID))).thenReturn(modelQuery);
-        when(modelQuery.modelTenantId(eq(TENANT_ID.toString()))).thenReturn(modelQuery);
+        when(modelQuery.modelTenantId(eq(TENANT_ID))).thenReturn(modelQuery);
         when(modelQuery.singleResult()).thenReturn(model);
     }
 

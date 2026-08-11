@@ -32,7 +32,6 @@ class BpmPortalAuthControllerTest extends BaseMockitoUnitTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(controller, "loginPassword", "portal-local-dev");
-        ReflectionTestUtils.setField(controller, "tenantId", 1L);
     }
 
     @Test
@@ -49,7 +48,6 @@ class BpmPortalAuthControllerTest extends BaseMockitoUnitTest {
 
         assertEquals(user.getId(), response.getUser().getId());
         assertEquals(user.getDisplayName(), response.getUser().getDisplayName());
-        assertEquals(1L, response.getTenantId());
         String payload = new String(Base64.getUrlDecoder().decode(response.getAccessToken().split("\\.")[1]),
                 StandardCharsets.UTF_8);
         assertEquals(user.getId(), JSONUtil.parseObj(payload).getStr("userId"));

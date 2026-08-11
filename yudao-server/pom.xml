@@ -40,12 +40,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 服务保障相关 -->
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-protection</artifactId>
-        </dependency>
-
     </dependencies>
 
     <build>

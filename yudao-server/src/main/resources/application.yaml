@@ -281,19 +281,6 @@ yudao:
     response-key: 96103715984234343991809655248883 # 【AES 案例】响应加密的秘钥，AES 案例，必须 16、24、32 位
 #    request-key: MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAKWzasimcZ1icsWDPVdTXcZs1DkOWjI+m9bTQU8aOqflnomkr6QO1WWeSHBHzuJGsTlV/ZY2pFfq/NstKC94hBjx7yioYJvzb2bKN/Uy4j5nM3iCF//u0RiFkkY8j0Bt/EWoFTOb6RHf8cHIAjbYYtP3pYzbpCIwryfe0g//KIuzAgMBAAECgYADDjZrYcpZjR2xr7RbXmGtzYbyUGXwZEAqa3XaWBD51J2iSyOkAlQEDjGmxGQ3vvb4qDHHadWI+3/TKNeDXJUO+xTVJrnismK5BsHyC6dfxlIK/5BAuknryTca/3UoA1yomS9ZlF3Q0wcecaDoEnSmZEaTrp9T3itPAz4KnGjv5QJBAN5mNcfu6iJ5ktNvEdzqcxkKwbXb9Nq1SLnmTvt+d5TPX7eQ9fCwtOfVu5iBLhhZzb5PJ7pSN3Zt6rl5/jPOGv0CQQC+vETX9oe1wbxZSv6/RBGy0Xow6GndbJwvd89PcAJ2h+OJXWtg/rRHB3t9EQm7iis0XbZTapj19E4U6l8EibhvAkEA1CvYpRwmHKu1SqdM+GBnW/2qHlBwwXJvpoK02TOm674HR/4w0+YRQJfkd7LOAgcyxJuJgDTNmtt0MmzS+iNoFQJAMVSUIZ77XoDq69U/qcw7H5qaFcgmiUQr6QL9tTftCyb+LGri+MUnby96OtCLSdvkbLjIDS8GvKYhA7vSM2RDNQJBAKGyVVnFFIrbK3yuwW71yvxQEGoGxlgvZSezZ4vGgqTxrr9HvAtvWLwR6rpe6ybR/x8uUtoW7NRBWgpiIFwjvY4= # 【RSA 案例】请求解密的私钥
 #    response-key: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDh/CHyBcS/zEfVyINVA7+c9Xxl0CPdxPMK1OIjxaLy/7BLfbkoEpI8onQtjuzfpuxCraDem9bu3BMF0pMH95HytI3Vi0kGjaV+WLIalwgc2w37oA2sbsmKzQOP7SDLO5s2QJNAD7kVwd+Q5rqaLu2MO0xVv+0IUJhn83hClC0L5wIDAQAB # 【RSA 案例】响应加密的公钥
-  websocket:
-    enable: true # websocket的开关
-    path: /infra/ws # 路径
-    sender-type: local # 消息发送的类型，可选值为 local、redis、rocketmq、kafka、rabbitmq
-    sender-rocketmq:
-      topic: ${spring.application.name}-websocket # 消息发送的 RocketMQ Topic
-      consumer-group: ${spring.application.name}-websocket-consumer # 消息发送的 RocketMQ Consumer Group
-    sender-rabbitmq:
-      exchange: ${spring.application.name}-websocket-exchange # 消息发送的 RabbitMQ Exchange
-      queue: ${spring.application.name}-websocket-queue # 消息发送的 RabbitMQ Queue
-    sender-kafka:
-      topic: ${spring.application.name}-websocket # 消息发送的 Kafka Topic
-      consumer-group: ${spring.application.name}-websocket-consumer # 消息发送的 Kafka Consumer Group
   swagger:
     title: 芋道快速开发平台
     description: 提供管理后台、用户 App 的所有功能
@@ -310,24 +297,6 @@ yudao:
     delete-batch-enable: true # 是否生成批量删除接口
     unit-test-enable: false # 是否生成单元测试
     import-enable: false # 是否生成 Excel 导入接口
-  tenant: # 多租户相关配置项
-    enable: true
-    ignore-urls:
-      - /jmreport/* # 积木报表，无法携带租户编号
-    ignore-visit-urls:
-      - /admin-api/system/user/profile/**
-      - /admin-api/system/auth/**
-    ignore-tables:
-    ignore-caches:
-      - user_role_ids
-      - permission_menu_ids
-      - oauth_client
-      - notify_template
-      - mail_account
-      - mail_template
-      - sms_template
-      - iot:device
-      - iot:thing_model_list
   sms-code: # 短信验证码相关的配置项
     expire-times: 10m
     send-frequency: 1m

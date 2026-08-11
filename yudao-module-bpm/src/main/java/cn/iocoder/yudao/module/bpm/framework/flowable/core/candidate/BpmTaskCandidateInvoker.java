@@ -7,7 +7,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
-import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmUserTaskApproveTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmUserTaskAssignStartUserHandlerTypeEnum;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmTaskCandidateStrategyEnum;
@@ -87,7 +86,6 @@ public class BpmTaskCandidateInvoker {
      * @param execution 执行任务
      * @return 用户编号集合
      */
-    @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致找不到候选人
     public Set<Long> calculateUsersByTask(DelegateExecution execution) {
         // 注意：解决极端情况下，Flowable 异步调用，导致租户 id 丢失的情况
         // 例如说，SIMPLE 延迟器在 trigger 的时候！！！
@@ -135,8 +133,6 @@ public class BpmTaskCandidateInvoker {
         removeStartUserIfSkip(assigneeIds, execution.getCurrentFlowElement(), getStartUserId(execution));
         return assigneeIds;
     }
-
-    @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致找不到候选人
     public Set<Long> calculateUsersByActivity(BpmnModel bpmnModel, String activityId,
                                               Long startUserId, String processDefinitionId, Map<String, Object> processVariables) {
         // 如果是 CallActivity 子流程，不进行计算候选人

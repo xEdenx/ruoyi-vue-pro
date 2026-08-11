@@ -67,7 +67,7 @@ type BpmUser = {
 - 登录成功后进入 `/bpm/task/todo`。路由启动时只注册登录与错误页，登录后由 Portal 角色动态注入“工作流程”菜单：运行用户获得“审批中心”，带 `ROLE_BPM_MODEL_MANAGER` 的 Mock 用户获得完整 BPM 管理菜单（流程管理、审批中心）。本地 Mock 中该角色可调用 `bpm:*` API；生产必须由 Portal claims 精确替换，不得沿用此宽泛开发权限。当前 server 已移除 system 认证与动态菜单 API。
 - 前端对同一 Mock 角色投影 `*:*:*`，仅用于让既有 BPM 页面中的 `v-hasPermi` 按钮与后端的 `bpm:*` Mock 授权一致；它不会放行 backend 的 system API，也不能作为生产权限模型。
 - Headless 本地登录不挂载顶部的 system 站内信铃铛，也不轮询 `/system/notify-message/*`。该入口属于已移除的 system 通知能力；未来由 Portal 的通知中心或 Portal Webhook 投递能力替换，不能为兼容该管理端而在 BPM 服务中恢复旧 API。
-- Headless 本地登录不挂载租户切换控件，也不请求 `/system/tenant/*`；租户边界由登录时的 Portal claims 与 BPM 的 `PortalTenantApi` 校验。静态工作流程菜单排除已下线的 OA 请假示例和本地用户分组，避免进入仍依赖 system 数据的遗留页面。
+- Headless 本地登录不挂载租户切换控件，也不请求 `/system/tenant/*`；系统采用全局单租户，不接受或发送租户上下文。静态工作流程菜单排除已下线的 OA 请假示例和本地用户分组，避免进入仍依赖 system 数据的遗留页面。
 - Headless 字典存储从 `/bpm/portal-config/dict-data/simple-list` 获取 BPM 状态和建模所需的固定枚举，禁止状态标签或表单控件回退请求 `/system/dict-data/*`。候选人策略选择器始终直接从该 BPM 配置 API 读取完整策略目录，前端不维护策略白名单，也不依据 Spring 当前是否注册策略进行过滤；策略是否可执行由后端发布、运行时校验。默认实现投影 BPM 自己的枚举，不读取或同步 system 字典；未来由 Portal 配置时，直接替换后端 `BpmPortalConfigurationApi` 实现，前端无需改动。
 - BPM 建模、流程管理、审批详情和动态选人控件统一从 `/bpm/portal-directory/simple-list` 读取可选择用户/部门；地区打印选项从 `/bpm/portal-config/area-tree` 读取。前端不保留 system 回退路径；生产 Portal 只需替换组织目录/配置适配器并按调用方权限过滤结果。
 - RuoYi 全局 `UserVO` 仍保留数值 `id`/`deptId`，避免影响大量非 BPM 页面；Headless 模式中该全局投影只用于展示名称，Portal 原始 String ID 始终保留在 Bearer token 与 BPM API 链路中。未来 Portal 页面不能依赖此管理端全局 `UserVO`。

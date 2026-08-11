@@ -63,8 +63,8 @@ Headless BPM Server
 
 **目标：** 在删除依赖前明确 Portal 与 BPM 的可信边界。
 
-- [x] 定义 `BpmPortalPrincipal`：`userId: String`、可选 `tenantId: String`、`authorities`；Controller 与 Flowable Filter 经 `BpmPortalPrincipalUtils` 读取当前主体。（本地安全上下文适配已完成；生产可信 Principal 尚未实现）
-- [ ] 由 BPM 网关或服务端验证 Portal JWT / mTLS，并提供 `PortalTenantApi`；不得从普通请求头读取用户 ID。（本地 Mock token 和固定租户仅用于 walkthrough，不能作为验收）
+- [x] 定义 `BpmPortalPrincipal`：`userId: String`、`authorities`；Controller 与 Flowable Filter 经 `BpmPortalPrincipalUtils` 读取当前主体。（本地安全上下文适配已完成；生产可信 Principal 尚未实现）
+- [x] 运行时采用全局单租户：移除租户上下文、租户请求头、`PortalTenantApi` 及其 Job/MQ 传播；不得从普通请求头读取用户 ID。
 - [ ] 将运行 API 收敛为：流程定义/表单读取、创建流程、待办/已办、同意/拒绝、审批轨迹；流程图维护 API 仅开放给定义管理员。
 - [ ] 定义流程发起契约：`processDefinitionId`（或解析后的 key/version）、`businessKey`、路由变量、`startUserSelectAssignees`。
 - [ ] 约定 `startUserSelectAssignees` 中只允许最终用户 String ID；Portal 在调用前完成角色到用户的展开。

@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.expression;
 
-import cn.idev.excel.annotation.ExcelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -11,11 +10,9 @@ import java.time.LocalDateTime;
 public class BpmProcessExpressionRespVO {
 
     @Schema(description = "编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "3870")
-    @ExcelProperty("编号")
     private Long id;
 
     @Schema(description = "表达式名字", requiredMode = Schema.RequiredMode.REQUIRED, example = "李四")
-    @ExcelProperty("表达式名字")
     private String name;
 
     @Schema(description = "表达式状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")

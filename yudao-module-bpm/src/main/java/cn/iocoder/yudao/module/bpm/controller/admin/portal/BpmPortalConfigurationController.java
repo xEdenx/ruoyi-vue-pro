@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.bpm.controller.admin.portal;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalAreaRespVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.portal.vo.BpmPortalDictDataRespVO;
 import cn.iocoder.yudao.module.bpm.framework.portal.BpmPortalConfigurationApi;
@@ -21,7 +20,6 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/bpm/portal-config")
 @Validated
-@TenantIgnore
 public class BpmPortalConfigurationController {
 
     @Resource
