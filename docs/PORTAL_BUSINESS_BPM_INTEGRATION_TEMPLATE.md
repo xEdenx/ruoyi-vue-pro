@@ -44,7 +44,7 @@ Portal 先持久化自己的业务单据，再调用 `POST /admin-api/bpm/proces
 
 ## 5. 上线检查
 
-1. BPMN 仅使用 `START_USER_SELECT` 或 `HEADLESS_REMOTE` 候选人策略。
+1. BPMN 仅使用 `START_USER_SELECT`（35）或 Portal `ROLE`（70）候选人策略。
 2. 使用非数值 Portal 用户 ID 跑通发起、待办、审批、轨迹和回调。
 3. Portal 为组织目录、通知和权限 claims 提供生产适配器；本地 mock 不得进入生产。
 4. 业务单据表不放入 `bpm` Schema；BPM 表不作为 Portal 的业务主数据来源。

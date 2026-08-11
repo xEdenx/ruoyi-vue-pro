@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.headless;
+package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.role;
 
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class HeadlessRemoteCandidateStrategyTest extends BaseMockitoUnitTest {
+class PortalRoleCandidateStrategyTest extends BaseMockitoUnitTest {
 
     @Test
     void calculateAssigneeIdsByTask_resolvesCandidatesFromPortal() {
-        HeadlessRemoteCandidateStrategy.PortalCandidateApi portalCandidateApi =
-                mock(HeadlessRemoteCandidateStrategy.PortalCandidateApi.class);
+        PortalRoleCandidateStrategy.PortalRoleCandidateApi portalRoleCandidateApi =
+                mock(PortalRoleCandidateStrategy.PortalRoleCandidateApi.class);
         BpmProcessInstanceService processInstanceService = mock(BpmProcessInstanceService.class);
         DelegateExecution execution = mock(DelegateExecution.class);
         ProcessInstance processInstance = mock(ProcessInstance.class);
@@ -29,11 +29,11 @@ class HeadlessRemoteCandidateStrategyTest extends BaseMockitoUnitTest {
         when(execution.getCurrentActivityId()).thenReturn("activity-1");
         when(processInstanceService.getProcessInstance("process-1")).thenReturn(processInstance);
         when(processInstance.getStartUserId()).thenReturn("portal-user-1");
-        when(portalCandidateApi.resolveAssigneeIds("portal-user-1", "activity-1", "ROLE_ADMIN", "process-1"))
+        when(portalRoleCandidateApi.resolveRoleAssigneeIds("portal-user-1", "activity-1", "ROLE_ADMIN", "process-1"))
                 .thenReturn(new LinkedHashSet<>(List.of("portal-user-2")));
 
-        HeadlessRemoteCandidateStrategy strategy = new HeadlessRemoteCandidateStrategy(
-                Optional.of(portalCandidateApi), processInstanceService);
+        PortalRoleCandidateStrategy strategy = new PortalRoleCandidateStrategy(
+                Optional.of(portalRoleCandidateApi), processInstanceService);
 
         assertEquals(Set.of("portal-user-2"),
                 strategy.calculateAssigneeIdsByTask(execution, "ROLE_ADMIN"));
@@ -41,7 +41,7 @@ class HeadlessRemoteCandidateStrategyTest extends BaseMockitoUnitTest {
 
     @Test
     void calculateAssigneeIdsByTask_failsWhenPortalResolverIsMissing() {
-        HeadlessRemoteCandidateStrategy strategy = new HeadlessRemoteCandidateStrategy(Optional.empty(),
+        PortalRoleCandidateStrategy strategy = new PortalRoleCandidateStrategy(Optional.empty(),
                 mock(BpmProcessInstanceService.class));
         DelegateExecution execution = mock(DelegateExecution.class);
         when(execution.getProcessInstanceId()).thenReturn("process-1");
@@ -53,12 +53,12 @@ class HeadlessRemoteCandidateStrategyTest extends BaseMockitoUnitTest {
 
     @Test
     void calculateAssigneeIdsByActivity_failsWhenPortalReturnsNoCandidates() {
-        HeadlessRemoteCandidateStrategy.PortalCandidateApi portalCandidateApi =
-                mock(HeadlessRemoteCandidateStrategy.PortalCandidateApi.class);
-        when(portalCandidateApi.resolveAssigneeIds("100", "activity-1", "ROLE_ADMIN", null))
+        PortalRoleCandidateStrategy.PortalRoleCandidateApi portalRoleCandidateApi =
+                mock(PortalRoleCandidateStrategy.PortalRoleCandidateApi.class);
+        when(portalRoleCandidateApi.resolveRoleAssigneeIds("100", "activity-1", "ROLE_ADMIN", null))
                 .thenReturn(Set.of());
-        HeadlessRemoteCandidateStrategy strategy = new HeadlessRemoteCandidateStrategy(
-                Optional.of(portalCandidateApi), mock(BpmProcessInstanceService.class));
+        PortalRoleCandidateStrategy strategy = new PortalRoleCandidateStrategy(
+                Optional.of(portalRoleCandidateApi), mock(BpmProcessInstanceService.class));
 
         assertThrows(IllegalStateException.class,
                 () -> strategy.calculateAssigneeIdsByActivity(null, "activity-1", "ROLE_ADMIN", 100L, null, null));
@@ -66,12 +66,12 @@ class HeadlessRemoteCandidateStrategyTest extends BaseMockitoUnitTest {
 
     @Test
     void calculateAssigneeIdsByActivity_keepsPortalStartUserId() {
-        HeadlessRemoteCandidateStrategy.PortalCandidateApi portalCandidateApi =
-                mock(HeadlessRemoteCandidateStrategy.PortalCandidateApi.class);
-        when(portalCandidateApi.resolveAssigneeIds("portal-requester-a1f2", "activity-1", "ROLE_ADMIN", null))
+        PortalRoleCandidateStrategy.PortalRoleCandidateApi portalRoleCandidateApi =
+                mock(PortalRoleCandidateStrategy.PortalRoleCandidateApi.class);
+        when(portalRoleCandidateApi.resolveRoleAssigneeIds("portal-requester-a1f2", "activity-1", "ROLE_ADMIN", null))
                 .thenReturn(new LinkedHashSet<>(List.of("portal-admin-d5e6")));
-        HeadlessRemoteCandidateStrategy strategy = new HeadlessRemoteCandidateStrategy(
-                Optional.of(portalCandidateApi), mock(BpmProcessInstanceService.class));
+        PortalRoleCandidateStrategy strategy = new PortalRoleCandidateStrategy(
+                Optional.of(portalRoleCandidateApi), mock(BpmProcessInstanceService.class));
 
         assertEquals(Set.of("portal-admin-d5e6"), strategy.calculateAssigneeIdsByActivity(null,
                 "activity-1", "ROLE_ADMIN", "portal-requester-a1f2", null, null));

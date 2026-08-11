@@ -4,7 +4,7 @@
 
 文档索引:
 - [基础架构决策: ADR-000 无头工作流中台与零用户同步架构](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/adr/ADR_000_HEADLESS_BPM_ZERO_USER_SYNC_ARCHITECTURE.md)
-- [演进架构决策: ADR-001 远程候选人解算策略](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/adr/ADR_001_HEADLESS_REMOTE_CANDIDATE_STRATEGY.md)
+- [演进架构决策: ADR-002 Portal 角色候选人策略](adr/ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md)
 
 ---
 
@@ -88,7 +88,7 @@
 ### 4.1 BPMN 流程图设计规范（零硬编码）
 在 BPM 平台拖拽流程图时：
 1. 若 Portal 在发起时已确定最终用户 ID，使用 **【发起人自选 (START_USER_SELECT, 35)】**，由请求中的 `startUserSelectAssignees` 传入；
-2. 若节点到达时才需依据 Portal 当前角色、部门或业务规则解算，使用 **【HEADLESS_REMOTE (70)】**，并在节点 `candidateParam` 中填写 Portal 原生规则 Key；
+2. 若节点到达时需要按 Portal 目标角色解算，使用 **【ROLE (70)】**，并在节点 `candidateParam` 中填写 Portal 角色编码；
 3. 流程图节点不绑定 BPM 本地用户 ID、角色 ID 或部门 ID。
 
 ### 4.2 Portal 发起流程时的动态 JSON 数据包
@@ -191,10 +191,10 @@ Portal 将返回的 `processInstanceId` 保存到本地业务表中。
 
 | 场景 | SPI 方法 | Portal 返回值 |
 | --- | --- | --- |
-| `HEADLESS_REMOTE` 节点到达时的审批人解算 | `HeadlessRemoteCandidateStrategy.PortalCandidateApi.resolveAssigneeIds(startUserId, activityId, roleParam, processInstanceId)` | `Set<String>` 审批人 ID |
+| `ROLE` 节点到达时的审批人解算 | `PortalRoleCandidateStrategy.PortalRoleCandidateApi.resolveRoleAssigneeIds(startUserId, activityId, roleCode, processInstanceId)` | `Set<String>` 审批人 ID |
 | 流程模型的管理人信息与角色校验 | `BpmPortalIdentityApi.getUser(userId)`；框架默认调用 `hasAnyRole(...)` | `PortalUser(id, displayName, departmentId, roleCodes)` |
 
-生产接入只需关闭 `yudao.bpm.headless-mock.enabled`，并分别提供这两个接口的 HTTP 实现 Bean。调用方和 BPMN 图均无需修改：前者替代 `LocalPortalCandidateApiMock`，后者替代 `LocalBpmPortalIdentityApiMock`。若候选人适配器缺失、Portal 返回空审批人，或身份适配器未配置，服务会失败关闭，不会回退查询本地用户、角色或部门表。
+生产接入只需关闭 `yudao.bpm.headless-mock.enabled`，并分别提供这两个接口的 HTTP 实现 Bean。调用方和 BPMN 图均无需修改：前者替代 `LocalPortalRoleCandidateApiMock`，后者替代 `LocalBpmPortalIdentityApiMock`。若候选人适配器缺失、Portal 返回空审批人，或身份适配器未配置，服务会失败关闭，不会回退查询本地用户、角色或部门表。
 
 真实 HTTP 实现应使用 BPM 与 Portal 约定的服务间凭证或已验证的用户委托凭证；不要把客户端随意传入的用户 ID 当作 Portal 身份事实。
 

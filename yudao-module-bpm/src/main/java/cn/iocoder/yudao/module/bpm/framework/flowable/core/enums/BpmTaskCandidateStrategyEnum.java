@@ -18,7 +18,7 @@ import java.util.Arrays;
 @AllArgsConstructor
 public enum BpmTaskCandidateStrategyEnum implements ArrayValuable<Integer> {
 
-    ROLE(10, "角色"),
+    ROLE(70, "Portal 角色"),
     DEPT_MEMBER(20, "部门的成员"), // 包括负责人
     DEPT_LEADER(21, "部门的负责人"),
     MULTI_DEPT_LEADER_MULTI(23, "连续多级部门的负责人"),
@@ -30,7 +30,6 @@ public enum BpmTaskCandidateStrategyEnum implements ArrayValuable<Integer> {
     START_USER_DEPT_LEADER(37, "发起人部门负责人"),
     START_USER_DEPT_LEADER_MULTI(38, "发起人连续多级部门的负责人"),
     START_USER_DEPT_ROLE(39, "发起人部门角色"),
-    HEADLESS_REMOTE(70, "无头 Portal 远程候选人解算"),
     USER_GROUP(40, "用户组"),
     FORM_USER(50, "表单内用户字段"),
     FORM_DEPT_LEADER(51, "表单内部门负责人"),

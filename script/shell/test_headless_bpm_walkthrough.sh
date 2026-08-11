@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # 无头 BPM (Headless Flowable) walkthrough.md 自动化测试一键脚本
-# 说明：部门经理使用 START_USER_SELECT；行政与供应商节点使用 HEADLESS_REMOTE，
-# 由本地 Portal mock 在节点到达时按角色参数返回最终 String 用户 ID。
+# 说明：部门经理使用 START_USER_SELECT；行政与供应商节点使用 ROLE（70），
+# 由本地 Portal mock 在节点到达时按目标角色返回最终 String 用户 ID。
 # 用法：bash script/shell/test_headless_bpm_walkthrough.sh [BASE_URL]
 # 可选环境变量：TODO_PAGE_SIZE、TASK_POLL_ATTEMPTS、TASK_POLL_INTERVAL_SECONDS、
 # RESULT_DIR、RUN_ID、WALKTHROUGH_FORM_CODE、WALKTHROUGH_BPMN_FILE。脚本只依赖目标环境
@@ -144,8 +144,8 @@ TOKEN_PORTAL_SUPPLIER_B=$(make_jwt "portal-supplier-f9a0" "ROLE_SUPPLIER")
 
 echo -e "${BOLD}${MAGENTA}>>> [V5 流程节点确定模式说明]:${RESET}"
 echo -e "  1. 部门经理节点 (Activity_Manager) : START_USER_SELECT，发起时传入 [\"portal-manager-b3c4\"]"
-echo -e "  2. 行政管理员节点 (Activity_Admin)  : HEADLESS_REMOTE + ROLE_ADMIN -> mock 返回 [\"portal-admin-d5e6\"]"
-echo -e "  3. 供应商节点 (Activity_Supplier)   : HEADLESS_REMOTE + ROLE_SUPPLIER -> mock 返回 [\"portal-supplier-e7f8\", \"portal-supplier-f9a0\"]\n"
+echo -e "  2. 行政管理员节点 (Activity_Admin)  : ROLE(70) + ROLE_ADMIN -> mock 返回 [\"portal-admin-d5e6\"]"
+echo -e "  3. 供应商节点 (Activity_Supplier)   : ROLE(70) + ROLE_SUPPLIER -> mock 返回 [\"portal-supplier-e7f8\", \"portal-supplier-f9a0\"]\n"
 
 # ==============================================================================
 # 前置检查：读取可发起的最新定义；未发布时上传当前 BPMN 并一键保存、发布。
@@ -470,7 +470,7 @@ echo -e "${BOLD}${GREEN}✓ 场景三全流程测试完毕，流程状态 code: 
 
 
 echo -e "${BOLD}${GREEN}==============================================================================${RESET}"
-echo -e "${BOLD}${GREEN}  🎉 Portal mock HEADLESS_REMOTE 候选人解算自动化测试全部通过！  ${RESET}"
+echo -e "${BOLD}${GREEN}  🎉 Portal mock ROLE 候选人解算自动化测试全部通过！  ${RESET}"
 echo -e "${BOLD}${GREEN}  场景 1 (小额直通): 实例 ${PROC_ID_1} -> 状态: ${STATUS_1}${RESET}"
 echo -e "${BOLD}${GREEN}  场景 2 (大额通过): 实例 ${PROC_ID_2} -> 状态: ${STATUS_2}${RESET}"
 echo -e "${BOLD}${GREEN}  场景 3 (拒单终止): 实例 ${PROC_ID_3} -> 状态: ${STATUS_3}${RESET}"

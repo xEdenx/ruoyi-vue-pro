@@ -86,7 +86,7 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 
 ### 4.2 删除本地组织候选人能力
 
-- [x] 仅保留 `START_USER_SELECT` 与 `HEADLESS_REMOTE`；策略枚举保留历史编号，但不再保留旧编号的实现。
+- [x] 仅注册 `START_USER_SELECT`（35）与 Portal `ROLE`（70）；策略枚举保留未执行的历史编号，但不再保留旧编号的实现。
 - [x] 删除用户、角色、岗位、部门、部门负责人、用户组、表达式和本地空审批人等候选人策略及其校验；旧模型不再兼容。
 - [x] 删除 BPM 引擎路径中的 `AdminUserApi`、`DeptApi`、`RoleApi`、`PostApi`、`PermissionApi` 注入。（候选人调用器、任务运行/变更、流程实例、抄送、模型列表、流程定义和转换器均改为 Portal 端口；旧 OA 请假样例已下线）
 - [x] 响应中保留原始 ID，昵称、部门名称和头像只由 Portal 最小投影补全；目录缺失时展示对象可为空，调用方回退显示原始 ID。

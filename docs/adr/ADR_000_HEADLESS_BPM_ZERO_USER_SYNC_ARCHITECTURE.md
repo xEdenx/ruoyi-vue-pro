@@ -55,4 +55,4 @@
 ## 4. 相关参考 (References)
 
 * **主架构文档**: [docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md)
-* **后续演进决策**: [ADR-001 远程候选人解算策略](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/adr/ADR_001_HEADLESS_REMOTE_CANDIDATE_STRATEGY.md)
+* **后续演进决策**: [ADR-002 Portal 角色候选人策略](ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md)

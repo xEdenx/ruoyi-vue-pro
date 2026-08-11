@@ -1,4 +1,6 @@
-# ADR-001: 无头 BPM 远程候选人解算策略与零角色映射架构 (Headless Remote Candidate Strategy)
+# ADR-001: 无头 BPM 远程候选人解算策略与零角色映射架构（已被 ADR-002 替代）
+
+> 当前状态：已被 [ADR-002 Portal 角色候选人策略](ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md) 替代。本文保留用于解释策略 70 曾使用通用远程规则参数的历史背景；当前实现使用 `ROLE(70)` 和显式角色解算 SPI。
 
 * **状态 (Status)**: 已接受 (Accepted)
 * **日期 (Date)**: 2026-08-08

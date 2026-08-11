@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.headless;
+package cn.iocoder.yudao.module.bpm.framework.flowable.core.candidate.strategy.role;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
@@ -13,33 +13,33 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * 纯无头 Headless 远程候选人解算策略 {@link BpmTaskCandidateStrategy}
- * 核心机制：BPM 平台底层不存储任何用户、部门、角色数据，亦无需维护 Portal 到 BPM 的 Role Mapping。
- * 当流程到达该节点时，将上下文 (startUserId, activityId, roleParam) 透明回调给 Portal SPI API，
- * 由 Portal 端自由解析并返回目标审批人的 userId 集合 Set<String>。
+ * Portal 角色候选人策略 {@link BpmTaskCandidateStrategy}。
+ * BPM 不保存角色数据；任务到达时由 Portal 根据发起人、节点上下文和目标角色编码解算最终用户 ID。
  *
  * @author Antigravity
  */
 @Component
-public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy {
+public class PortalRoleCandidateStrategy implements BpmTaskCandidateStrategy {
 
-    private final PortalCandidateApi portalCandidateApi;
+    private final PortalRoleCandidateApi portalRoleCandidateApi;
     private final BpmProcessInstanceService processInstanceService;
 
-    public HeadlessRemoteCandidateStrategy(Optional<PortalCandidateApi> portalCandidateApi,
-                                           @org.springframework.context.annotation.Lazy BpmProcessInstanceService processInstanceService) {
-        this.portalCandidateApi = portalCandidateApi.orElse(null);
+    public PortalRoleCandidateStrategy(Optional<PortalRoleCandidateApi> portalRoleCandidateApi,
+                                       @org.springframework.context.annotation.Lazy BpmProcessInstanceService processInstanceService) {
+        this.portalRoleCandidateApi = portalRoleCandidateApi.orElse(null);
         this.processInstanceService = processInstanceService;
     }
 
     @Override
     public BpmTaskCandidateStrategyEnum getStrategy() {
-        return BpmTaskCandidateStrategyEnum.HEADLESS_REMOTE;
+        return BpmTaskCandidateStrategyEnum.ROLE;
     }
 
     @Override
     public void validateParam(String param) {
-        // param 为 Portal 系统的原生角色标识/Code，透明接收，无需校验 BPM 本地角色
+        if (StrUtil.isBlank(param)) {
+            throw new IllegalArgumentException("Portal 角色编码不能为空");
+        }
     }
 
     @Override
@@ -49,7 +49,7 @@ public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy
         String activityId = execution.getCurrentActivityId();
         String processInstanceId = execution.getProcessInstanceId();
 
-        return resolveAssigneeIds(startUserId, activityId, param, processInstanceId);
+        return resolveRoleAssigneeIds(startUserId, activityId, param, processInstanceId);
     }
 
     @Override
@@ -63,7 +63,7 @@ public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy
     public Set<String> calculateAssigneeIdsByActivity(BpmnModel bpmnModel, String activityId, String param,
                                                         String startUserId, String processDefinitionId,
                                                         Map<String, Object> processVariables) {
-        return resolveAssigneeIds(startUserId, activityId, param, null);
+        return resolveRoleAssigneeIds(startUserId, activityId, param, null);
     }
 
     @Override
@@ -72,36 +72,37 @@ public class HeadlessRemoteCandidateStrategy implements BpmTaskCandidateStrategy
     }
 
     /**
-     * 远程候选人是无头模式下的唯一权威来源。未接入 Portal 或 Portal 无法给出有效候选人时，
-     * 必须终止本次计算，不能回退到本地组织架构策略后产生错误待办。
+     * Portal 是角色候选人的唯一权威来源。未接入 Portal 或未返回有效候选人时必须失败关闭，
+     * 不得回退到 BPM 本地角色、用户或部门表。
      */
-    private Set<String> resolveAssigneeIds(String startUserId, String activityId, String param,
-                                            String processInstanceId) {
-        if (portalCandidateApi == null) {
-            throw new IllegalStateException("未配置 PortalCandidateApi，无法解析 HEADLESS_REMOTE 候选人");
+    private Set<String> resolveRoleAssigneeIds(String startUserId, String activityId, String roleCode,
+                                               String processInstanceId) {
+        if (portalRoleCandidateApi == null) {
+            throw new IllegalStateException("未配置 PortalRoleCandidateApi，无法解析 Portal 角色候选人");
         }
-        Set<String> assigneeIds = portalCandidateApi.resolveAssigneeIds(startUserId, activityId, param,
+        Set<String> assigneeIds = portalRoleCandidateApi.resolveRoleAssigneeIds(startUserId, activityId, roleCode,
                 processInstanceId);
         if (CollUtil.isEmpty(assigneeIds) || assigneeIds.stream().anyMatch(StrUtil::isBlank)) {
-            throw new IllegalStateException("Portal 未返回有效的 HEADLESS_REMOTE 候选人");
+            throw new IllegalStateException("Portal 未返回有效的角色候选人");
         }
         return new LinkedHashSet<>(assigneeIds);
     }
 
     /**
-     * Portal 远程解算候选人的 SPI 接口定义
+     * Portal 角色候选人解算端口。
      */
-    public interface PortalCandidateApi {
+    public interface PortalRoleCandidateApi {
         /**
-         * 解算候选人 ID 集合
+         * 按目标角色解算候选人 ID 集合。
          *
          * @param startUserId 流程发起人 ID
          * @param activityId 当前流程节点 XML ID
-         * @param roleParam Portal 原生角色 Code / 参数
+         * @param roleCode Portal 目标角色编码
          * @param processInstanceId 流程实例 ID
          * @return 匹配目标审批人的 User ID 集合
          */
-        Set<String> resolveAssigneeIds(String startUserId, String activityId, String roleParam, String processInstanceId);
+        Set<String> resolveRoleAssigneeIds(String startUserId, String activityId, String roleCode,
+                                           String processInstanceId);
     }
 
 }

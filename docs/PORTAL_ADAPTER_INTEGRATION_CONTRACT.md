@@ -26,7 +26,7 @@ Portal 适配器只负责下列边界能力：身份与权限 claims、组织目
 | `BpmPortalOrganizationApi` | 用户/部门展示、启用状态、角色/岗位/部门到最终用户的解算 | `LocalBpmPortalIdentityApiMock` | HTTP/mTLS 调 Portal 组织目录 API |
 | `BpmPortalConfigurationApi` | Headless 管理端固定枚举、地区树等展示配置 | `LocalBpmPortalConfigurationApi`：直接投影 BPM 枚举，地区树为空 | HTTP/mTLS 调 Portal 配置 API；直接替换该实现 |
 | `PortalTenantApi` | 请求租户合法性和定时任务租户范围 | `LocalBpmPortalTenantApiMock`：只接受配置的本地租户 | 由已验证的 Portal 租户边界实现 |
-| `HeadlessRemoteCandidateStrategy.PortalCandidateApi` | BPMN 策略 70 的节点级候选人解算 | `LocalPortalCandidateApiMock` | HTTP/mTLS 调 Portal 节点选人策略 API |
+| `PortalRoleCandidateStrategy.PortalRoleCandidateApi` | BPMN 策略 70 的节点级角色候选人解算 | `LocalPortalRoleCandidateApiMock` | HTTP/mTLS 调 Portal 角色选人 API |
 | `BpmPortalPrincipal` / `BpmPortalPrincipalUtils` | 请求主体的 String ID、租户和权限 claims | 将现有安全上下文适配为 BPM 主体；`BpmPortalAuthController` 提供本地 Mock 登录 | 校验 Portal JWT 或网关透传的可信身份后在此适配器构造主体 |
 | `BpmPortalNotificationApi` | 待办、审批结果、抄送等通知投递 | `LoggingBpmPortalNotificationApi`：只记录待投递事件，不影响 BPM 状态和审计 | HTTP/mTLS 调 Portal Webhook / 消息入口 |
 | `PortalApplicationLogApi` | API 访问与异常审计 | 应用日志输出待投递事件；不写 `infra_api_*` | Portal 审计入口或 OTel 日志管道 |
@@ -130,22 +130,22 @@ Set<String> resolveUserIds(
 ### 4.1 当前 BPMN 候选人策略边界
 
 - `BpmTaskCandidateStrategyEnum` 保留全部历史编号，只作为 BPMN 元数据和错误诊断的稳定目录；保留枚举值不代表存在可执行实现。
-- Spring 仅注册 `START_USER_SELECT`（35）与 `HEADLESS_REMOTE`（70）两个候选人实现。Vue 两套建模器也只提供这两个选项。
+- Spring 仅注册 `START_USER_SELECT`（35）与 Portal `ROLE`（70）两个候选人实现。Vue 两套建模器也只提供这两个选项。
 - 旧策略编号对应的实现已删除。包含旧编号的流程模型发布时会因找不到策略实现而失败，不能再隐式读取 `system_user`、角色、岗位或部门。
-- 候选人为空时不再执行本地 `ASSIGN_EMPTY` 回退。Portal 必须在发起时提供 `startUserSelectAssignees`，或由远程策略返回有效的最终用户 String ID；否则失败关闭。
+- 候选人为空时不再执行本地 `ASSIGN_EMPTY` 回退。Portal 必须在发起时提供 `startUserSelectAssignees`，或由角色策略返回有效的最终用户 String ID；否则失败关闭。
 
-策略 70 的入口是 `HeadlessRemoteCandidateStrategy.PortalCandidateApi`：
+策略 70 的入口是 `PortalRoleCandidateStrategy.PortalRoleCandidateApi`：
 
 ```java
-Set<String> resolveAssigneeIds(
+Set<String> resolveRoleAssigneeIds(
     String startUserId,
     String activityId,
-    String roleParam,
+    String roleCode,
     String processInstanceId
 )
 ```
 
-`roleParam` 是 BPMN 中 `candidateParam` 的原样值，由 Portal 自定义解释。例如可为单角色编码、组合角色策略编码，或受控 JSON 选择器。BPM 不解析、不映射、不查询本地角色表。
+`roleCode` 是 BPMN 中 `candidateParam` 的 Portal 目标角色编码。Portal 根据发起人、节点和自身组织数据解算用户；BPM 不解析、不映射、不查询本地角色表。
 
 当前本地示例：
 
@@ -162,7 +162,7 @@ Set<String> resolveAssigneeIds(
 
 | 范围 | 当前本地依赖 | Portal 替代 | 目标状态 |
 | --- | --- | --- | --- |
-| BPMN 本地用户/角色/岗位/部门候选人策略 | 已删除 | `START_USER_SELECT` 或 `HEADLESS_REMOTE` | 已移除 |
+| BPMN 本地用户/角色/岗位/部门候选人策略 | 已删除 | `START_USER_SELECT` 或 Portal `ROLE` | 已移除 |
 | 候选人禁用过滤 | `AdminUserApi.getUserMap` | `BpmPortalOrganizationApi.isUserActive` | 已迁移（候选人为空时失败关闭） |
 | 待办、已办、任务明细与评论的姓名/部门补全 | `AdminUserApi`、`DeptApi` | `BpmPortalUserProjection` + `getUserMap`；Portal 可自行渲染 | 已迁移 |
 | 流程实例列表、详情、打印、审批轨迹、BPMN 模型视图与下一节点预测的姓名/部门补全 | `AdminUserApi`、`DeptApi` | `BpmPortalUserProjection` + `getUserMap`；Flowable 原始 String ID 透传 | 已迁移 |
