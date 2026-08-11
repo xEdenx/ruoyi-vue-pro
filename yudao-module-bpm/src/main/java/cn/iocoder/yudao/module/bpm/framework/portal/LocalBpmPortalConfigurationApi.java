@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.bpm.enums.definition.BpmProcessListenerValueTypeE
 import cn.iocoder.yudao.module.bpm.enums.task.BpmCommentTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.task.BpmProcessInstanceStatusEnum;
 import cn.iocoder.yudao.module.bpm.enums.task.BpmTaskStatusEnum;
+import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmTaskCandidateStrategyEnum;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ public class LocalBpmPortalConfigurationApi implements BpmPortalConfigurationApi
         List<PortalDictionaryItem> result = new ArrayList<>();
         addModelTypes(result);
         addModelFormTypes(result);
+        addTaskCandidateStrategies(result);
         addProcessInstanceStatuses(result);
         addTaskStatuses(result);
         addCommentTypes(result);
@@ -49,6 +51,18 @@ public class LocalBpmPortalConfigurationApi implements BpmPortalConfigurationApi
     private static void addModelFormTypes(List<PortalDictionaryItem> result) {
         for (BpmModelFormTypeEnum item : BpmModelFormTypeEnum.values()) {
             add(result, "bpm_model_form_type", item.getType(), item.getName());
+        }
+    }
+
+    /**
+     * 候选人策略是 BPMN 元数据目录，而不是当前 Spring 已注册策略的投影。
+     *
+     * <p>建模器据此展示可配置项；具体策略是否可执行由后端发布、运行时的
+     * {@code BpmTaskCandidateInvoker} 校验。</p>
+     */
+    private static void addTaskCandidateStrategies(List<PortalDictionaryItem> result) {
+        for (BpmTaskCandidateStrategyEnum item : BpmTaskCandidateStrategyEnum.values()) {
+            add(result, "bpm_task_candidate_strategy", item.getStrategy(), item.getDescription());
         }
     }
 

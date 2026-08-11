@@ -25,6 +25,9 @@ class LocalBpmPortalConfigurationApiTest {
         assertEquals("审批通过中", dictionaryItems.get("bpm_task_status").stream()
                 .filter(item -> Integer.valueOf(7).equals(item.getValue()))
                 .findFirst().orElseThrow().getLabel());
+        assertEquals("Portal 角色", dictionaryItems.get("bpm_task_candidate_strategy").stream()
+                .filter(item -> Integer.valueOf(70).equals(item.getValue()))
+                .findFirst().orElseThrow().getLabel());
         assertTrue(dictionaryItems.containsKey("bpm_model_type"));
         assertTrue(dictionaryItems.containsKey("bpm_comment_type"));
     }

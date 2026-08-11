@@ -130,7 +130,8 @@ Set<String> resolveUserIds(
 ### 4.1 当前 BPMN 候选人策略边界
 
 - `BpmTaskCandidateStrategyEnum` 保留全部历史编号，只作为 BPMN 元数据和错误诊断的稳定目录；保留枚举值不代表存在可执行实现。
-- Spring 仅注册 `START_USER_SELECT`（35）与 Portal `ROLE`（70）两个候选人实现。Vue 两套建模器也只提供这两个选项。
+- `/bpm/portal-config/dict-data/simple-list` 以 `bpm_task_candidate_strategy` 返回完整策略目录。Vue 两套建模器直接读取该目录，不维护策略白名单，也不根据 Spring 注册情况过滤选项。
+- Spring 当前仅注册 `START_USER_SELECT`（35）与 Portal `ROLE`（70）两个候选人实现；这仅是后端的可执行性边界。
 - 旧策略编号对应的实现已删除。包含旧编号的流程模型发布时会因找不到策略实现而失败，不能再隐式读取 `system_user`、角色、岗位或部门。
 - 候选人为空时不再执行本地 `ASSIGN_EMPTY` 回退。Portal 必须在发起时提供 `startUserSelectAssignees`，或由角色策略返回有效的最终用户 String ID；否则失败关闭。
 
