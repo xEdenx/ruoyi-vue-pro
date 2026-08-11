@@ -122,7 +122,7 @@ CREATE TABLE [bpm_process_definition_info] (
     [process_after_trigger_setting] nvarchar(1024) NULL,
     [task_before_trigger_setting] nvarchar(1024) NULL,
     [task_after_trigger_setting] nvarchar(1024) NULL,
-    [print_template_setting] nvarchar(4096) NULL,
+    [print_template_setting] nvarchar(max) NULL,
     [creator] nvarchar(64) NULL CONSTRAINT [DF_bpm_process_definition_info_creator] DEFAULT N'',
     [create_time] datetime2(6) NOT NULL CONSTRAINT [DF_bpm_process_definition_info_create_time] DEFAULT SYSDATETIME(),
     [updater] nvarchar(64) NULL CONSTRAINT [DF_bpm_process_definition_info_updater] DEFAULT N'',
@@ -151,8 +151,8 @@ GO
 
 CREATE TABLE [bpm_process_instance_copy] (
     [id] bigint NOT NULL,
-    [user_id] bigint NOT NULL CONSTRAINT [DF_bpm_process_instance_copy_user_id] DEFAULT 0,
-    [start_user_id] bigint NOT NULL CONSTRAINT [DF_bpm_process_instance_copy_start_user_id] DEFAULT 0,
+    [user_id] varchar(64) NOT NULL,
+    [start_user_id] varchar(64) NOT NULL,
     [process_instance_id] nvarchar(64) NOT NULL CONSTRAINT [DF_bpm_process_instance_copy_process_instance_id] DEFAULT N'',
     [process_instance_name] nvarchar(64) NOT NULL CONSTRAINT [DF_bpm_process_instance_copy_process_instance_name] DEFAULT N'',
     [process_definition_id] nvarchar(64) NOT NULL,

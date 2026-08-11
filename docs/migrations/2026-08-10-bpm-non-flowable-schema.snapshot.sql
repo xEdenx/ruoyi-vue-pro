@@ -139,8 +139,8 @@ CREATE TABLE bpm_process_expression (
 
 CREATE TABLE bpm_process_instance_copy (
     id bigint NOT NULL,
-    user_id bigint DEFAULT 0 NOT NULL,
-    start_user_id bigint DEFAULT 0 NOT NULL,
+    user_id character varying(64) NOT NULL,
+    start_user_id character varying(64) NOT NULL,
     process_instance_id character varying(64) DEFAULT ''::character varying NOT NULL,
     process_instance_name character varying(64) DEFAULT ''::character varying NOT NULL,
     process_definition_id character varying(64) NOT NULL,
