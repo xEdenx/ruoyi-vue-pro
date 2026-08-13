@@ -9,7 +9,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 /**
  * BPM 流程表达式 Service 接口
  *
- * @author 芋道源码
+ * @author 示例
  */
 public interface BpmProcessExpressionService {
 

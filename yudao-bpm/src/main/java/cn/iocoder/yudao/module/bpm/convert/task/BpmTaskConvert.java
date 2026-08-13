@@ -33,7 +33,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 /**
  * Bpm 任务 Convert
  *
- * @author 芋道源码
+ * @author 示例
  */
 @Mapper
 public interface BpmTaskConvert {

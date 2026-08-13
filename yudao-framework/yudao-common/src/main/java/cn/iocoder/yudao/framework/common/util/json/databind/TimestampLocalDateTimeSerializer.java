@@ -37,7 +37,7 @@ public class TimestampLocalDateTimeSerializer extends StdScalarSerializer<LocalD
 
     @Override
     public void serialize(LocalDateTime value, JsonGenerator gen, SerializationContext serializers) throws JacksonException {
-        // 情况一：有 JsonFormat 自定义注解，则使用它。https://github.com/YunaiV/ruoyi-vue-pro/pull/1019
+        // 情况一：有 JsonFormat 自定义注解，则使用它。https://example.invalid/upstream/pull/1019
         String fieldName = gen.streamWriteContext().currentName();
         if (fieldName != null) {
             Object currentValue = gen.currentValue();
@@ -45,7 +45,7 @@ public class TimestampLocalDateTimeSerializer extends StdScalarSerializer<LocalD
                 Class<?> clazz = currentValue.getClass();
                 Map<String, Field> fieldMap = FIELD_CACHE.computeIfAbsent(clazz, this::buildFieldMap);
                 Field field = fieldMap.get(fieldName);
-                // 进一步修复：https://gitee.com/zhijiantianya/ruoyi-vue-pro/pulls/1480
+                // 进一步修复：https://example.invalid/upstream/pulls/1480
                 if (field != null && field.isAnnotationPresent(JsonFormat.class)) {
                     JsonFormat jsonFormat = field.getAnnotation(JsonFormat.class);
                     try {

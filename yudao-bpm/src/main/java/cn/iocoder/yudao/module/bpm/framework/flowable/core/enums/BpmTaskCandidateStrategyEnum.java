@@ -12,7 +12,7 @@ import java.util.Arrays;
  *
  * 例如说：分配给指定人审批
  *
- * @author 芋道源码
+ * @author 示例
  */
 @Getter
 @AllArgsConstructor

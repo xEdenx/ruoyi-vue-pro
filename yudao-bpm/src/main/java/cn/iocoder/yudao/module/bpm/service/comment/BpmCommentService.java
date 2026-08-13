@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * 流程评论 Service 接口
  *
- * @author 芋道源码
+ * @author 示例
  */
 public interface BpmCommentService {
 

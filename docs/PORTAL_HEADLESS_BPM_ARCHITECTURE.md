@@ -148,7 +148,7 @@
   curl -X POST 'http://127.0.0.1:48080/admin-api/bpm/process-definition/deploy-xml' \
     -H 'Authorization: Bearer <Portal_JWT>' \
     -F "model={\"key\":\"office_supplies_request_v5\",\"name\":\"办公用品申请流程 V5\",\"category\":\"default\",\"type\":10,\"formType\":10,\"formId\":${FORM_ID},\"visible\":true,\"managerRoleCodes\":[\"ROLE_BPM_MODEL_MANAGER\"]};type=application/json" \
-    -F 'file=@docs/office_supplies_request_v5.bpmn.xml;type=application/xml'
+    -F 'file=@script/bpmn/office_supplies_request_v5.bpmn.xml;type=application/xml'
   ```
 - **响应示例**:
   ```json
@@ -291,4 +291,4 @@ Portal 前端拿此 JSON 匹配本地用户字典后，可直接渲染出带有�
 
 ## 七、 后续解耦路线图
 
-`system` / `infra` 的解耦目标、阶段门槛和数据库清理顺序见 [HEADLESS_BPM_DECOUPLING_ROADMAP.md](HEADLESS_BPM_DECOUPLING_ROADMAP.md)。在完成认证与本地组织依赖替换前，不得直接删除相关模块或数据库表。
+`system` / `infra` 的替代边界以 Portal 适配契约、实现和 walkthrough 为准；删除相关模块或数据库表前必须确认替代能力和回归验证均已完成。

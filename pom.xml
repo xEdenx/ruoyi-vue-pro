@@ -15,8 +15,7 @@
     </modules>
 
     <name>${project.artifactId}</name>
-    <description>芋道项目基础脚手架</description>
-    <url>https://github.com/YunaiV/ruoyi-vue-pro</url>
+    <description>Headless BPM Platform</description>
 
     <properties>
         <revision>2026.07-jdk25-SNAPSHOT</revision>

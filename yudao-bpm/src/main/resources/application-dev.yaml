@@ -72,7 +72,7 @@ spring:
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   data:
     redis:
-      host: 400-infra.server.iocoder.cn # 地址
+      host: ${REDIS_HOST:127.0.0.1}
       port: 6379 # 端口
       database: 1 # 数据库索引
 #    password: 123456 # 密码，建议生产环境开启
@@ -180,9 +180,9 @@ wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-sta
       key-prefix: wa # Redis Key 的前缀
       http-client-type: HttpComponents # 采用 HttpComponents（HttpClient 5）请求微信小程序平台
 
---- #################### 芋道相关配置 ####################
+--- #################### 示例相关配置 ####################
 
-# 芋道配置项，设置当前项目所有自定义的配置
+# 示例配置项，设置当前项目所有自定义的配置
 yudao:
   pay:
     order-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址

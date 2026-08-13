@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * HTTP 工具类
  *
- * @author 芋道源码
+ * @author 示例
  */
 public class HttpUtils {
 

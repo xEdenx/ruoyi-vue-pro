@@ -70,7 +70,7 @@ import static cn.iocoder.yudao.module.bpm.framework.flowable.core.util.BpmnModel
 /**
  * 流程任务实例 Service 实现类
  *
- * @author 芋道源码
+ * @author 示例
  * @author jason
  */
 @Slf4j
@@ -378,7 +378,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
         // 2.2 过滤：只有串行可到达的节点，才可以退回。类似非串行、子流程无法退回
         previousUserList.removeIf(userTask -> !BpmnModelUtils.isSequentialReachable(source, userTask, null));
 
-        // 2.3 过滤：只能退回到已经处理过的节点（排除审批未经过的节点）。相关 issue：https://github.com/YunaiV/ruoyi-vue-pro/issues/982
+        // 2.3 过滤：只能退回到已经处理过的节点（排除审批未经过的节点）。相关 issue：https://example.invalid/upstream/issues/982
         List<HistoricTaskInstance> finishedTasks = getFinishedTaskListByProcessInstanceIdWithoutCancel(task.getProcessInstanceId());
         Set<String> finishedTaskDefinitionKeys = convertSet(finishedTasks, HistoricTaskInstance::getTaskDefinitionKey);
         previousUserList.removeIf(userTask -> !finishedTaskDefinitionKeys.contains(userTask.getId()));
@@ -987,12 +987,12 @@ public class BpmTaskServiceImpl implements BpmTaskService {
         // ① 使用 moveExecutionsToSingleActivityId 替换 moveActivityIdsToSingleActivityId。原因：当多实例任务回退的时候有问题。
         //    相关 issue: https://github.com/flowable/flowable-engine/issues/3944
         // ② flowable 7.2.0 版本后，继续使用 moveActivityIdsToSingleActivityId 方法。原因：flowable 7.2.0 版本修复了该问题。
-        //    相关 issue：https://github.com/YunaiV/ruoyi-vue-pro/issues/1018
-        // ③ moveActivityIdsToSingleActivityId 使用遇到问题， 相关 issue https://gitee.com/zhijiantianya/yudao-cloud/issues/IJM8MS
+        //    相关 issue：https://example.invalid/upstream/issues/1018
+        // ③ moveActivityIdsToSingleActivityId 使用遇到问题， 相关 issue https://example.invalid/upstream/issues/IJM8MS
         //  改成 moveExecutionsToSingleActivityId 好像并没有遇到 ② 提到的超时提醒失效的问题。暂时先改回 moveExecutionsToSingleActivityId
         // ④ moveExecutionsToSingleActivityId 回退多实例的时候不会去删除多实例根, 应改成 moveActivityIdsToSingleActivityId
         // flowable 8.0.0  修复上面相关问题， 还修复了并行分支回退的问题 https://t.zsxq.com/z4d9i。
-        // ⑤ 使用 moveExecutionsToSingleActivityId 方法进行回退操作时，如果是多实例的用户任务【芋道用户任务默认为多实例】，不会删除多实例任务的根数据 ACT_RU_EXECUTION
+        // ⑤ 使用 moveExecutionsToSingleActivityId 方法进行回退操作时，如果是多实例的用户任务【示例用户任务默认为多实例】，不会删除多实例任务的根数据 ACT_RU_EXECUTION
         // 会导致有一些问题，所以使用 moveActivityIdsToSingleActivityId。 但是该方法在 flowable 6.8.1 ~ 7.1.0 的版本会有 bug 阻塞回退功能
         // 相关 issue: https://github.com/flowable/flowable-engine/issues/3944
         runtimeService.createChangeActivityStateBuilder()
@@ -1052,7 +1052,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                 getPortalDisplayName(userId), delegateUser.getDisplayName(), reqVO.getReason());
 
         // 3.1 设置任务所有人 (owner) 为原任务的处理人 (assignee)
-        // 特殊：如果已经被委派（owner 非空），则不需要更新 owner：https://gitee.com/zhijiantianya/yudao-cloud/issues/ICJ153
+        // 特殊：如果已经被委派（owner 非空），则不需要更新 owner：https://example.invalid/upstream/issues/ICJ153
         if (StrUtil.isEmpty(task.getOwner())) {
             taskService.setOwner(taskId, task.getAssignee());
         }
@@ -1081,7 +1081,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
                 getPortalDisplayName(userId), assigneeUser.getDisplayName(), reqVO.getReason());
 
         // 3.1 设置任务所有人 (owner) 为原任务的处理人 (assignee)
-        // 特殊：如果已经被转派（owner 非空），则不需要更新 owner：https://gitee.com/zhijiantianya/yudao-cloud/issues/ICJ153
+        // 特殊：如果已经被转派（owner 非空），则不需要更新 owner：https://example.invalid/upstream/issues/ICJ153
         if (StrUtil.isEmpty(task.getOwner())) {
             taskService.setOwner(taskId, task.getAssignee());
         }
@@ -1394,7 +1394,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
             /**
              * 特殊情况：部分情况下，TransactionSynchronizationManager 注册 afterCommit 监听时，不会被调用，但是 afterCompletion 可以
              * 例如说：第一个 task 就是配置【自动通过】或者【自动拒绝】时
-             * 参见 <a href="https://gitee.com/zhijiantianya/yudao-cloud/issues/IB7V7Q">issue</a> 反馈
+             * 参见 <a href="https://example.invalid/upstream/issues/IB7V7Q">issue</a> 反馈
              */
             @Override
             public void afterCompletion(int transactionStatus) {
@@ -1468,7 +1468,7 @@ public class BpmTaskServiceImpl implements BpmTaskService {
             /**
              * 特殊情况：部分情况下，TransactionSynchronizationManager 注册 afterCommit 监听时，不会被调用，但是 afterCompletion 可以
              * 例如说：第一个 task 就是配置【自动通过】或者【自动拒绝】时
-             * 参见 <a href="https://gitee.com/zhijiantianya/yudao-cloud/issues/IB7V7Q">issue</a> 反馈
+             * 参见 <a href="https://example.invalid/upstream/issues/IB7V7Q">issue</a> 反馈
              */
             @Override
             public void afterCompletion(int transactionStatus) {

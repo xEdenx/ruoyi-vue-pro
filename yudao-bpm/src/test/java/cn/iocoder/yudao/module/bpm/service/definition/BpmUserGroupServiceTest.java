@@ -24,7 +24,7 @@ import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.USER_GROUP_NO
 /**
  * {@link BpmUserGroupServiceImpl} 的单元测试类
  *
- * @author 芋道源码
+ * @author 示例
  */
 @Import(BpmUserGroupServiceImpl.class)
 public class BpmUserGroupServiceTest extends BaseDbUnitTest {
@@ -102,20 +102,20 @@ public class BpmUserGroupServiceTest extends BaseDbUnitTest {
     public void testGetUserGroupPage() {
        // mock 数据
        BpmUserGroupDO dbUserGroup = RandomUtils.randomPojo(BpmUserGroupDO.class, o -> { // 等会查询到
-           o.setName("芋道源码");
+           o.setName("示例用户组");
            o.setStatus(CommonStatusEnum.ENABLE.getStatus());
            o.setCreateTime(buildTime(2021, 11, 11));
        });
        userGroupMapper.insert(dbUserGroup);
        // 测试 name 不匹配
-       userGroupMapper.insert(cloneIgnoreId(dbUserGroup, o -> o.setName("芋道")));
+       userGroupMapper.insert(cloneIgnoreId(dbUserGroup, o -> o.setName("其他用户组")));
        // 测试 status 不匹配
        userGroupMapper.insert(cloneIgnoreId(dbUserGroup, o -> o.setStatus(CommonStatusEnum.DISABLE.getStatus())));
        // 测试 createTime 不匹配
        userGroupMapper.insert(cloneIgnoreId(dbUserGroup, o -> o.setCreateTime(buildTime(2021, 12, 12))));
        // 准备参数
        BpmUserGroupPageReqVO reqVO = new BpmUserGroupPageReqVO();
-       reqVO.setName("源码");
+       reqVO.setName("示例");
        reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
        reqVO.setCreateTime((new LocalDateTime[]{buildTime(2021, 11, 10),buildTime(2021, 11, 12)}));
 

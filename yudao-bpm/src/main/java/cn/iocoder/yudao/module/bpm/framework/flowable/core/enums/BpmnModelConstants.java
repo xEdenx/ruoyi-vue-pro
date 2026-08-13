@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelTypeEnum;
 /**
  * BPMN XML 常量信息
  *
- * @author 芋道源码
+ * @author 示例
  */
 public interface BpmnModelConstants {
 

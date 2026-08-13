@@ -67,4 +67,4 @@
 ## 5. 项目核心文档索引 (Project Docs Index)
 
 - [docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md](file:///Users/John Doe/Documents/coding/ruoyi-vue-pro/docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md): Portal 对接无头 BPM 架构设计与 API 规范
-- [docs/DATABASE_TABLES_DICTIONARY.md](file:///Users/John Doe/Documents/coding/ruoyi-vue-pro/docs/DATABASE_TABLES_DICTIONARY.md): 数据库 97 张全量表字典
+- [script/sql/init-bpm.sql](file:///Users/eden/Documents/coding/ruoyi-vue-pro/script/sql/init-bpm.sql): `bpm` Schema 初始化 SQL；执行前确认目标 Schema 与现有数据范围

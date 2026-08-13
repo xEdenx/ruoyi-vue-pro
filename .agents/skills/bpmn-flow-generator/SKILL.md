@@ -13,7 +13,7 @@ description: 根据自然语言业务流程描述，自动生成 Flowable BPMN 2
 
 | 产物名称 | 文件存放路径 / 输出格式 | 说明 |
 | :--- | :--- | :--- |
-| **1. BPMN 2.0 流程图 XML** | `docs/<process_key>.bpmn.xml` | 符合 Flowable 7 标准规范，包含图形布局 (`bpmndi`) 与监听器扩展属性 |
+| **1. BPMN 2.0 流程图 XML** | `script/bpmn/<process_key>.bpmn.xml` | 符合 Flowable 7 标准规范，包含图形布局 (`bpmndi`) 与监听器扩展属性 |
 | **2. 表单定义 SQL 脚本** | `sql/<process_key>_form.sql` | 依据项目数据库方言 (**PostgreSQL / MySQL / SQL Server**) **仅生成 SQL 文件**，不自动在线执行 |
 | **3. Portal 动态表单 Schema** | JSON Payload (`formFields` & `formConf`) | 供 Portal 前端调 API 直接渲染表单控件定义 |
 | **4. Java 执行监听器组件** | `yudao-bpm/.../listener/<domain>/<ProcessName>Listeners.java` | 参照 **`OfficeSuppliesListeners`** 的范式，基于 Spring `@Component` 注入，包含流程节点到达/完成时的业务逻辑 |
@@ -23,7 +23,7 @@ description: 根据自然语言业务流程描述，自动生成 Flowable BPMN 2
 
 ## 二、 核心遵循规范 (Architecture Rules)
 
-1. **候选人解算边界 (Rule 3.2)**：若 Portal 在发起时已确定最终用户 ID，使用 **【发起人自选 (candidateStrategy="35")】** 并通过 `startUserSelectAssignees` 传入；若节点到达时才需按 Portal 角色/组织规则解算，使用 **【HEADLESS_REMOTE (candidateStrategy="70")】**，并以 `candidateParam` 传入 Portal 原生规则 Key。禁止使用 BPM 本地角色策略。
+1. **候选人解算边界 (Rule 3.2)**：若 Portal 在发起时已确定最终用户 ID，使用 **【发起人自选 (candidateStrategy="35")】** 并通过 `startUserSelectAssignees` 传入；若节点到达时需要按 Portal 目标角色解算，使用 **【ROLE (candidateStrategy="70")】**，并以 `candidateParam` 传入 Portal 角色编码。禁止使用 BPM 本地角色策略。
 2. **零用户数据同步 (Rule 3.1)**：Java 监听器中不依赖本地 `system_users` 表，审批人 ID 均作为 Portal 原始字符串在 Flowable `act_ru_task` 中流转。
 3. **Bean 表达式绑定监听器**：在 BPMN XML 的 `<extensionElements>` 中使用 `delegateExpression="${<beanName>.<methodName>}"` 或 `delegateExpression="${<beanName>}"` 进行解耦绑定。
 4. **监听器编写范式**：完全采用 `OfficeSuppliesListeners` 模式，每个流程独立一个以 `<ProcessName>Listeners` 命名的组件文件，内部定义静态内部类监听器并通过 `PREFIX` 区分 Bean 名称。
@@ -122,7 +122,7 @@ VALUES (
 
 ---
 
-### 步骤 3：生成 BPMN 2.0 XML 文件 (`docs/<process_key>.bpmn.xml`)
+### 步骤 3：生成 BPMN 2.0 XML 文件 (`script/bpmn/<process_key>.bpmn.xml`)
 
 生成的 XML 结构模板：
 
@@ -261,12 +261,12 @@ public class <ProcessName>Listeners {
 }
 ```
 
-策略 70 的节点不放入 `startUserSelectAssignees`；由 PortalCandidateApi 在任务到达时按 `candidateParam` 返回最终 String 用户 ID 集合。
+策略 70 的节点不放入 `startUserSelectAssignees`；由 `PortalRoleCandidateApi` 在任务到达时按 `candidateParam` 中的角色编码返回最终 String 用户 ID 集合。
 
 ---
 
-## 四、 标杆案例示范：办公用品申请流程 V2 (`office_supplies_request_v2`)
+## 四、 标杆案例示范：办公用品申请流程 V5 (`office_supplies_request_v5`)
 
-- **BPMN XML**：[docs/office_supplies_request_v2.bpmn.xml](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/docs/office_supplies_request_v2.bpmn.xml)
+- **BPMN XML**：[script/bpmn/office_supplies_request_v5.bpmn.xml](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/script/bpmn/office_supplies_request_v5.bpmn.xml)
 - **Java 监听器**：[OfficeSuppliesListeners.java](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/listener/office/OfficeSuppliesListeners.java)
 - **测试 Walkthrough**：[docs/HEADLESS_BPM_TEST_WALKTHROUGH.md](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/docs/HEADLESS_BPM_TEST_WALKTHROUGH.md)

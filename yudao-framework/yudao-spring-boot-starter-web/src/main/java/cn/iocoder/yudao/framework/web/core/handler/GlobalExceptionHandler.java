@@ -51,7 +51,7 @@ import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeC
 /**
  * 全局异常处理器，将 Exception 翻译成 CommonResult + 对应的异常编号
  *
- * @author 芋道源码
+ * @author 示例
  */
 @RestControllerAdvice
 @Order(0) // 优先于三方库默认的全局异常处理器，例如 JimuReport
@@ -322,7 +322,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = Exception.class)
     public CommonResult<?> defaultExceptionHandler(HttpServletRequest req, Throwable ex) {
         // 特殊：如果是 ServiceException 的异常，则直接返回
-        // 例如说：https://gitee.com/zhijiantianya/yudao-cloud/issues/ICSSRM、https://gitee.com/zhijiantianya/yudao-cloud/issues/ICT6FM
+        // 例如说：https://example.invalid/upstream/issues/ICSSRM、https://example.invalid/upstream/issues/ICT6FM
         if (ex.getCause() != null && ex.getCause() instanceof ServiceException) {
             return serviceExceptionHandler((ServiceException) ex.getCause());
         }
@@ -397,75 +397,75 @@ public class GlobalExceptionHandler {
         }
         // 1. 数据报表
         if (message.contains("report_")) {
-            log.error("[报表模块 yudao-module-report - 表结构未导入][参考 https://cloud.iocoder.cn/report/ 开启]");
+            log.error("[报表模块 yudao-module-report - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[报表模块 yudao-module-report - 表结构未导入][参考 https://cloud.iocoder.cn/report/ 开启]");
+                    "[报表模块 yudao-module-report - 表结构未导入]");
         }
         // 2. 工作流
         if (message.contains("bpm_")) {
-            log.error("[工作流服务 yudao-bpm - 表结构未导入][参考 https://cloud.iocoder.cn/bpm/ 开启]");
+            log.error("[工作流服务 yudao-bpm - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[工作流服务 yudao-bpm - 表结构未导入][参考 https://cloud.iocoder.cn/bpm/ 开启]");
+                    "[工作流服务 yudao-bpm - 表结构未导入]");
         }
         // 3. 微信公众号
         if (message.contains("mp_")) {
-            log.error("[微信公众号 yudao-module-mp - 表结构未导入][参考 https://cloud.iocoder.cn/mp/build/ 开启]");
+            log.error("[微信公众号 yudao-module-mp - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[微信公众号 yudao-module-mp - 表结构未导入][参考 https://cloud.iocoder.cn/mp/build/ 开启]");
+                    "[微信公众号 yudao-module-mp - 表结构未导入]");
         }
         // 4. 商城系统
         if (StrUtil.containsAny(message, "product_", "promotion_", "trade_")) {
-            log.error("[商城系统 yudao-module-mall - 已禁用][参考 https://cloud.iocoder.cn/mall/build/ 开启]");
+            log.error("[商城系统 yudao-module-mall - 已禁用]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[商城系统 yudao-module-mall - 已禁用][参考 https://cloud.iocoder.cn/mall/build/ 开启]");
+                    "[商城系统 yudao-module-mall - 已禁用]");
         }
         // 5. ERP 系统
         if (message.contains("erp_")) {
-            log.error("[ERP 系统 yudao-module-erp - 表结构未导入][参考 https://cloud.iocoder.cn/erp/build/ 开启]");
+            log.error("[ERP 系统 yudao-module-erp - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[ERP 系统 yudao-module-erp - 表结构未导入][参考 https://cloud.iocoder.cn/erp/build/ 开启]");
+                    "[ERP 系统 yudao-module-erp - 表结构未导入]");
         }
         // 6. WMS 仓库管理系统
         if (message.contains("wms_")) {
-            log.error("[WMS 仓库管理系统 yudao-module-wms - 表结构未导入][参考 https://doc.iocoder.cn/wms/build/ 开启]");
+            log.error("[WMS 仓库管理系统 yudao-module-wms - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[WMS 仓库管理系统 yudao-module-wms - 表结构未导入][参考 https://doc.iocoder.cn/wms/build/ 开启]");
+                    "[WMS 仓库管理系统 yudao-module-wms - 表结构未导入]");
         }
         // 7. CRM 系统
         if (message.contains("crm_")) {
-            log.error("[CRM 系统 yudao-module-crm - 表结构未导入][参考 https://cloud.iocoder.cn/crm/build/ 开启]");
+            log.error("[CRM 系统 yudao-module-crm - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[CRM 系统 yudao-module-crm - 表结构未导入][参考 https://cloud.iocoder.cn/crm/build/ 开启]");
+                    "[CRM 系统 yudao-module-crm - 表结构未导入]");
         }
         // 8. MES 系统
         if (message.contains("mes_")) {
-            log.error("[MES 系统 yudao-module-mes - 表结构未导入][参考 https://doc.iocoder.cn/mes/build/ 开启]");
+            log.error("[MES 系统 yudao-module-mes - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[MES 系统 yudao-module-mes - 表结构未导入][参考 https://doc.iocoder.cn/mes/build/ 开启]");
+                    "[MES 系统 yudao-module-mes - 表结构未导入]");
         }
         // 9. IM 即时通讯
         if (message.contains("im_")) {
-            log.error("[IM 即时通讯 yudao-module-im - 表结构未导入][参考 https://doc.iocoder.cn/im/build/ 开启]");
+            log.error("[IM 即时通讯 yudao-module-im - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[IM 即时通讯 yudao-module-im - 表结构未导入][参考 https://doc.iocoder.cn/im/build/ 开启]");
+                    "[IM 即时通讯 yudao-module-im - 表结构未导入]");
         }
         // 10. 支付平台
         if (message.contains("pay_")) {
-            log.error("[支付模块 yudao-module-pay - 表结构未导入][参考 https://cloud.iocoder.cn/pay/build/ 开启]");
+            log.error("[支付模块 yudao-module-pay - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[支付模块 yudao-module-pay - 表结构未导入][参考 https://cloud.iocoder.cn/pay/build/ 开启]");
+                    "[支付模块 yudao-module-pay - 表结构未导入]");
         }
         // 11. AI 大模型
         if (message.contains("ai_")) {
-            log.error("[AI 大模型 yudao-module-ai - 表结构未导入][参考 https://cloud.iocoder.cn/ai/build/ 开启]");
+            log.error("[AI 大模型 yudao-module-ai - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[AI 大模型 yudao-module-ai - 表结构未导入][参考 https://cloud.iocoder.cn/ai/build/ 开启]");
+                    "[AI 大模型 yudao-module-ai - 表结构未导入]");
         }
         // 12. IoT 物联网
         if (message.contains("iot_")) {
-            log.error("[IoT 物联网 yudao-module-iot - 表结构未导入][参考 https://doc.iocoder.cn/iot/build/ 开启]");
+            log.error("[IoT 物联网 yudao-module-iot - 表结构未导入]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[IoT 物联网 yudao-module-iot - 表结构未导入][参考 https://doc.iocoder.cn/iot/build/ 开启]");
+                    "[IoT 物联网 yudao-module-iot - 表结构未导入]");
         }
         return null;
     }

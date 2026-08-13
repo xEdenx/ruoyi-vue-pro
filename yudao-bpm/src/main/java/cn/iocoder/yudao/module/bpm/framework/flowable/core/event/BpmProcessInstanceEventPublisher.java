@@ -10,7 +10,7 @@ import jakarta.validation.Valid;
 /**
  * {@link BpmProcessInstanceStatusEvent} 的生产者
  *
- * @author 芋道源码
+ * @author 示例
  */
 @AllArgsConstructor
 @Validated

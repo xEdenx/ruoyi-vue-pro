@@ -230,9 +230,9 @@ wx:
       key-prefix: wa # Redis Key 的前缀
       http-client-type: HttpComponents # 采用 HttpComponents（HttpClient 5）请求微信小程序平台
 
---- #################### 芋道相关配置 ####################
+--- #################### 示例相关配置 ####################
 
-# 芋道配置项，设置当前项目所有自定义的配置
+# 示例配置项，设置当前项目所有自定义的配置
 yudao:
   bpm:
     headless:

@@ -16,7 +16,7 @@ public class BpmTaskRespVO {
     @Schema(description = "任务编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
     private String id;
 
-    @Schema(description = "任务名字", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋道")
+    @Schema(description = "任务名字", requiredMode = Schema.RequiredMode.REQUIRED, example = "示例")
     private String name;
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -34,10 +34,10 @@ public class BpmTaskRespVO {
     @Schema(description = "审批理由", requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
     private String reason;
 
-    @Schema(description = "签名", example = "https://www.iocoder.cn/sign.png")
+    @Schema(description = "签名", example = "https://example.com/sign.png")
     private String signPicUrl;
 
-    @Schema(description = "附件", example = "[https://test.yudao.iocoder.cn/20260609/test.txt]")
+    @Schema(description = "附件", example = "[https://example.com/20260609/test.txt]")
     private List<String> attachments;
 
     @Schema(description = "任务负责人编号", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "2048")
@@ -98,7 +98,7 @@ public class BpmTaskRespVO {
         @Schema(description = "流程实例编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
         private String id;
 
-        @Schema(description = "流程实例名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋道")
+        @Schema(description = "流程实例名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "示例")
         private String name;
 
         @Schema(description = "提交时间", requiredMode = Schema.RequiredMode.REQUIRED)

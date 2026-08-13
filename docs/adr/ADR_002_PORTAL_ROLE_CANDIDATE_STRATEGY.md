@@ -26,4 +26,4 @@
 
 - [无头工作流架构](../PORTAL_HEADLESS_BPM_ARCHITECTURE.md)
 - [Portal 适配器集成契约](../PORTAL_ADAPTER_INTEGRATION_CONTRACT.md)
-- [ADR-001 历史决策](ADR_001_HEADLESS_REMOTE_CANDIDATE_STRATEGY.md)
+- 历史候选人策略已归档，不再作为当前实现依据。

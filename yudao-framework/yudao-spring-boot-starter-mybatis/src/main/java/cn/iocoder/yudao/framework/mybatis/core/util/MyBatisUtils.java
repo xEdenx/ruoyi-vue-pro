@@ -45,7 +45,7 @@ public class MyBatisUtils {
     public static <T> Page<T> buildPage(PageParam pageParam, Collection<SortingField> sortingFields) {
         // 页码 + 数量
         Page<T> page = new Page<>(pageParam.getPageNo(), pageParam.getPageSize());
-        page.setOptimizeJoinOfCountSql(false); // 关联 issue：https://gitee.com/zhijiantianya/yudao-cloud/issues/ID2QLL
+        page.setOptimizeJoinOfCountSql(false); // 关联 issue：https://example.invalid/upstream/issues/ID2QLL
         // 排序字段
         if (CollUtil.isNotEmpty(sortingFields)) {
             for (SortingField sortingField : sortingFields) {
@@ -204,7 +204,7 @@ public class MyBatisUtils {
      * 将驼峰命名转换为下划线命名
      *
      * 使用场景：
-     * 1. <a href="https://gitee.com/zhijiantianya/ruoyi-vue-pro/pulls/1357/files">fix:修复"商品统计聚合函数的别名与排序字段不符"导致的 SQL 异常</a>
+     * 1. <a href="https://example.invalid/upstream/pulls/1357/files">fix:修复"商品统计聚合函数的别名与排序字段不符"导致的 SQL 异常</a>
      *
      * @param func 字段名函数(驼峰命名)
      * @return 字段名(下划线命名)

@@ -193,6 +193,6 @@ Set<String> resolveRoleAssigneeIds(
 2. Mock 覆盖至少一个 String/UUID 风格用户 ID，以及角色、部门或岗位解算。
 3. 在关闭 Mock 且未注册 HTTP 实现时，调用会清晰失败，不回退 system。
 4. 使用最小 schema 或 SQL 观测验证该 API 路径没有 `system_*` 查询。
-5. 更新本文件的“待迁移调用登记”、[解耦路线图](HEADLESS_BPM_DECOUPLING_ROADMAP.md)和相关 walkthrough。
+5. 更新本文件的“待迁移调用登记”和相关 walkthrough。
 
-现有 Vue 管理端和未来 Portal 前端的兼容边界见 [FRONTEND_BPM_PORTAL_COMPATIBILITY.md](FRONTEND_BPM_PORTAL_COMPATIBILITY.md)。后端变更用户 ID、用户投影或候选人响应前，必须先检查该文档中的稳定响应形状与迁移顺序。
+后端变更用户 ID、用户投影或候选人响应前，必须保持当前 Portal API 的响应形状，并通过 walkthrough 验证迁移兼容性。

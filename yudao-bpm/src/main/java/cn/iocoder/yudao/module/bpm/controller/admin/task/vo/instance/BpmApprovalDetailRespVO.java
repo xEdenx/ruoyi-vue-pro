@@ -102,10 +102,10 @@ public class BpmApprovalDetailRespVO {
         @Schema(description = "审批意见", example = "同意")
         private String reason;
 
-        @Schema(description = "签名", example = "https://www.iocoder.cn/sign.png")
+        @Schema(description = "签名", example = "https://example.com/sign.png")
         private String signPicUrl;
 
-        @Schema(description = "附件", example = "[https://test.yudao.iocoder.cn/20260609/test.txt]")
+        @Schema(description = "附件", example = "[https://example.com/20260609/test.txt]")
         private List<String> attachments;
 
     }

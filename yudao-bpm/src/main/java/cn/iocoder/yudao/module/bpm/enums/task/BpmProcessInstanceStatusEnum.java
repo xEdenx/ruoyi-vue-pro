@@ -11,7 +11,7 @@ import java.util.Arrays;
 /**
  * 流程实例 ProcessInstance 的状态
  *
- * @author 芋道源码
+ * @author 示例
  */
 @Getter
 @AllArgsConstructor

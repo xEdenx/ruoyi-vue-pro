@@ -11,7 +11,7 @@ public class UserSimpleBaseVO {
     private String id;
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋艿")
     private String nickname;
-    @Schema(description = "用户头像", example = "https://www.iocoder.cn/1.png")
+    @Schema(description = "用户头像", example = "https://example.com/1.png")
     private String avatar;
 
     @Schema(description = "部门编号。由 Portal 提供时保留其原始 String ID", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "portal-dept-general")

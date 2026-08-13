@@ -18,7 +18,7 @@ public class BpmTaskRejectReqVO {
     @Schema(description = "审批意见", requiredMode = Schema.RequiredMode.REQUIRED, example = "不错不错！")
     private String reason;
 
-    @Schema(description = "附件", example = "[https://test.yudao.iocoder.cn/20260609/test.txt]")
+    @Schema(description = "附件", example = "[https://example.com/20260609/test.txt]")
     private List<String> attachments;
 
 }

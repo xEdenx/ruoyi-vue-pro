@@ -15,7 +15,7 @@ public class BpmFormSaveReqVO {
     @Schema(description = "表单标识，用于程序化关联", example = "office_supplies_request_v5_form")
     private String code;
 
-    @Schema(description = "表单名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋道")
+    @Schema(description = "表单名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "示例")
     @NotNull(message = "表单名称不能为空")
     private String name;
 
