@@ -240,7 +240,8 @@ public class BpmnModelUtils {
      * @return 处理类型枚举
      */
     public static Integer parseAssignStartUserHandlerType(FlowElement userTask) {
-        return NumberUtils.parseInt(parseExtensionElement(userTask, USER_TASK_ASSIGN_START_USER_HANDLER_TYPE));
+        Integer handlerType = NumberUtils.parseInt(parseExtensionElement(userTask, USER_TASK_ASSIGN_START_USER_HANDLER_TYPE));
+        return handlerType != null ? handlerType : BpmUserTaskAssignStartUserHandlerTypeEnum.SKIP.getType();
     }
 
     /**
