@@ -10,10 +10,8 @@
     <modules>
         <module>yudao-dependencies</module>
         <module>yudao-framework</module>
-        <!-- Server 主项目 -->
-        <module>yudao-server</module>
-        <!-- 各种 module 拓展 -->
-        <module>yudao-module-bpm</module>
+        <!-- 无头 BPM 服务（包含应用启动与 BPM 功能） -->
+        <module>yudao-bpm</module>
     </modules>
 
     <name>${project.artifactId}</name>

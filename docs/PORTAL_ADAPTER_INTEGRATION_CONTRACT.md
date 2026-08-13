@@ -55,7 +55,7 @@ yudao:
 
 ## 3. 组织目录 SPI
 
-代码入口：[BpmPortalOrganizationApi.java](../yudao-module-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/portal/BpmPortalOrganizationApi.java)。
+代码入口：[BpmPortalOrganizationApi.java](../yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/portal/BpmPortalOrganizationApi.java)。
 
 除 `getUser`、`getDepartment` 和候选人解算外，`listSelectableUsers`、`listSelectableDepartments` 供 Headless BPM 管理页的选人/选部门控件使用。`/bpm/portal-directory/simple-list` 仅向已认证调用方暴露其可选择范围；生产实现必须由 Portal 根据当前主体和租户做授权过滤，不能把本地 mock 的全量目录当作生产行为。
 

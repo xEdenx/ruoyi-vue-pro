@@ -23,14 +23,14 @@
 
 ## 2. 决策方案 (Decision Outcome)
 
-我们决定在 `yudao-module-bpm` 模块中实现并采用 **无头远程候选人解算策略 (Headless Remote Candidate Strategy)**：
+我们决定在 `yudao-bpm` 模块中实现并采用 **无头远程候选人解算策略 (Headless Remote Candidate Strategy)**：
 
 ### 2.1 核心设计
 
 1. **注册专属策略枚举 (`HEADLESS_REMOTE = 70`)**：
    在 `BpmTaskCandidateStrategyEnum` 中定义专用于 Headless 模式的策略编号 `70` (`HEADLESS_REMOTE`)。
 2. **解耦 SPI 接口定义 (`PortalCandidateApi`)**：
-   策略类 [`HeadlessRemoteCandidateStrategy`](file:///Users/eden/Documents/coding/ruoyi-vue-pro/yudao-module-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/candidate/strategy/headless/HeadlessRemoteCandidateStrategy.java) 不包含任何 BPM 本地角色与用户表的查询逻辑。
+   策略类 [`HeadlessRemoteCandidateStrategy`](file:///Users/eden/Documents/coding/ruoyi-vue-pro/yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/candidate/strategy/headless/HeadlessRemoteCandidateStrategy.java) 不包含任何 BPM 本地角色与用户表的查询逻辑。
 3. **运行期动态回调 (Task-Arrival Execution)**：
    当流程到达 UserTask 节点时，策略实时提取上下文参数 `(startUserId, activityId, roleParam, processInstanceId)`，通过 SPI 接口 / REST API 回调给 Portal。
 4. **Portal 负责逻辑解算**：
@@ -74,6 +74,6 @@ sequenceDiagram
 
 ## 5. 相关参考与代码实现 (References & Implementations)
 
-* **策略实现类**: [`HeadlessRemoteCandidateStrategy.java`](file:///Users/eden/Documents/coding/ruoyi-vue-pro/yudao-module-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/candidate/strategy/headless/HeadlessRemoteCandidateStrategy.java)
-* **策略枚举类**: [`BpmTaskCandidateStrategyEnum.java`](file:///Users/eden/Documents/coding/ruoyi-vue-pro/yudao-module-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/enums/BpmTaskCandidateStrategyEnum.java#L30-L33) (`HEADLESS_REMOTE = 70`)
+* **策略实现类**: [`HeadlessRemoteCandidateStrategy.java`](file:///Users/eden/Documents/coding/ruoyi-vue-pro/yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/candidate/strategy/headless/HeadlessRemoteCandidateStrategy.java)
+* **策略枚举类**: [`BpmTaskCandidateStrategyEnum.java`](file:///Users/eden/Documents/coding/ruoyi-vue-pro/yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/enums/BpmTaskCandidateStrategyEnum.java#L30-L33) (`HEADLESS_REMOTE = 70`)
 * **全量无头架构文档**: [docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md)

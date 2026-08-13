@@ -24,7 +24,7 @@
 
 ### 2.1 零用户数据同步原则 (Zero User Sync)
 * **不维护 `system_users` 与 `system_role`**：Portal 负责所有的用户与角色增删改查。
-* **透明 ID 中转 (Transparent ID Delegation)**：BPM 平台底层（如 Flowable `act_ru_task` 表）仅按纯数字/字符串 ID (`userId`/`roleId`) 进行流转与存储。BPM 响应 REST API 时返回 ID，由 Portal 前端自行匹配本地字典渲染姓名与部门。
+* **透明 ID 中转 (Transparent ID Delegation)**：BPM 平台底层（如 Flowable `act_ru_task` 表）仅按 Portal 原始字符串 ID (`userId`/`roleId`) 进行流转与存储。BPM 响应 REST API 时返回 ID，由 Portal 前端自行匹配本地字典渲染姓名与部门。
 
 ### 2.2 JWT Token Payload 无库解包鉴权 (Bearer JWT Authentication)
 * **重构 `TokenAuthenticationFilter`**：直接 Base64URL 解码 HTTP Header 中 Bearer JWT Token 的 Payload 声明；

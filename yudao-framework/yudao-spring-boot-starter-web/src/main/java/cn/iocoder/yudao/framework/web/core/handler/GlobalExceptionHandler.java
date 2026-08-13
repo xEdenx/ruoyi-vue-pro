@@ -403,9 +403,9 @@ public class GlobalExceptionHandler {
         }
         // 2. 工作流
         if (message.contains("bpm_")) {
-            log.error("[工作流模块 yudao-module-bpm - 表结构未导入][参考 https://cloud.iocoder.cn/bpm/ 开启]");
+            log.error("[工作流服务 yudao-bpm - 表结构未导入][参考 https://cloud.iocoder.cn/bpm/ 开启]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[工作流模块 yudao-module-bpm - 表结构未导入][参考 https://cloud.iocoder.cn/bpm/ 开启]");
+                    "[工作流服务 yudao-bpm - 表结构未导入][参考 https://cloud.iocoder.cn/bpm/ 开启]");
         }
         // 3. 微信公众号
         if (message.contains("mp_")) {

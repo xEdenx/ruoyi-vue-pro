@@ -55,9 +55,11 @@ Headless BPM Server
   └─ PostgreSQL（Flowable 表 + 最小 BPM 配置表）
 ```
 
-目标运行时保留：`yudao-server`、`yudao-module-bpm`、必要的 `yudao-framework` starter、`yudao-dependencies` 和 PostgreSQL 驱动。
+唯一启动入口是 `cn.iocoder.yudao.YudaoBpmApplication`；它仅扫描 `cn.iocoder.yudao.module`，避免恢复已移除的通用服务端 Controller。
 
-目标运行时移除：`yudao-module-system`、`yudao-module-infra`，以及未启用的业务模块。当前 `yudao-server` 已仅依赖 BPM；安全 starter 不再调用 system OAuth2 或权限 API。
+目标运行时保留：`yudao-bpm`（应用启动与 BPM 功能合一）、必要的 `yudao-framework` starter、`yudao-dependencies` 和 PostgreSQL 驱动。
+
+目标运行时移除：`yudao-module-system`、`yudao-module-infra`，以及未启用的业务模块。当前 `yudao-bpm` 已仅依赖 BPM；安全 starter 不再调用 system OAuth2 或权限 API。
 
 ## 3. 阶段 0：冻结 API 与数据契约
 
@@ -127,7 +129,7 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 
 ## 6. 阶段 3：解耦 infra
 
-当前 BPM 源码没有直接依赖 `infra`。`yudao-module-bpm` 对 `yudao-module-system` 的直接 Maven 依赖已移除，因而不再由 BPM 模块传递引入 `infra`；`yudao-server` 仍暂时保留两者，必须在生产认证与后台定义维护入口完成迁移后再处理。
+当前 BPM 源码没有直接依赖 `infra`。`yudao-bpm` 对 `yudao-module-system` 的直接 Maven 依赖已移除，因而不再由 BPM 服务传递引入 `infra`。
 
 | Infra 能力 | Headless 替代 | 后续表 |
 | --- | --- | --- |
@@ -138,14 +140,15 @@ Portal 适配接口、Mock 与后续 HTTP 实现的集中约定见 [PORTAL_ADAPT
 | 部门数据权限 | Portal 在调用 BPM 前完成数据范围授权；BPM 不执行本地部门规则 | `system_dept`、本地部门权限关系 |
 | 代码生成、动态数据源 | 不提供 | `infra_codegen_*`、`infra_data_source_config` |
 
-**验收：** 从 `yudao-server` 删除 `yudao-module-infra` 后，核心 API 可启动并通过 walkthrough；无 `infra_*` SQL。
+**验收：** `yudao-bpm` 不引入 `yudao-module-infra` 后，核心 API 可启动并通过 walkthrough；无 `infra_*` SQL。
 
 ## 7. 阶段 4：POM、依赖与数据库收尾
 
 按以下顺序执行，禁止反向操作：
 
-1. [x] 移除 `yudao-module-bpm` 对 `yudao-module-system` 的依赖，并完成构建与 walkthrough。
-2. [x] 从 `yudao-server` 和根 `pom.xml` 移除 `system`、`infra` 依赖与 Reactor 模块；源码目录暂保留在仓库中，不参与 headless 默认构建。
+1. [x] 移除 `yudao-bpm` 对 `yudao-module-system` 的依赖，并完成构建与 walkthrough。
+2. [x] 从 `yudao-bpm` 和根 `pom.xml` 移除 `system`、`infra` 依赖与 Reactor 模块；源码目录暂保留在仓库中，不参与 headless 默认构建。
+3. [x] 合并启动壳与 BPM 代码，并将唯一可部署模块命名为 `yudao-bpm`；保留 `yudao-server.jar` 产物名以兼容现有部署。
 3. 清理 system/infra 配置、自动装配、测试夹具和无效 REST API。
 4. 在新建的最小 PostgreSQL schema 上验证启动，确认仅创建保留表。
 5. 备份生产数据后，以可回滚迁移将候选表改名为 `bak_` 前缀；不要以手工 `DROP TABLE` 替代迁移。

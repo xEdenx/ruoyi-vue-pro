@@ -284,7 +284,7 @@ Portal 前端拿此 JSON 匹配本地用户字典后，可直接渲染出带有�
 ## 六、 方案总结与最佳实践
 
 1. **解耦性极强**：Portal 拥有 100% 的 UI 自由度与业务控制权，BPM 平台只做流程维护与底层 Flowable 状态机运算。
-2. **零用户同步**：无需维护 `system_users`，Portal 独占用户数据源，BPM 仅按数字 ID 透明中转。
+2. **零用户同步**：无需维护 `system_users`，Portal 独占用户数据源，BPM 仅按 Portal 原始字符串 ID 透明中转。
 3. **免二次开发**：利用 BPM 框架内置的 `startUserSelectAssignees` 机制，无需手写后端监听器，直接在 API 发起时传入动态选人字典。
 
 ---

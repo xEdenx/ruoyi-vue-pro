@@ -329,11 +329,10 @@
 |-----------------------|--------------------|
 | `yudao-dependencies`  | Maven 依赖版本管理       |
 | `yudao-framework`     | Java 框架拓展          |
-| `yudao-server`        | 管理后台 + 用户 APP 的服务端 |
+| `yudao-bpm`           | 无头 BPM 服务端（包含应用启动与工作流能力） |
 | `yudao-module-system` | 系统功能的 Module 模块    |
 | `yudao-module-member` | 会员中心的 Module 模块    |
 | `yudao-module-infra`  | 基础设施的 Module 模块    |
-| `yudao-module-bpm`    | 工作流程的 Module 模块    |
 | `yudao-module-pay`    | 支付系统的 Module 模块    |
 | `yudao-module-mall`   | 商城系统的 Module 模块    |
 | `yudao-module-erp`    | ERP 系统的 Module 模块  |
