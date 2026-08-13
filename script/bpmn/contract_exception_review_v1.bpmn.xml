@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <!--
+    合同例外评审全场景流程：这是 Headless BPM 的验收资产，不绑定任何本地 system_user。
+    35 = Portal 在发起时指定 String 用户 ID；70 = Portal 到达节点时按角色解析 String 用户 ID。
+  -->
+  <process id="contract_exception_review_v1" name="合同例外评审全场景流程 V1" isExecutable="true">
+    <startEvent id="StartEvent" name="提交合同例外申请"/>
+    <sequenceFlow id="Flow_Start_SelfCheck" sourceRef="StartEvent" targetRef="Activity_RequesterSelfCheck"/>
+
+    <!-- 显式验证“审批人与发起人相同”时的 SKIP 策略。 -->
+    <userTask id="Activity_RequesterSelfCheck" name="申请人资料自检" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+        <flowable:assignStartUserHandlerType>2</flowable:assignStartUserHandlerType>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_SelfCheck_Risk" sourceRef="Activity_RequesterSelfCheck" targetRef="Gateway_Risk"/>
+
+    <exclusiveGateway id="Gateway_Risk" name="风险与金额分流" default="Flow_Standard"/>
+    <sequenceFlow id="Flow_Low" name="低风险且金额不超过 1 万" sourceRef="Gateway_Risk" targetRef="Activity_BusinessOwner">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${riskLevel == 'LOW' && totalAmount <= 10000}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_High" name="高风险或金额超过 10 万" sourceRef="Gateway_Risk" targetRef="Activity_Manager">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${riskLevel == 'HIGH' || totalAmount > 100000}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_Standard" name="常规例外" sourceRef="Gateway_Risk" targetRef="Activity_Manager"/>
+
+    <!-- 70：由 Portal 角色目录解析，不把角色 ID 当作 Flowable 办理人。 -->
+    <userTask id="Activity_BusinessOwner" name="业务归口确认" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_BUSINESS_OWNER">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_BUSINESS_OWNER</flowable:candidateParam>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_BusinessOwner_Final" sourceRef="Activity_BusinessOwner" targetRef="Activity_FinalArchive"/>
+
+    <userTask id="Activity_Manager" name="业务负责人审批" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+      </extensionElements>
+    </userTask>
+    <exclusiveGateway id="Gateway_AfterManager" name="进入评审路径" default="Flow_Manager_Standard"/>
+    <sequenceFlow id="Flow_Manager_High" name="高风险或超额" sourceRef="Gateway_AfterManager" targetRef="Activity_RiskAnySign">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${riskLevel == 'HIGH' || totalAmount > 100000}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_Manager_Standard" name="常规例外" sourceRef="Gateway_AfterManager" targetRef="Activity_LegalSequential"/>
+    <sequenceFlow id="Flow_Manager_Gateway" sourceRef="Activity_Manager" targetRef="Gateway_AfterManager"/>
+
+    <!-- 串行多实例：数组顺序就是每一轮的办理顺序。 -->
+    <userTask id="Activity_LegalSequential" name="法务依次复核" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+      </extensionElements>
+      <multiInstanceLoopCharacteristics isSequential="true">
+        <loopCardinality>1</loopCardinality>
+        <completionCondition>${nrOfCompletedInstances == nrOfInstances}</completionCondition>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+    <!-- 非中断催办：到期只触发 timeoutHandlerType=1（提醒），不改变任务流转。 -->
+    <boundaryEvent id="Boundary_LegalReminder" name="30 秒催办" attachedToRef="Activity_LegalSequential" cancelActivity="false">
+      <extensionElements>
+        <flowable:boundaryEventType>1</flowable:boundaryEventType>
+        <flowable:timeoutHandlerType>1</flowable:timeoutHandlerType>
+      </extensionElements>
+      <timerEventDefinition>
+        <timeDuration>PT30S</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <sequenceFlow id="Flow_Legal_AllSign" sourceRef="Activity_LegalSequential" targetRef="Activity_RiskAllSign"/>
+
+    <!-- 并行会签：ROLE_RISK 在 mock 中会解算为两个独立 String ID，必须全部办结。 -->
+    <userTask id="Activity_RiskAllSign" name="风险委员会会签" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_RISK">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_RISK</flowable:candidateParam>
+      </extensionElements>
+      <multiInstanceLoopCharacteristics isSequential="false">
+        <loopCardinality>1</loopCardinality>
+        <completionCondition>${nrOfCompletedInstances == nrOfInstances}</completionCondition>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+    <sequenceFlow id="Flow_AllSign_Final" sourceRef="Activity_RiskAllSign" targetRef="Activity_FinalArchive"/>
+
+    <!-- 并行或签：第一个通过者结束节点，Flowable 清除其余尚未完成的实例。 -->
+    <userTask id="Activity_RiskAnySign" name="紧急风险或签" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_RISK">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_RISK</flowable:candidateParam>
+      </extensionElements>
+      <multiInstanceLoopCharacteristics isSequential="false">
+        <loopCardinality>1</loopCardinality>
+        <completionCondition>${nrOfCompletedInstances &gt; 0}</completionCondition>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+    <sequenceFlow id="Flow_AnySign_Executive" sourceRef="Activity_RiskAnySign" targetRef="Activity_ExecutiveReview"/>
+
+    <userTask id="Activity_ExecutiveReview" name="例外最终授权" flowable:candidateStrategy="35">
+      <extensionElements>
+        <flowable:candidateStrategy>35</flowable:candidateStrategy>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_Executive_Final" sourceRef="Activity_ExecutiveReview" targetRef="Activity_FinalArchive"/>
+
+    <userTask id="Activity_FinalArchive" name="归档与生效确认" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_ADMIN">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_ADMIN</flowable:candidateParam>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_Final_End" sourceRef="Activity_FinalArchive" targetRef="EndEvent"/>
+    <endEvent id="EndEvent" name="合同例外已闭环"/>
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_contract_exception_review_v1">
+    <bpmndi:BPMNPlane id="BPMNPlane_contract_exception_review_v1" bpmnElement="contract_exception_review_v1">
+      <bpmndi:BPMNShape id="Shape_StartEvent" bpmnElement="StartEvent"><omgdc:Bounds x="80" y="285" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_SelfCheck" bpmnElement="Activity_RequesterSelfCheck"><omgdc:Bounds x="170" y="260" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Risk" bpmnElement="Gateway_Risk" isMarkerVisible="true"><omgdc:Bounds x="350" y="275" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_BusinessOwner" bpmnElement="Activity_BusinessOwner"><omgdc:Bounds x="480" y="70" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Manager" bpmnElement="Activity_Manager"><omgdc:Bounds x="480" y="260" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_AfterManager" bpmnElement="Gateway_AfterManager" isMarkerVisible="true"><omgdc:Bounds x="660" y="275" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Legal" bpmnElement="Activity_LegalSequential"><omgdc:Bounds x="790" y="390" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Reminder" bpmnElement="Boundary_LegalReminder"><omgdc:Bounds x="850" y="450" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_AllSign" bpmnElement="Activity_RiskAllSign"><omgdc:Bounds x="970" y="390" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_AnySign" bpmnElement="Activity_RiskAnySign"><omgdc:Bounds x="790" y="165" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Executive" bpmnElement="Activity_ExecutiveReview"><omgdc:Bounds x="970" y="165" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Final" bpmnElement="Activity_FinalArchive"><omgdc:Bounds x="1180" y="260" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End" bpmnElement="EndEvent"><omgdc:Bounds x="1370" y="282" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Start_SelfCheck" bpmnElement="Flow_Start_SelfCheck"><omgdi:waypoint x="116" y="303"/><omgdi:waypoint x="170" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SelfCheck_Risk" bpmnElement="Flow_SelfCheck_Risk"><omgdi:waypoint x="290" y="300"/><omgdi:waypoint x="350" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Low" bpmnElement="Flow_Low"><omgdi:waypoint x="375" y="275"/><omgdi:waypoint x="375" y="110"/><omgdi:waypoint x="480" y="110"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_High" bpmnElement="Flow_High"><omgdi:waypoint x="400" y="300"/><omgdi:waypoint x="480" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Standard" bpmnElement="Flow_Standard"><omgdi:waypoint x="375" y="325"/><omgdi:waypoint x="375" y="510"/><omgdi:waypoint x="440" y="510"/><omgdi:waypoint x="440" y="300"/><omgdi:waypoint x="480" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_BusinessOwner_Final" bpmnElement="Flow_BusinessOwner_Final"><omgdi:waypoint x="600" y="110"/><omgdi:waypoint x="1140" y="110"/><omgdi:waypoint x="1140" y="300"/><omgdi:waypoint x="1180" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Manager_Gateway" bpmnElement="Flow_Manager_Gateway"><omgdi:waypoint x="600" y="300"/><omgdi:waypoint x="660" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Manager_High" bpmnElement="Flow_Manager_High"><omgdi:waypoint x="685" y="275"/><omgdi:waypoint x="685" y="205"/><omgdi:waypoint x="790" y="205"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Manager_Standard" bpmnElement="Flow_Manager_Standard"><omgdi:waypoint x="685" y="325"/><omgdi:waypoint x="685" y="430"/><omgdi:waypoint x="790" y="430"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Legal_AllSign" bpmnElement="Flow_Legal_AllSign"><omgdi:waypoint x="910" y="430"/><omgdi:waypoint x="970" y="430"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_AllSign_Final" bpmnElement="Flow_AllSign_Final"><omgdi:waypoint x="1090" y="430"/><omgdi:waypoint x="1140" y="430"/><omgdi:waypoint x="1140" y="300"/><omgdi:waypoint x="1180" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_AnySign_Executive" bpmnElement="Flow_AnySign_Executive"><omgdi:waypoint x="910" y="205"/><omgdi:waypoint x="970" y="205"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Executive_Final" bpmnElement="Flow_Executive_Final"><omgdi:waypoint x="1090" y="205"/><omgdi:waypoint x="1140" y="205"/><omgdi:waypoint x="1140" y="300"/><omgdi:waypoint x="1180" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Final_End" bpmnElement="Flow_Final_End"><omgdi:waypoint x="1300" y="300"/><omgdi:waypoint x="1370" y="300"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

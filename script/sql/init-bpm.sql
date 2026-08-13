@@ -2,10 +2,9 @@
 -- Scope: base tables except act_*, flw_*, and bak_*.
 -- This is destructive bootstrap DDL: it drops and recreates these tables in the
 -- current schema. Select the target schema before executing it.
--- Includes the walkthrough form seed identified by office_supplies_request_v5_form.
 -- Source inspection: 2026-08-10, 7 tables and no table/column comments.
--- This bootstrap adds bpm_category_seq and bpm_form_seq so its seed and later
--- inserts receive generated IDs.
+-- This bootstrap creates empty BPM tables and their ID sequences. Optional local
+-- walkthrough records live in init-mock-data.sql and are intentionally separate.
 
 DROP TABLE IF EXISTS bpm_process_instance_copy;
 DROP TABLE IF EXISTS bpm_process_definition_info;
@@ -35,14 +34,6 @@ CREATE TABLE bpm_category (
     CONSTRAINT bpm_category_pkey PRIMARY KEY (id)
 );
 
-INSERT INTO bpm_category (
-    name, code, description, status, sort,
-    creator, create_time, updater, update_time, deleted, tenant_id
-) VALUES (
-    '默认', 'default', '默认流程分类', 0, 0,
-    '1', CURRENT_TIMESTAMP, '1', CURRENT_TIMESTAMP, 0, 1
-);
-
 CREATE SEQUENCE bpm_form_seq AS bigint START WITH 1 INCREMENT BY 1;
 
 CREATE TABLE bpm_form (
@@ -60,23 +51,6 @@ CREATE TABLE bpm_form (
     deleted smallint DEFAULT 0 NOT NULL,
     tenant_id bigint DEFAULT 0 NOT NULL,
     CONSTRAINT bpm_form_pkey PRIMARY KEY (id)
-);
-
-INSERT INTO bpm_form (
-    code, name, status, conf, fields, remark,
-    creator, create_time, updater, update_time, deleted, tenant_id
-) VALUES (
-    'office_supplies_request_v5_form', '办公用品申请流程 V5表单',
-    0,
-    $${"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"100px"}}$$,
-    $$[
-        "{\"type\":\"input\",\"field\":\"name\",\"title\":\"申请事项\",\"$required\":true}",
-        "{\"type\":\"inputNumber\",\"field\":\"count\",\"title\":\"数量\",\"$required\":true}",
-        "{\"type\":\"input\",\"field\":\"price\",\"title\":\"单价\",\"$required\":true}",
-        "{\"type\":\"input\",\"field\":\"totalAmount\",\"title\":\"总金额\",\"$required\":true}"
-    ]$$,
-    '系统自动生成的表单 Schema',
-    '1', CURRENT_TIMESTAMP, '1', CURRENT_TIMESTAMP, 0, 1
 );
 
 CREATE UNIQUE INDEX bpm_form_code_uq

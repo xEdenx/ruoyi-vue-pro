@@ -90,9 +90,9 @@
 
 * **退回保护机制**：在 `BpmTaskServiceImpl` 中校验如果当前任务是【被驳回/退回】到该节点的（`returnTaskFlag == true`），会强制关掉自动通过，避免退回给发起人后又被系统瞬间自动通过。
 
-### 6.4 未配置时的默认行为与全局默认兜底方案
-* **未配置时的默认行为**：若 BPMN 节点未显式配置扩展属性，`parseAssignStartUserHandlerType` 返回 `null`，系统自动兜底为 **`START_USER_AUDIT` (不自动通过，需手动审批)**。
-* **全局默认兜底方案**：若希望全系统未配置时默认一律【自动跳过/自动完成】，推荐修改 `BpmnModelUtils.parseAssignStartUserHandlerType`：当解析出的扩展属性为空时，默认返回 `BpmUserTaskAssignStartUserHandlerTypeEnum.SKIP.getType()`。
+### 6.4 未配置时的默认行为
+* **未配置时的默认行为**：`parseAssignStartUserHandlerType` 当前默认返回 **`SKIP`**。因此新 BPMN 应显式写出 `assignStartUserHandlerType`，避免“是否由发起人自审”成为隐式约定。
+* **验收资产**：`script/bpmn/contract_exception_review_v1.bpmn.xml` 在 `Activity_RequesterSelfCheck` 显式配置 `SKIP`，walkthrough 验证该节点不产生需人工办理的待办。
 
 ---
 

@@ -52,7 +52,9 @@ bash script/shell/test_headless_bpm_walkthrough.sh http://127.0.0.1:48080
 | [架构决策记录](docs/adr/) | 已采纳与已替代决策的历史依据 |
 | [流程演练说明](docs/HEADLESS_BPM_TEST_WALKTHROUGH.md) | V5 流程的 API 验收背景与场景 |
 | [`script/bpmn/office_supplies_request_v5.bpmn.xml`](script/bpmn/office_supplies_request_v5.bpmn.xml) | walkthrough 会直接部署的 BPMN 示例资产 |
-| [`script/sql/`](script/sql/) | `bpm` 初始化 SQL；包含 destructive bootstrap DDL，执行前必须确认目标 schema |
+| [合同例外复杂流程 walkthrough](docs/CONTRACT_EXCEPTION_REVIEW_WALKTHROUGH.md) | 覆盖委派、加签、退回、会签/或签、催办与转办的独立验收资产 |
+| [合同例外节点说明](docs/CONTRACT_EXCEPTION_REVIEW_NODE_GUIDE.md) | 节点业务语义、Portal 选人策略与 Flowable 代码路径 |
+| [`script/sql/`](script/sql/) | `init-bpm` 是纯结构初始化；`init-mock-data` 是可选的 walkthrough 表单与分类数据 |
 | [`.agents/skills/bpmn-flow-generator/`](.agents/skills/bpmn-flow-generator/) | 新 BPMN、表单、监听器与接入资产的生成规范 |
 
 历史文档已在 Git 提交 `0aaa5cdde4` 中完整归档；当前运行约定以实现、测试、本文档和上表列出的当前契约为准。
@@ -70,4 +72,4 @@ Portal 运行期主要使用以下 API：
 
 ## 数据库注意事项
 
-`script/sql/init-bpm.sql` 与其 SQL Server 版本是受控的初始化资产，不是日常增量迁移。它会重建其覆盖范围内的表；执行前必须备份、明确选中 `bpm` schema，并验证不在其范围内的 Flowable 表和现有业务数据不会受影响。
+`script/sql/init-bpm.sql` 与其 SQL Server 版本是受控的纯结构初始化资产，不是日常增量迁移。它会重建其覆盖范围内的表；执行前必须备份、明确选中 `bpm` schema，并验证不在其范围内的 Flowable 表和现有业务数据不会受影响。需要本地演练表单和默认分类时，再显式执行对应的 `init-mock-data` 文件。

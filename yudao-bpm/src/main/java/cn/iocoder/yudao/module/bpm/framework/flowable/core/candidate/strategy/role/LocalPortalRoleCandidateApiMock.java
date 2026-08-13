@@ -20,6 +20,10 @@ public class LocalPortalRoleCandidateApiMock implements PortalRoleCandidateStrat
 
     private static final Map<ResolutionKey, Set<String>> CANDIDATES = Map.of(
             new ResolutionKey("Activity_Admin", "ROLE_ADMIN"), Set.of("portal-admin-d5e6"),
+            new ResolutionKey("Activity_BusinessOwner", "ROLE_BUSINESS_OWNER"), Set.of("portal-business-owner-g1h2"),
+            new ResolutionKey("Activity_RiskAllSign", "ROLE_RISK"), Set.of("portal-risk-k4m5", "portal-risk-m5n6"),
+            new ResolutionKey("Activity_RiskAnySign", "ROLE_RISK"), Set.of("portal-risk-k4m5", "portal-risk-m5n6"),
+            new ResolutionKey("Activity_FinalArchive", "ROLE_ADMIN"), Set.of("portal-admin-d5e6"),
             new ResolutionKey("Activity_Supplier", "ROLE_SUPPLIER"), Set.of("portal-supplier-e7f8", "portal-supplier-f9a0")
     );
 

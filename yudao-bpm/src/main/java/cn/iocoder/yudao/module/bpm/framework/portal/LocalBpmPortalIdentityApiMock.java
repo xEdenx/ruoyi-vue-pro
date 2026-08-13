@@ -15,12 +15,18 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "yudao.bpm.headless-mock", name = "enabled", havingValue = "true")
 public class LocalBpmPortalIdentityApiMock implements BpmPortalIdentityApi, BpmPortalOrganizationApi {
 
-    private static final Map<String, BpmPortalOrganizationApi.PortalUser> USERS = Map.of(
-            "portal-requester-a1f2", user("portal-requester-a1f2", "申请人", "portal-dept-general", "通用部门", Set.of("ROLE_USER")),
-            "portal-manager-b3c4", user("portal-manager-b3c4", "部门经理", "portal-dept-general", "通用部门", Set.of("ROLE_MANAGER", "ROLE_BPM_MODEL_MANAGER")),
-            "portal-admin-d5e6", user("portal-admin-d5e6", "行政管理员", "portal-dept-admin", "行政部", Set.of("ROLE_ADMIN", "ROLE_BPM_MODEL_MANAGER")),
-            "portal-supplier-e7f8", user("portal-supplier-e7f8", "供应商成员A", "portal-dept-supplier", "供应商部", Set.of("ROLE_SUPPLIER")),
-            "portal-supplier-f9a0", user("portal-supplier-f9a0", "供应商成员B", "portal-dept-supplier", "供应商部", Set.of("ROLE_SUPPLIER"))
+    private static final Map<String, BpmPortalOrganizationApi.PortalUser> USERS = Map.ofEntries(
+            Map.entry("portal-requester-a1f2", user("portal-requester-a1f2", "申请人", "portal-dept-general", "通用部门", Set.of("ROLE_USER"))),
+            Map.entry("portal-manager-b3c4", user("portal-manager-b3c4", "业务负责人", "portal-dept-general", "通用部门", Set.of("ROLE_MANAGER", "ROLE_BPM_MODEL_MANAGER"))),
+            Map.entry("portal-admin-d5e6", user("portal-admin-d5e6", "流程管理员", "portal-dept-admin", "行政部", Set.of("ROLE_ADMIN", "ROLE_BPM_MODEL_MANAGER"))),
+            Map.entry("portal-business-owner-g1h2", user("portal-business-owner-g1h2", "业务归口负责人", "portal-dept-business", "业务管理部", Set.of("ROLE_BUSINESS_OWNER"))),
+            Map.entry("portal-legal-h2j3", user("portal-legal-h2j3", "法务复核人A", "portal-dept-legal", "法务部", Set.of("ROLE_LEGAL"))),
+            Map.entry("portal-legal-j3k4", user("portal-legal-j3k4", "法务复核人B", "portal-dept-legal", "法务部", Set.of("ROLE_LEGAL"))),
+            Map.entry("portal-risk-k4m5", user("portal-risk-k4m5", "风控委员A", "portal-dept-risk", "风险管理部", Set.of("ROLE_RISK"))),
+            Map.entry("portal-risk-m5n6", user("portal-risk-m5n6", "风控委员B", "portal-dept-risk", "风险管理部", Set.of("ROLE_RISK"))),
+            Map.entry("portal-executive-n6p7", user("portal-executive-n6p7", "最终授权人", "portal-dept-executive", "管理层", Set.of("ROLE_EXECUTIVE"))),
+            Map.entry("portal-supplier-e7f8", user("portal-supplier-e7f8", "供应商成员A", "portal-dept-supplier", "供应商部", Set.of("ROLE_SUPPLIER"))),
+            Map.entry("portal-supplier-f9a0", user("portal-supplier-f9a0", "供应商成员B", "portal-dept-supplier", "供应商部", Set.of("ROLE_SUPPLIER")))
     );
 
     private static final Map<String, String> DEPARTMENT_LEADERS = Map.of(
@@ -29,10 +35,14 @@ public class LocalBpmPortalIdentityApiMock implements BpmPortalIdentityApi, BpmP
             "portal-dept-supplier", "portal-supplier-e7f8"
     );
 
-    private static final Map<String, BpmPortalOrganizationApi.PortalDepartment> DEPARTMENTS = Map.of(
-            "portal-dept-general", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-general", "通用部门"),
-            "portal-dept-admin", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-admin", "行政部"),
-            "portal-dept-supplier", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-supplier", "供应商部")
+    private static final Map<String, BpmPortalOrganizationApi.PortalDepartment> DEPARTMENTS = Map.ofEntries(
+            Map.entry("portal-dept-general", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-general", "通用部门")),
+            Map.entry("portal-dept-admin", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-admin", "行政部")),
+            Map.entry("portal-dept-business", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-business", "业务管理部")),
+            Map.entry("portal-dept-legal", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-legal", "法务部")),
+            Map.entry("portal-dept-risk", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-risk", "风险管理部")),
+            Map.entry("portal-dept-executive", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-executive", "管理层")),
+            Map.entry("portal-dept-supplier", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-supplier", "供应商部"))
     );
 
     @Override
