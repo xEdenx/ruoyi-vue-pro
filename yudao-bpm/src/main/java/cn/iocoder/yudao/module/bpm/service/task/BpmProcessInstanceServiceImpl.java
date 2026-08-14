@@ -178,7 +178,7 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
             List<ActivityNode> simulateNodes = getSimulateApproveNodeList(loginUserId, bpmnModel,
                     processDefinitionInfo, processVariables, Collections.emptyList(), Collections.emptySet());
             return buildPortalApprovalDetail(reqVO, bpmnModel, processDefinition, processDefinitionInfo,
-                    null, BpmProcessInstanceStatusEnum.NOT_START.getStatus(), simulateNodes);
+                    null, BpmProcessInstanceStatusEnum.NOT_START.getStatus(), simulateNodes, null);
         }
         HistoricProcessInstance processInstance = getHistoricProcessInstance(reqVO.getProcessInstanceId());
         if (processInstance == null) {
@@ -193,8 +193,9 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
         List<HistoricTaskInstance> tasks = taskService.getTaskListByProcessInstanceId(processInstance.getId(), true);
         List<ActivityNode> endNodes = getEndActivityNodeList(processInstance.getStartUserId(), bpmnModel,
                 processDefinitionInfo, processInstance, status, activities, tasks);
+        BpmTaskRespVO todoTask = taskService.getTodoTask(loginUserId, reqVO.getTaskId(), processInstance.getId());
         return buildPortalApprovalDetail(reqVO, bpmnModel, processDefinition, processDefinitionInfo,
-                processInstance, status, endNodes);
+                processInstance, status, endNodes, todoTask);
     }
 
     @Override
@@ -338,9 +339,10 @@ public class BpmProcessInstanceServiceImpl implements BpmProcessInstanceService 
                                                               BpmProcessDefinitionInfoDO processDefinitionInfo,
                                                               HistoricProcessInstance processInstance,
                                                               Integer processInstanceStatus,
-                                                              List<ActivityNode> approveNodes) {
+                                                              List<ActivityNode> approveNodes,
+                                                              BpmTaskRespVO todoTask) {
         return BpmProcessInstanceConvert.INSTANCE.buildApprovalDetail(bpmnModel, processDefinition,
-                processDefinitionInfo, processInstance, processInstanceStatus, approveNodes, null,
+                processDefinitionInfo, processInstance, processInstanceStatus, approveNodes, todoTask,
                 getFormFieldsPermission(bpmnModel, reqVO.getActivityId(), reqVO.getTaskId()), Map.of(), Map.of());
     }
 
