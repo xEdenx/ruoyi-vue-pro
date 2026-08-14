@@ -31,13 +31,11 @@
 * 增量通过 `FlowableEventListener` 监听 `TASK_CREATED` 自动触发 `delegateTask`。
 * 取消代理时调用 `setAssignee(taskId, "UserA")` + `setOwner(taskId, null)` 还原指派。
 
-### 1.3 `yudao-bpm` 落地实现方案
-* **开启代理**：
-  - 存量：`BpmTaskService.delegateTask` 批量委派存量待办。
-  - 增量：注册 `BpmAgentTaskEventListener` 拦截新任务。
-* **取消代理**：
-  - 检索 `taskOwner = A & taskAssignee = B` 的任务，将 `assignee` 改回 A，`owner` 清空，记录日志。
-* **待办查询**：修改 `BpmTaskServiceImpl.getTaskTodoPage` 为 `or().taskAssignee(userId).taskOwner(userId)`。
+### 1.3 当前 `yudao-bpm` 边界
+* 已实现的是单任务委派：`BpmTaskService.delegateTask` 将当前任务交给指定 Portal String ID；被委派人办理时按 Flowable `DelegationState` 解析回 owner。
+* 当前**没有** `BpmAgentTaskEventListener`，也没有“请假期间批量交接、增量自动委派、取消后批量收回”的领域能力。
+* 待办查询当前只按 `taskAssignee(userId)` 过滤；owner 不会因为委派自动获得双人待办可见性。
+* 若需要本节的完整请假代理模型，应新增独立业务规则、任务监听器、批处理与回归测试，不能把它当作已落地能力。
 
 ---
 
@@ -59,13 +57,13 @@
 ## 业务场景 4：超时催办与自动处理 (Timer Boundary Events) [待扩展]
 
 * **官方做法**：BPMN 定时边界事件 (Timer Boundary Event) 或 Flowable Job Executor 调度。
-* **本项目实现**：基于 `bpm_process_listener` 或 Quartz 结合 Flowable 定时任务。
+* **当前项目边界**：BPMN 的边界定时器由 Flowable Job Executor 驱动。`bpm_process_listener` 是监听器配置资产，不是催办调度器；本地 profile 已排除 Quartz 自动配置，因此不能把 Quartz 视为当前可用实现。
 
 ---
 
 ## 业务场景 5：加签与减签 (前加签 / 后加签 / 并行加签) [待扩展]
 
-* **官方做法**：通过 Flowable 6/7 动态增加多实例节点或任务跳转。
+* **官方做法**：通过 Flowable 8 的多实例行为或任务跳转 API 实现。
 * **本项目实现**：`BpmTaskServiceImpl.createSignTask` 加签逻辑。
 
 ---
@@ -106,13 +104,13 @@
 * **Flowable Admin 控制台**：提供图形化界面查看死信 Job、重新触发 (`moveDeadLetterJobToExecutableJob`)、修改运行期变量 (`setVariable`)、以及强行节点跳转 (`createChangeActivityStateBuilder`)。
 
 ### 7.3 `yudao-bpm` 落地实现与管理员干预 API
-* **事前防范（审批人为空策略）**：在节点上配置 `BpmUserTaskAssignEmptyHandlerTypeEnum`，当解算审批人为空时，可自动转交给流程管理员 (`ASSIGN_ADMIN`) 或指定人员 (`ASSIGN_USER`)。
+* **事前防范（审批人为空策略）**：当前运行逻辑仅处理 `APPROVE`（自动通过）和 `REJECT`（自动拒绝）。`ASSIGN_ADMIN`、`ASSIGN_USER` 虽保留在枚举和建模元数据中，但当前未执行自动转派，Headless BPM 不应将其作为可用兜底策略。
 * **错误查看**：
   - `infra_api_error_log` 在 Headless BPM 模式下已归档为 `bak_infra_api_error_log`。运行时异常堆栈统一通过服务器 Console / Logback 日志或 APM 监控输出。
   - 前端通过 `GET /admin-api/bpm/process-instance/get-approval-detail` 查看卡死节点。
 * **管理员替代他人处理并推进到下一节点（两步法）**：
   1. **Step 1 (强制转派)**：由于 `validateTask` 会校验 `Assignee == 当前用户`，管理员需先调用 `PUT /admin-api/bpm/task/transfer`（具备 `bpm:task:update` 权限即可操作），将任务处理人强行转派给管理员自己。
-  2. **Step 2 (正常审批)**：转派完成后，管理员调用 `POST /admin-api/bpm/task/approve` 完成任务审批，流程随即**顺利推进到下一个节点**。
+  2. **Step 2 (正常审批)**：转派完成后，管理员调用 `PUT /admin-api/bpm/task/approve` 完成任务审批，流程随即**顺利推进到下一个节点**。
 * **其他干预手段**：
   - **强制跳转/退回**：调用 `PUT /admin-api/bpm/task/return` 利用 `createChangeActivityStateBuilder` 强行跳转离开崩溃节点。
-  - **强制作废**：调用 `DELETE /admin-api/bpm/process-instance/cancel` 取消污染流程。
+  - **强制作废**：由发起人调用 `DELETE /admin-api/bpm/process-instance/cancel-by-start-user`，或由管理员调用 `DELETE /admin-api/bpm/process-instance/cancel-by-admin`；请求体字段为 `id` 与 `reason`。

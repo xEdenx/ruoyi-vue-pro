@@ -171,7 +171,7 @@ Set<String> resolveRoleAssigneeIds(
 | 短信、邮件、站内信 | `SmsSendApi` 等 system 能力 | `BpmPortalNotificationApi`；当前日志兜底，后续替换为 Portal Webhook；保留 BPM 通知触发时机 | 适配端口已迁移，生产投递待接入 |
 | API 与操作审计 | `OperateLogCommonApi`、`Api*LogCommonApi` | `PortalApplicationLogApi`；本地只输出待投递日志 | 已迁移；Portal 审计或 OTel 接入待实现 |
 | 本地部门数据权限 | `PermissionCommonApi`、部门数据权限规则 | BPM 不再创建或执行本地部门规则；Portal 在调用 BPM 前完成数据范围授权 | 已移除；不得回退读取 system 部门权限 |
-| 抄送收件人、抄送查询与抄送节点 | 数值 `user_id` / `start_user_id`、`AdminUserApi` | Portal 原始 String ID + `BpmPortalOrganizationApi.getUserMap`；保留 BPM 抄送审计和查询 API | 已迁移；生产库需执行 [字段迁移脚本](migrations/2026-08-10-bpm-process-instance-copy-portal-user-id.sql) |
+| 抄送收件人、抄送查询与抄送节点 | 数值 `user_id` / `start_user_id`、`AdminUserApi` | Portal 原始 String ID + `BpmPortalOrganizationApi.getUserMap`；保留 BPM 抄送审计和查询 API | 已迁移；生产库与初始化快照均应保持 `varchar(64)` String ID 语义 |
 | 转办、委派、加签、减签、退回、撤回的操作主体与目标用户 | `AdminUserApi`、`DeptApi`、Long ID | Portal 组织目录用户校验和 Flowable 原始 String ID；`DEPT_LEADER_OF_USER` 解算发起人部门负责人；保留 BPM 动作、监听器、查询 API 与审计 | 已迁移；生产 Portal 需实现 `DEPT_LEADER_OF_USER` |
 
 `bpm_process_definition_info` 的白名单字段仍是逗号分隔文本列，因此本轮不需要数据库列类型变更。已有数值 ID 会被读取为 String，但不能自动推导为 Portal 用户/部门 ID；生产切换前必须用 Portal 的稳定 ID 重新保存每个受限模型，或清空白名单后由 Portal claims/API 统一授权。禁止猜测或通过数值转换映射到 Portal 身份。

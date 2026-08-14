@@ -15,7 +15,7 @@
 
 ## 技术栈与模块
 
-- Java 21、Spring Boot 4、Flowable 7
+- Java 21、Spring Boot 4、Flowable 8.0.0
 - PostgreSQL（当前目标 schema：`bpm`）、Redis、MyBatis-Plus
 - Maven 多模块工程；可运行服务为 [`yudao-bpm`](yudao-bpm/)
 - 外部 Portal 前端位于独立仓库，不在本仓库维护
@@ -57,15 +57,15 @@ bash script/shell/test_headless_bpm_walkthrough.sh http://127.0.0.1:48080
 | [`script/sql/`](script/sql/) | `init-bpm` 是纯结构初始化；`init-mock-data` 是可选的 walkthrough 表单与分类数据 |
 | [`.agents/skills/bpmn-flow-generator/`](.agents/skills/bpmn-flow-generator/) | 新 BPMN、表单、监听器与接入资产的生成规范 |
 
-历史文档已在 Git 提交 `0aaa5cdde4` 中完整归档；当前运行约定以实现、测试、本文档和上表列出的当前契约为准。
+当前运行约定以实现、测试、本文档和上表列出的现行契约为准。
 
 ## API 范围
 
 Portal 运行期主要使用以下 API：
 
-- `POST /admin-api/bpm/process-instance/create`：发起流程，并传入 `startUserSelectAssignees`。
+- `POST /admin-api/bpm/process-instance/create`：以 `processDefinitionId` 发起流程，并按需传入策略 35 的 `startUserSelectAssignees`。
 - `GET /admin-api/bpm/task/todo-page`：查询当前 Portal 主体的待办。
-- `POST /admin-api/bpm/task/approve`、`POST /admin-api/bpm/task/reject`：办理任务。
+- `PUT /admin-api/bpm/task/approve`、`PUT /admin-api/bpm/task/reject`：办理任务；请求体任务字段为 `id`。
 - `GET /admin-api/bpm/process-instance/get-approval-detail`：查询审批轨迹。
 
 完整请求/响应、流程定义维护接口和权限边界以 Swagger 与 Portal 适配契约为准。

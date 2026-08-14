@@ -1,8 +1,8 @@
 # ADR-000: 无头工作流中台与零用户同步基础架构设计 (Headless BPM & Zero User Sync Architecture)
 
-* **状态 (Status)**: 已接受 (Accepted)
+* **状态 (Status)**: 已接受；候选人策略部分已由 ADR-002 演进
 * **日期 (Date)**: 2026-08-07
-* **决策者 (Deciders)**: Antigravity AI, Project Architecture Team
+* **决策者 (Deciders)**: Project Architecture Team
 * **标签 (Tags)**: Headless BPM, Architecture, Zero User Sync, Dynamic Assignees, JWT, ADR
 
 ---
@@ -31,8 +31,8 @@
 * **提取 Claim 自动组装 `LoginUser`**：提取 `userId` 与 `role` 声明直接填充 Spring Security 的 `LoginUser`，跳过 BPM 数据库中 `system_oauth2_access_token` 的查库逻辑。
 
 ### 2.3 动态审批人指派机制 (Dynamic Assignees)
-* **静态画图解耦**：在 BPM 平台绘制 BPMN 流程图时，审批节点统一配置为 **【发起人自选 (START_USER_SELECT, 策略 code 35)】**；
-* **发起时动态注入**：Portal 发起流程时，通过 API 参数中的 `startUserSelectAssignees` 字典（如 `{"Activity_Manager": ["102"]}`）动态指定节点审批人 ID 数组。
+* **静态画图解耦**：审批节点使用 **【发起人自选 (START_USER_SELECT, 35)】** 或 ADR-002 定义的 **【Portal 角色 (ROLE, 70)】**；不绑定 BPM 本地用户、角色或部门。
+* **发起时动态注入**：Portal 仅为策略 35 通过 `startUserSelectAssignees` 传入最终用户 String ID（如 `{"Activity_Manager": ["portal-manager-b3c4"]}`）；策略 70 在节点抵达时由 Portal 根据角色编码解算。
 
 ### 2.4 4 大标准 REST API 对接规范
 1. **发起流程 API**: `POST /admin-api/bpm/process-instance/create`
@@ -54,5 +54,5 @@
 
 ## 4. 相关参考 (References)
 
-* **主架构文档**: [docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/PORTAL_HEADLESS_BPM_ARCHITECTURE.md)
+* **主架构文档**: [Portal Headless BPM 架构](../PORTAL_HEADLESS_BPM_ARCHITECTURE.md)
 * **后续演进决策**: [ADR-002 Portal 角色候选人策略](ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md)

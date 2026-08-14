@@ -3,7 +3,7 @@
 本文档针对**“外部门户/Portal 系统作为全量用户 UI 入口，BPM 平台作为无头工作流中台 (Headless BPM Engine)”**的场景，提供完整的技术架构解法与 API 对接规范。
 
 文档索引:
-- [基础架构决策: ADR-000 无头工作流中台与零用户同步架构](file:///Users/eden/Documents/coding/ruoyi-vue-pro/docs/adr/ADR_000_HEADLESS_BPM_ZERO_USER_SYNC_ARCHITECTURE.md)
+- [基础架构决策: ADR-000 无头工作流中台与零用户同步架构](adr/ADR_000_HEADLESS_BPM_ZERO_USER_SYNC_ARCHITECTURE.md)
 - [演进架构决策: ADR-002 Portal 角色候选人策略](adr/ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md)
 
 ---
@@ -40,7 +40,7 @@
 
 ## 二、 零用户同步架构设计 (Zero User Sync)
 
-### 2.1 不维护与同步 `system_users` 机制
+### 2.1 不维护与同步本地用户主数据机制
 在无头中台架构下，**BPM 平台侧完全不需要同步或维护 Portal 的用户信息**：
 - **Portal 是唯一数据源头 (Single Source of Truth)**：所有的用户、角色、部门维护完全在 Portal 端完成；
 - **BPM 平台仅处理透明 String ID**：Flowable 引擎底层（`act_ru_task`、`act_hi_procinst`、`act_ru_variable`）按原样存储 Portal 用户 ID（如 `assignee_ = "b943f25d-4064-4f5f-8b8f-70437e4d6fd3"`），不转换为本地用户 ID；
@@ -68,7 +68,7 @@
 当 Portal 里的审批人在页面上点击【同意】或【拒绝】时，**流程节点的中转、计算与状态流转 100% 发生在 BPM 平台内部的 Flowable 引擎中**：
 
 ### 3.1 BPM 内部中转执行步骤
-1. **接受动作请求**：Portal 调 BPM 的 `POST /admin-api/bpm/task/approve` 接口（传入 `taskId`）；
+1. **接受动作请求**：Portal 调 BPM 的 `PUT /admin-api/bpm/task/approve` 接口（请求体传入 `id`）；
 2. **引擎中转计算**：BPM 平台内部触发 Flowable 的 `taskService.complete(taskId)`：
    - **完成旧任务**：在数据库 `act_ru_task` 与 `act_hi_taskinst` 中将当前任务标志为已完成；
    - **自动计算连线**：Flowable 解析下一个连线（SequenceFlow），代入之前的参数变量计算分支表达式；
@@ -78,8 +78,8 @@
 ### 3.2 Portal 获取中转结果的 2 种机制
 - **被动拉取 (API 轮询/页面刷新)**：
   下一个审批人登录 Portal 时，Portal 调 BPM 的 `GET /admin-api/bpm/task/todo-page` 接口，Flowable 引擎把刚才中转生成的新待办返回给 Portal 展示出来。
-- **主动推送 (Webhook HTTP 回调 / 消息队列 MQ)**：
-  在 BPM 平台的 Flowable 引擎完成中转（节点切换或流程结束）的瞬间，BPM 平台可以通过 **Webhook** 主动推一条消息给 Portal（如：`"单据 PORTAL_ORDER_001 已由部门经理审批通过，当前流转至 HR 节点！"`）。
+- **主动推送（显式配置后）**：
+  为流程模型配置流程后置 HTTP 触发器后，BPM 可以回调 Portal。默认 `BpmPortalNotificationApi` 只记录待投递日志，不会发送 Webhook 或消息；生产环境必须提供实际的 HTTP/mTLS 或消息实现。
 
 ---
 
@@ -99,15 +99,14 @@
 
 ```json
 {
-  "processDefinitionKey": "portal_purchase_flow",
-  "businessKey": "portal_order_20260807_001",
+  "processDefinitionId": "portal_purchase_flow:3:abc",
   "variables": {
     "amount": 8000,
     "title": "采购办公电脑",
     "portal_form_id": "FORM_99812"
   },
   "startUserSelectAssignees": {
-    "Activity_Node1": ["102"]
+    "Activity_Node1": ["portal-manager-b3c4"]
   }
 }
 ```
@@ -171,7 +170,7 @@
   "msg": "成功"
 }
 ```
-Portal 将返回的 `processInstanceId` 保存到本地业务表中。
+Portal 将响应 `data` 中的流程实例 ID 作为 `processInstanceId` 保存到本地业务表中。当前管理端发起 API 不接收 `businessKey`；Portal 应维护自己的业务主键与该 ID 的映射。
 
 ### 3.1.1 临时 Portal JWT 授权边界
 
@@ -183,18 +182,18 @@ Portal 将返回的 `processInstanceId` 保存到本地业务表中。
 
 真实 Portal 接入时，应替换为已验证 JWT 及 Portal 自己的权限策略；不得再绑定本地 `system_user`、`system_role` 或 `system_user_role`。
 
-本地无头配置还启用 `yudao.bpm.headless.enabled=true`：流程完成、拒绝、任务分配和超时不会调用本地 `system` 短信服务。Portal 负责接收状态变化并自行通知业务用户。
+本地 mock 由 `yudao.bpm.headless-mock.enabled=true` 控制。流程通知当前默认只记录待投递日志；生产环境必须以 `BpmPortalNotificationApi` 的 HTTP/mTLS 或消息实现替换它，才能向 Portal 实际投递状态变化。
 
 ### 3.1.2 Portal 适配器替换点
 
-为使接入真实 Portal 时不改动 Flowable 流转逻辑，BPM 只保留以下两个 Java SPI；两者的 ID 都是原始 `String`，接口中没有 `system_user`、`system_role` 或 `Long userId`：
+为使接入真实 Portal 时不改动 Flowable 流转逻辑，BPM 通过身份、组织目录、固定配置、角色候选人、请求主体、通知和应用日志等适配端口与 Portal 协作。所有流程身份 ID 均为原始 `String`，接口中不应重新引入本地用户、角色或部门主数据。完整端口清单和切换条件以《Portal 适配契约》为准；其中最直接影响流程流转的是：
 
 | 场景 | SPI 方法 | Portal 返回值 |
 | --- | --- | --- |
 | `ROLE` 节点到达时的审批人解算 | `PortalRoleCandidateStrategy.PortalRoleCandidateApi.resolveRoleAssigneeIds(startUserId, activityId, roleCode, processInstanceId)` | `Set<String>` 审批人 ID |
 | 流程模型的管理人信息与角色校验 | `BpmPortalIdentityApi.getUser(userId)`；框架默认调用 `hasAnyRole(...)` | `PortalUser(id, displayName, departmentId, roleCodes)` |
 
-生产接入只需关闭 `yudao.bpm.headless-mock.enabled`，并分别提供这两个接口的 HTTP 实现 Bean。调用方和 BPMN 图均无需修改：前者替代 `LocalPortalRoleCandidateApiMock`，后者替代 `LocalBpmPortalIdentityApiMock`。若候选人适配器缺失、Portal 返回空审批人，或身份适配器未配置，服务会失败关闭，不会回退查询本地用户、角色或部门表。
+生产接入应关闭 `yudao.bpm.headless-mock.enabled`，并提供可信请求主体、身份、组织目录和角色候选人实现；需要外部回调时还应替换通知实现。调用方和 BPMN 图均无需修改。若候选人适配器缺失、Portal 返回空审批人，或身份/组织实现未配置，服务会失败关闭，不会回退查询本地用户、角色或部门表。
 
 真实 HTTP 实现应使用 BPM 与 Portal 约定的服务间凭证或已验证的用户委托凭证；不要把客户端随意传入的用户 ID 当作 Portal 身份事实。
 
@@ -227,7 +226,7 @@ Portal 将返回的 `processInstanceId` 保存到本地业务表中。
 ### 3. 办理审批（同意 / 拒绝）接口
 
 #### 3.1 点击【同意 / 通过】
-- **HTTP 方法**：`POST`
+- **HTTP 方法**：`PUT`
 - **接口路径**：`/admin-api/bpm/task/approve`
 - **请求体 (JSON)**：
 ```json
@@ -238,7 +237,7 @@ Portal 将返回的 `processInstanceId` 保存到本地业务表中。
 ```
 
 #### 3.2 点击【拒绝 / 终止】
-- **HTTP 方法**：`POST`
+- **HTTP 方法**：`PUT`
 - **接口路径**：`/admin-api/bpm/task/reject`
 - **请求体 (JSON)**：
 ```json
@@ -265,13 +264,13 @@ Portal 需要展示流程跑到了哪个节点、谁审批过了、审批意见�
         "id": "startNode",
         "name": "发起流程",
         "status": 2, // 2代表已完成
-        "tasks": [{ "assignee": 1, "endTime": 1786070535000 }]
+        "tasks": [{ "assignee": "portal-requester-a1f2", "endTime": "2026-08-14T10:20:30" }]
       },
       {
         "id": "lm_pass",
         "name": "部门经理审批",
         "status": 1, // 1代表进行中
-        "tasks": [{ "assignee": 118 }]
+        "tasks": [{ "assignee": "portal-manager-b3c4" }]
       }
     ]
   }

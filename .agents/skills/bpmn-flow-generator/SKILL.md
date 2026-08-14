@@ -245,12 +245,12 @@ public class <ProcessName>Listeners {
 
 ### 步骤 5：编译验证与生成 REST API 入参 Json
 
-1. **编译检查**：自动运行 `mvn compile -pl yudao-bpm -am -DskipTests` 校验 Java 代码语法无误。
+1. **编译检查**：运行 `mvn -pl yudao-bpm -am -DskipTests compile` 校验 Java 代码语法无误。
 2. **提供 Portal REST API 接口测试 Json**：
 
 ```json
 {
-  "processDefinitionKey": "<process_key>",
+  "processDefinitionId": "<deployed-process-definition-id>",
   "variables": {
     "name": "测试申请项",
     "totalAmount": 1500.0
@@ -267,6 +267,6 @@ public class <ProcessName>Listeners {
 
 ## 四、 标杆案例示范：办公用品申请流程 V5 (`office_supplies_request_v5`)
 
-- **BPMN XML**：[script/bpmn/office_supplies_request_v5.bpmn.xml](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/script/bpmn/office_supplies_request_v5.bpmn.xml)
-- **Java 监听器**：[OfficeSuppliesListeners.java](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/listener/office/OfficeSuppliesListeners.java)
-- **测试 Walkthrough**：[docs/HEADLESS_BPM_TEST_WALKTHROUGH.md](file:///Users/John%20Doe/Documents/coding/ruoyi-vue-pro/docs/HEADLESS_BPM_TEST_WALKTHROUGH.md)
+- **BPMN XML**：[script/bpmn/office_supplies_request_v5.bpmn.xml](../../../script/bpmn/office_supplies_request_v5.bpmn.xml)
+- **Java 监听器**：[OfficeSuppliesListeners.java](../../../yudao-bpm/src/main/java/cn/iocoder/yudao/module/bpm/framework/flowable/core/listener/office/OfficeSuppliesListeners.java)
+- **测试 Walkthrough**：[docs/HEADLESS_BPM_TEST_WALKTHROUGH.md](../../../docs/HEADLESS_BPM_TEST_WALKTHROUGH.md)

@@ -19,7 +19,6 @@ Portal 先持久化自己的业务单据，再调用 `POST /admin-api/bpm/proces
 ```json
 {
   "processDefinitionId": "purchase_request:3:abc",
-  "businessKey": "purchase-request-2026-00042",
   "variables": {
     "amount": 1200,
     "requestTitle": "采购显示器"
@@ -30,7 +29,7 @@ Portal 先持久化自己的业务单据，再调用 `POST /admin-api/bpm/proces
 }
 ```
 
-保存返回的 `processInstanceId` 到 Portal 单据。若 BPM 调用失败，Portal 必须回滚或标记单据为“流程发起失败”；不得伪造流程状态。
+将响应 `data` 中的流程实例 ID 保存为 Portal 单据的 `processInstanceId`。当前管理端发起 API 不接收或持久化 `businessKey`，Portal 应保存自己的单据主键与该实例 ID 的映射。若 BPM 调用失败，Portal 必须回滚或标记单据为“流程发起失败”；不得伪造流程状态。
 
 ## 3. 办理与展示
 
@@ -40,7 +39,7 @@ Portal 先持久化自己的业务单据，再调用 `POST /admin-api/bpm/proces
 
 ## 4. 状态回调
 
-为流程定义配置流程后置通知或由 Portal 消费 BPM 状态事件。回调至少包含：`processInstanceId`、`businessKey`、流程状态、原因和发生时间。Portal 按 `businessKey` 幂等更新自己的单据；重复回调不得重复写入业务审计。
+为流程定义配置流程后置 HTTP 通知，或由 Portal 消费 BPM 状态事件。默认 `BpmPortalNotificationApi` 只记录日志，不会投递外部回调。回调至少应包含 `processInstanceId`、流程状态、原因和发生时间；Portal 按保存的实例 ID 映射幂等更新自己的单据。重复回调不得重复写入业务审计。
 
 ## 5. 上线检查
 

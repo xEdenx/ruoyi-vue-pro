@@ -1,7 +1,7 @@
 # 无头 BPM 中台 (Headless BPM Engine) 零用户同步与动态选人 API 全流程实测报告 (V5 流程)
 
 > **测试时间**: 2026-08-07 19:07:30
-> **测试环境**: RuoYi-Vue-Pro / Flowable 7 / Supabase PostgreSQL / REST API
+> **测试环境**: RuoYi-Vue-Pro / Flowable 8.0.0 / Supabase PostgreSQL / REST API
 > **流程定义**: `office_supplies_request_v5` (办公用品申请流程 V5)
 > **流程定义 ID**: 每次通过 `/deploy-xml` 发布后由服务返回；不得复用历史 ID。
 
@@ -30,7 +30,7 @@
                         │
  [ 1. 拉取表单 Schema ] GET /admin-api/bpm/process-definition/get?key=office_supplies_request_v5
                         │
- [ 2. 预测审批节点 ]   POST /admin-api/bpm/process-instance/get-approval-detail (带表单变量)
+ [ 2. 预测审批节点 ]   GET /admin-api/bpm/process-instance/get-approval-detail（传 processDefinitionId 与 processVariablesStr）
                         │
  [ 3. 发起与全流转 ]   POST /admin-api/bpm/process-instance/create ➔ PUT /admin-api/bpm/task/approve / reject
 ```
