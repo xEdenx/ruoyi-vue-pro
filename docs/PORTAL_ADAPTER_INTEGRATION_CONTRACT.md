@@ -28,7 +28,8 @@ Portal 适配器只负责下列边界能力：身份与权限 claims、组织目
 | `PortalRoleCandidateStrategy.PortalRoleCandidateApi` | BPMN 策略 70 的节点级角色候选人解算 | `LocalPortalRoleCandidateApiMock` | HTTP/mTLS 调 Portal 角色选人 API |
 | `BpmPortalPrincipal` / `BpmPortalPrincipalUtils` | 请求主体的 String ID 和权限 claims | 将现有安全上下文适配为 BPM 主体；`BpmPortalAuthController` 提供本地 Mock 登录 | 校验 Portal JWT 或网关透传的可信身份后在此适配器构造主体 |
 | `BpmPortalNotificationApi` | 待办、审批结果、抄送等通知投递 | `LoggingBpmPortalNotificationApi`：只记录待投递事件，不影响 BPM 状态和审计 | HTTP/mTLS 调 Portal Webhook / 消息入口 |
-| `PortalApplicationLogApi` | API 访问与异常审计 | 应用日志输出待投递事件；不写 `infra_api_*` | Portal 审计入口或 OTel 日志管道 |
+| `BpmPortalProcessAccessApi`（待实现） | 按 Portal 主体和 BPM 实例判定业务数据范围 | 当前不存在；实例详情等读取入口尚未统一对象级授权 | HTTP/mTLS 调 Portal 业务授权入口；不可用或拒绝时失败关闭 |
+| `PortalApplicationLogApi`（待实现） | API 访问与异常审计 | 当前仅有应用日志输出；尚未提供对应 Java SPI，不写 `infra_api_*` | Portal 审计入口或 OTel 日志管道 |
 
 本地 Mock 开关：
 
@@ -171,6 +172,7 @@ Set<String> resolveRoleAssigneeIds(
 | 短信、邮件、站内信 | `SmsSendApi` 等 system 能力 | `BpmPortalNotificationApi`；当前日志兜底，后续替换为 Portal Webhook；保留 BPM 通知触发时机 | 适配端口已迁移，生产投递待接入 |
 | API 与操作审计 | `OperateLogCommonApi`、`Api*LogCommonApi` | `PortalApplicationLogApi`；本地只输出待投递日志 | 已迁移；Portal 审计或 OTel 接入待实现 |
 | 本地部门数据权限 | `PermissionCommonApi`、部门数据权限规则 | BPM 不再创建或执行本地部门规则；Portal 在调用 BPM 前完成数据范围授权 | 已移除；不得回退读取 system 部门权限 |
+| 实例级数据权限与参数篡改防护 | 仅通用 `@PreAuthorize`；任务办理另有 `assignee` 校验 | `BpmProcessInstancePermissionService` 统一校验发起人、参与人、抄送人与 `BpmPortalProcessAccessApi` 的业务范围；Controller 切面防漏接入，列表在查询阶段限缩 | 待实施；详情、轨迹、BPMN 视图、打印、任务/评论/附件读取不得只依赖前端或通用 query 权限 |
 | 抄送收件人、抄送查询与抄送节点 | 数值 `user_id` / `start_user_id`、`AdminUserApi` | Portal 原始 String ID + `BpmPortalOrganizationApi.getUserMap`；保留 BPM 抄送审计和查询 API | 已迁移；生产库与初始化快照均应保持 `varchar(64)` String ID 语义 |
 | 转办、委派、加签、减签、退回、撤回的操作主体与目标用户 | `AdminUserApi`、`DeptApi`、Long ID | Portal 组织目录用户校验和 Flowable 原始 String ID；`DEPT_LEADER_OF_USER` 解算发起人部门负责人；保留 BPM 动作、监听器、查询 API 与审计 | 已迁移；生产 Portal 需实现 `DEPT_LEADER_OF_USER` |
 

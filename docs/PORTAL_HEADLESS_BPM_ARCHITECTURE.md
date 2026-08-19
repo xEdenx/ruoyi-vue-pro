@@ -5,6 +5,7 @@
 文档索引:
 - [基础架构决策: ADR-000 无头工作流中台与零用户同步架构](adr/ADR_000_HEADLESS_BPM_ZERO_USER_SYNC_ARCHITECTURE.md)
 - [演进架构决策: ADR-002 Portal 角色候选人策略](adr/ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md)
+- [安全架构决策: ADR-003 Headless BPM 对象级授权与参数篡改防护](adr/ADR_003_HEADLESS_BPM_OBJECT_AUTHORIZATION.md)
 - [项目演示说明: 自研改造亮点与现场主线](HEADLESS_BPM_PROJECT_DEMO.md)
 - [采购申请子流程演示: 节点、运行时与验收说明](PURCHASE_REQUISITION_SUBPROCESS_NODE_GUIDE.md)
 
@@ -179,14 +180,38 @@ Portal 将响应 `data` 中的流程实例 ID 作为 `processInstanceId` 保存�
 本地 walkthrough 使用 JWT payload 中的 `role` 或 `roles` 模拟 Portal 角色。无头 BPM 的这条临时链路不查询 `system_user_role`：
 
 - JWT 必须包含非空角色声明；无角色声明直接拒绝。
-- 具备角色声明的 Portal JWT 仅可访问流程发起/详情和待办查询/办理所需的 BPM 权限：`bpm:process-instance:query`、`bpm:task:query`、`bpm:task:update`。
+- 具备角色声明的 Portal JWT 可取得流程发起、查询和待办办理所需的 BPM **功能权限**：`bpm:process-instance:query`、`bpm:task:query`、`bpm:task:update`。这不应被理解为可读取任意流程实例；当前读取入口的实例级授权尚待按 3.1.2 实施。
 - 它不能访问 `system:*` 或其他非 BPM 管理权限。
 
 真实 Portal 接入时，应替换为已验证 JWT 及 Portal 自己的权限策略；不得再绑定本地 `system_user`、`system_role` 或 `system_user_role`。
 
 本地 mock 由 `yudao.bpm.headless-mock.enabled=true` 控制。流程通知当前默认只记录待投递日志；生产环境必须以 `BpmPortalNotificationApi` 的 HTTP/mTLS 或消息实现替换它，才能向 Portal 实际投递状态变化。
 
-### 3.1.2 Portal 适配器替换点
+### 3.1.2 实例级数据访问授权（防参数篡改）
+
+`@PreAuthorize` 校验的是“调用者能否使用一类 BPM API”的**功能权限**，不是“调用者能否查看某一个流程实例”的**数据权限**。因此不能以隐藏 Portal 按钮、前端不暴露实例 ID，或仅信任 Portal 调用方作为安全边界；调用者替换 `processInstanceId`、`taskId`、评论或附件关联 ID 后，BPM 仍必须在服务端拒绝越权访问。
+
+目标调用链如下：
+
+```text
+可信 Portal 身份
+  -> @PreAuthorize（功能权限）
+  -> @BpmInstanceAccess（Controller 切面，防止漏接入）
+  -> BpmProcessInstancePermissionService（唯一授权裁决点）
+  -> Flowable 实例/历史任务/抄送事实 + Portal 业务数据范围判定
+  -> 构造并返回响应
+```
+
+- **切面只作入口覆盖，不承载规则**：读取单个资源的 API 标注 `@BpmInstanceAccess`，由切面提取 `processInstanceId` 或先由 `taskId` 反查实例后调用权限服务。授权规则不得分散到 SpEL、Controller 或前端；Service/异步调用也必须显式调用同一权限服务。
+- **授权规则由权限服务统一实现**：普通用户是否可读由流程发起人、当前/历史审批参与人、抄送接收人等 Flowable/BPM 持久化事实决定；跨部门、项目成员、业务单据状态等业务范围通过 Portal 的失败关闭授权适配器判定。全局查看/管理必须是独立、最小授予的 Portal claim，不能因为“拥有任一 Portal 角色”自动获得。
+- **读、办分离**：`approve`、`reject`、退回、转办等仍必须校验任务 `assignee` 与当前 Portal 原始 String ID 一致；“可以查看实例”绝不等于“可以办理任务”。
+- **覆盖所有派生资源**：实例详情、审批轨迹、BPMN 视图、打印数据、任务/评论列表、附件下载等，只要可由外部参数定位到某个实例或任务，均先进行实例级授权。拒绝访问时返回与资源不存在等价的业务错误，并记录不含表单内容的审计事件，避免通过 ID 探测实例是否存在。
+- **分页必须在查询阶段限缩**：我的流程、待办、已办、抄送等列表通过 Flowable/持久层条件构造授权范围；不得先取一页全量数据再在内存过滤，否则 `total`、分页空洞和耗时仍会泄露数据。
+- **字段权限不是数据访问授权**：BPMN 中的 `formFieldsPermission` 当前是表单展示/编辑元数据。实例级授权通过前不得返回流程变量、表单内容或附件；若同一实例对不同主体还需字段级保密，Portal 或 BPM 响应组装层必须按已验证的字段策略脱敏/剔除字段。
+
+当前代码已对待办办理使用 `assignee` 校验，但实例详情、审批轨迹、BPMN 视图、打印数据和按实例查询任务等读取入口尚未统一接入上述 `BpmProcessInstancePermissionService`。本节是待实施的安全设计，不应将现状视为已完成的数据权限能力。
+
+### 3.1.3 Portal 适配器替换点
 
 为使接入真实 Portal 时不改动 Flowable 流转逻辑，BPM 通过身份、组织目录、固定配置、角色候选人、请求主体、通知和应用日志等适配端口与 Portal 协作。所有流程身份 ID 均为原始 `String`，接口中不应重新引入本地用户、角色或部门主数据。完整端口清单和切换条件以《Portal 适配契约》为准；其中最直接影响流程流转的是：
 
@@ -293,3 +318,18 @@ Portal 前端拿此 JSON 匹配本地用户字典后，可直接渲染出带有�
 ## 七、 后续解耦路线图
 
 `system` / `infra` 的替代边界以 Portal 适配契约、实现和 walkthrough 为准；删除相关模块或数据库表前必须确认替代能力和回归验证均已完成。
+
+截至 2026-08-19，路线图**未全部完成**。已完成的是 BPM 内部从本地 `system_*` 用户、角色、部门和数据范围依赖中退出，并建立可本地演练的适配端口；尚未完成的是接入真实 Portal 的生产实现及实例级数据授权。不得将本地 Mock walkthrough 通过视为生产 Portal 已解耦。
+
+| 范围 | BPM 当前状态 | 生产完成条件 | 状态 |
+| --- | --- | --- | --- |
+| Portal 原始 String 用户 ID、发起人/任务办理人链路 | 已完成；Flowable 的 `startUserId`、`assignee`、`owner` 使用 Portal String ID | 保持 String ID 端到端，真实身份源通过验证 | 已完成（BPM 内部） |
+| 本地用户、角色、部门、岗位选人依赖 | 已移除；仅保留策略 35 和 Portal 角色策略 70，缺少适配器时失败关闭 | Portal 提供组织目录及节点级角色候选人 HTTP/mTLS 实现 | 待接入生产 Portal |
+| BPM 管理授权与请求主体 | 已有 `BpmPortalPrincipal`、Portal claims 适配及本地 Mock 登录 | 验证 Portal JWT 的签名、`iss`、`aud`、有效期，或采用受信任网关/mTLS 身份透传；按最小 claim 精确授权 | 待接入生产 Portal |
+| 用户/部门展示与 Headless 配置投影 | 已有组织/配置适配端口和本地实现；关闭 Mock 时组织访问失败关闭 | Portal 提供受当前主体和租户约束的目录/配置实现 | 待接入生产 Portal |
+| 角色候选人到最终审批人 | 已有 `PortalRoleCandidateApi` 和本地 Mock；空候选人失败关闭 | Portal 在节点到达时返回稳定、已授权的最终用户 ID 快照 | 待接入生产 Portal |
+| 通知、抄送投递与应用审计 | BPM 保留事件触发；通知默认只写待投递日志 | HTTP/mTLS Webhook 或消息投递、失败策略和 Portal 审计/OTel 管道均已验证 | 待接入生产 Portal |
+| 本地部门数据权限 | BPM 已不再读取本地部门权限 | Portal 的业务数据范围判定与 BPM 实例级授权服务/读取入口覆盖完成 | 待实施 |
+| 参数篡改下的实例、任务、评论、附件读取 | 任务办理已有 `assignee` 校验；单实例读取尚无统一对象级授权 | 实现本章 3.1.2 的权限服务、切面、查询限缩、Portal 授权适配器与越权回归测试 | 待实施 |
+
+完成判定：关闭 `yudao.bpm.headless-mock.enabled` 后，必须注册真实 Portal 适配器；身份、组织解算、通知和实例访问授权均失败关闭；使用至少两个无交集业务范围的 Portal 用户验证“替换任意实例/任务/附件参数均无法读取或办理他人资源”。在此之前，平台处于“Headless BPM 代码边界已就绪、本地 Mock 可验证”的阶段，而非生产 Portal 解耦完成。
