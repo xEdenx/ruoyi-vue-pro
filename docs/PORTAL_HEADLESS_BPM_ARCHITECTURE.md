@@ -5,6 +5,8 @@
 文档索引:
 - [基础架构决策: ADR-000 无头工作流中台与零用户同步架构](adr/ADR_000_HEADLESS_BPM_ZERO_USER_SYNC_ARCHITECTURE.md)
 - [演进架构决策: ADR-002 Portal 角色候选人策略](adr/ADR_002_PORTAL_ROLE_CANDIDATE_STRATEGY.md)
+- [项目演示说明: 自研改造亮点与现场主线](HEADLESS_BPM_PROJECT_DEMO.md)
+- [采购申请子流程演示: 节点、运行时与验收说明](PURCHASE_REQUISITION_SUBPROCESS_NODE_GUIDE.md)
 
 ---
 

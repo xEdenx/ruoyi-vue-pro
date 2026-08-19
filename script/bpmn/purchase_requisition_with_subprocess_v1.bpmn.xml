@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <!--
+    子流程演示的父流程。Call Activity 调用按 key 部署的独立流程定义，
+    而不是 BPMN 内嵌 subprocess；因此父、子拥有独立的流程实例和历史。
+  -->
+  <process id="purchase_requisition_with_subprocess_v1" name="采购申请（含合规子流程）V1" isExecutable="true">
+    <startEvent id="ParentStartEvent" name="提交采购申请"/>
+    <sequenceFlow id="Flow_Parent_Start_Manager" sourceRef="ParentStartEvent" targetRef="Activity_ParentManagerApproval"/>
+
+    <!-- 35：Portal 在发起父流程时指定业务负责人原始 String ID。 -->
+    <userTask id="Activity_ParentManagerApproval" name="业务负责人确认采购必要性" flowable:candidateStrategy="35">
+      <extensionElements><flowable:candidateStrategy>35</flowable:candidateStrategy></extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_Parent_Manager_Call" sourceRef="Activity_ParentManagerApproval" targetRef="Activity_CallComplianceSubprocess"/>
+
+    <!--
+      必须先部署 calledElement 指向的子流程。listenerConfig = {type:1,emptyType:1}
+      表示子流程发起人沿用父流程发起人，匹配 BpmCallActivityListener 的真实契约。
+    -->
+    <callActivity id="Activity_CallComplianceSubprocess" name="执行采购合规子流程"
+                  calledElement="purchase_requisition_compliance_subprocess_v1" flowable:calledElementType="key">
+      <extensionElements>
+        <flowable:in source="purchaseTitle" target="purchaseTitle"/>
+        <flowable:in source="procurementType" target="procurementType"/>
+        <flowable:in source="totalAmount" target="totalAmount"/>
+        <flowable:in source="PROCESS_STATUS" target="PROCESS_STATUS"/>
+        <flowable:executionListener event="start" delegateExpression="${bpmCallActivityListener}">
+          <flowable:field name="listenerConfig"><flowable:string>{&quot;type&quot;:1,&quot;emptyType&quot;:1}</flowable:string></flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+    </callActivity>
+    <sequenceFlow id="Flow_Parent_Call_Archive" sourceRef="Activity_CallComplianceSubprocess" targetRef="Activity_ParentArchive"/>
+
+    <!-- 70：父流程恢复后才按 Portal 角色目录解算归档人。 -->
+    <userTask id="Activity_ParentArchive" name="采购申请归档" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_ADMIN">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_ADMIN</flowable:candidateParam>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_Parent_Archive_End" sourceRef="Activity_ParentArchive" targetRef="ParentEndEvent"/>
+    <endEvent id="ParentEndEvent" name="采购申请已完成"/>
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_purchase_requisition_with_subprocess_v1">
+    <bpmndi:BPMNPlane id="BPMNPlane_purchase_requisition_with_subprocess_v1" bpmnElement="purchase_requisition_with_subprocess_v1">
+      <bpmndi:BPMNShape id="Shape_Parent_Start" bpmnElement="ParentStartEvent"><omgdc:Bounds x="70" y="190" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Parent_Manager" bpmnElement="Activity_ParentManagerApproval"><omgdc:Bounds x="160" y="168" width="150" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Parent_Call" bpmnElement="Activity_CallComplianceSubprocess" isExpanded="false"><omgdc:Bounds x="390" y="168" width="170" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Parent_Archive" bpmnElement="Activity_ParentArchive"><omgdc:Bounds x="650" y="168" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Parent_End" bpmnElement="ParentEndEvent"><omgdc:Bounds x="870" y="190" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Parent_Start_Manager" bpmnElement="Flow_Parent_Start_Manager"><omgdi:waypoint x="106" y="208"/><omgdi:waypoint x="160" y="208"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Parent_Manager_Call" bpmnElement="Flow_Parent_Manager_Call"><omgdi:waypoint x="310" y="208"/><omgdi:waypoint x="390" y="208"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Parent_Call_Archive" bpmnElement="Flow_Parent_Call_Archive"><omgdi:waypoint x="560" y="208"/><omgdi:waypoint x="650" y="208"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Parent_Archive_End" bpmnElement="Flow_Parent_Archive_End"><omgdi:waypoint x="790" y="208"/><omgdi:waypoint x="870" y="208"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

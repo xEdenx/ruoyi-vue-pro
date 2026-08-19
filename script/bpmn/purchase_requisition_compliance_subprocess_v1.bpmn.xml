@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <!-- 由 purchase_requisition_with_subprocess_v1 的 Call Activity 调用，不由 Portal 直接发起。 -->
+  <process id="purchase_requisition_compliance_subprocess_v1" name="采购申请合规子流程 V1" isExecutable="true">
+    <startEvent id="SubprocessStartEvent" name="进入采购合规子流程"/>
+    <sequenceFlow id="Flow_Sub_Start_Gateway" sourceRef="SubprocessStartEvent" targetRef="Gateway_Sub_Amount"/>
+
+    <exclusiveGateway id="Gateway_Sub_Amount" name="采购金额分流" default="Flow_Sub_Standard"/>
+    <sequenceFlow id="Flow_Sub_High" name="超过 5 万元" sourceRef="Gateway_Sub_Amount" targetRef="Activity_Subprocess_FinanceReview">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${totalAmount > 50000}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_Sub_Standard" name="不超过 5 万元" sourceRef="Gateway_Sub_Amount" targetRef="Activity_Subprocess_ProcurementCompliance"/>
+
+    <!-- 70：子流程到达节点时由 Portal 按角色解算，不继承或依赖父流程的 35 选人字典。 -->
+    <userTask id="Activity_Subprocess_FinanceReview" name="财务预算复核" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_FINANCE">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_FINANCE</flowable:candidateParam>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_Sub_Finance_Procurement" sourceRef="Activity_Subprocess_FinanceReview" targetRef="Activity_Subprocess_ProcurementCompliance"/>
+
+    <userTask id="Activity_Subprocess_ProcurementCompliance" name="采购合规确认" flowable:candidateStrategy="70" flowable:candidateParam="ROLE_PROCUREMENT">
+      <extensionElements>
+        <flowable:candidateStrategy>70</flowable:candidateStrategy>
+        <flowable:candidateParam>ROLE_PROCUREMENT</flowable:candidateParam>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="Flow_Sub_Procurement_End" sourceRef="Activity_Subprocess_ProcurementCompliance" targetRef="SubprocessEndEvent"/>
+    <endEvent id="SubprocessEndEvent" name="采购合规已完成"/>
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_purchase_requisition_compliance_subprocess_v1">
+    <bpmndi:BPMNPlane id="BPMNPlane_purchase_requisition_compliance_subprocess_v1" bpmnElement="purchase_requisition_compliance_subprocess_v1">
+      <bpmndi:BPMNShape id="Shape_Sub_Start" bpmnElement="SubprocessStartEvent"><omgdc:Bounds x="80" y="180" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Sub_Gateway" bpmnElement="Gateway_Sub_Amount" isMarkerVisible="true"><omgdc:Bounds x="190" y="173" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Sub_Finance" bpmnElement="Activity_Subprocess_FinanceReview"><omgdc:Bounds x="340" y="60" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Sub_Procurement" bpmnElement="Activity_Subprocess_ProcurementCompliance"><omgdc:Bounds x="560" y="170" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Sub_End" bpmnElement="SubprocessEndEvent"><omgdc:Bounds x="790" y="192" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Sub_Start_Gateway" bpmnElement="Flow_Sub_Start_Gateway"><omgdi:waypoint x="116" y="198"/><omgdi:waypoint x="190" y="198"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Sub_High" bpmnElement="Flow_Sub_High"><omgdi:waypoint x="215" y="173"/><omgdi:waypoint x="215" y="100"/><omgdi:waypoint x="340" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Sub_Standard" bpmnElement="Flow_Sub_Standard"><omgdi:waypoint x="240" y="198"/><omgdi:waypoint x="560" y="210"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Sub_Finance_Procurement" bpmnElement="Flow_Sub_Finance_Procurement"><omgdi:waypoint x="480" y="100"/><omgdi:waypoint x="520" y="100"/><omgdi:waypoint x="520" y="210"/><omgdi:waypoint x="560" y="210"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Sub_Procurement_End" bpmnElement="Flow_Sub_Procurement_End"><omgdi:waypoint x="700" y="210"/><omgdi:waypoint x="790" y="210"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

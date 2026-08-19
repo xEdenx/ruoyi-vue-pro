@@ -38,6 +38,27 @@ VALUES
         "{\"type\":\"textarea\",\"field\":\"exceptionReason\",\"title\":\"例外原因\",\"$required\":true}"
     ]$$,
     'contract exception walkthrough mock form', 'mock', CURRENT_TIMESTAMP, 'mock', CURRENT_TIMESTAMP, 0, 1
+),
+(
+    'purchase_requisition_with_subprocess_v1_form', '采购申请（含合规子流程）V1 表单',
+    0,
+    $${"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"120px"}}$$,
+    $$[
+        "{\"type\":\"input\",\"field\":\"purchaseTitle\",\"title\":\"采购事项\",\"$required\":true}",
+        "{\"type\":\"select\",\"field\":\"procurementType\",\"title\":\"采购类别\",\"options\":[{\"value\":\"GOODS\",\"label\":\"货物\"},{\"value\":\"SERVICE\",\"label\":\"服务\"}],\"$required\":true}",
+        "{\"type\":\"inputNumber\",\"field\":\"totalAmount\",\"title\":\"采购金额\",\"$required\":true}"
+    ]$$,
+    'parent process form for Call Activity walkthrough', 'mock', CURRENT_TIMESTAMP, 'mock', CURRENT_TIMESTAMP, 0, 1
+),
+(
+    'purchase_requisition_compliance_subprocess_v1_form', '采购申请合规子流程 V1 表单',
+    0,
+    $${"form":{"inline":false,"hideRequiredAsterisk":false,"labelPosition":"right","size":"default","labelWidth":"120px"}}$$,
+    $$[
+        "{\"type\":\"input\",\"field\":\"purchaseTitle\",\"title\":\"采购事项\",\"$required\":true}",
+        "{\"type\":\"inputNumber\",\"field\":\"totalAmount\",\"title\":\"采购金额\",\"$required\":true}"
+    ]$$,
+    'child process metadata form; normal execution receives variables from the parent Call Activity', 'mock', CURRENT_TIMESTAMP, 'mock', CURRENT_TIMESTAMP, 0, 1
 )
 ), updated AS (
     UPDATE bpm_form AS target

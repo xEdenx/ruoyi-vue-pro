@@ -24,6 +24,9 @@ public class LocalPortalRoleCandidateApiMock implements PortalRoleCandidateStrat
             new ResolutionKey("Activity_RiskAllSign", "ROLE_RISK"), Set.of("portal-risk-k4m5", "portal-risk-m5n6"),
             new ResolutionKey("Activity_RiskAnySign", "ROLE_RISK"), Set.of("portal-risk-k4m5", "portal-risk-m5n6"),
             new ResolutionKey("Activity_FinalArchive", "ROLE_ADMIN"), Set.of("portal-admin-d5e6"),
+            new ResolutionKey("Activity_ParentArchive", "ROLE_ADMIN"), Set.of("portal-admin-d5e6"),
+            new ResolutionKey("Activity_Subprocess_FinanceReview", "ROLE_FINANCE"), Set.of("portal-finance-r8s9"),
+            new ResolutionKey("Activity_Subprocess_ProcurementCompliance", "ROLE_PROCUREMENT"), Set.of("portal-procurement-q7r8"),
             new ResolutionKey("Activity_Supplier", "ROLE_SUPPLIER"), Set.of("portal-supplier-e7f8", "portal-supplier-f9a0")
     );
 

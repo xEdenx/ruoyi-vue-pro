@@ -1,6 +1,6 @@
 ---
 name: bpmn-flow-generator
-description: 根据自然语言业务流程生成或改造本项目 Flowable 8 Headless BPM 的完整交付资产：可部署 BPMN 2.0、Portal 表单初始化 SQL、必要的本地 mock 角色映射、HTTP walkthrough 与节点说明。用于包含条件分支、策略 35/70、串并行会签、或签、超时或任务操作等复杂流程；仅在存在明确的外部业务副作用时生成 Java 监听器。
+description: 根据自然语言业务流程生成或改造本项目 Flowable 8 Headless BPM 的完整交付资产：可部署 BPMN 2.0、Portal 表单初始化 SQL、必要的本地 mock 角色映射、HTTP walkthrough 与带 Mermaid 图的节点说明。用于包含条件分支、策略 35/70、串并行会签、或签、超时或任务操作等复杂流程；仅在存在明确的外部业务副作用时生成 Java 监听器。
 ---
 
 # Flowable 8 Headless BPM 复杂流程生成
@@ -28,7 +28,7 @@ description: 根据自然语言业务流程生成或改造本项目 Flowable 8 H
 | 表单初始化 | `script/sql/init-mock-data.sql` 与 `.sqlserver.sql` | 只放 mock/表单/演练数据，不混入 `init-bpm` Schema 初始化；以 `bpm_form.code` 定位，不能假设主键。 |
 | 本地 mock 扩展 | `LocalBpmPortalIdentityApiMock`、`LocalPortalRoleCandidateApiMock` 及定向测试 | 仅为本地 walkthrough 所需的用户、部门、角色和 `(activityId, roleCode)` 映射增加最小条目。 |
 | HTTP walkthrough | `script/shell/test_<process_key>_walkthrough.sh` | 仅 `curl`/`jq`，覆盖每个关键分支和复杂语义，并输出可审阅报告。 |
-| 节点说明 | `docs/<PROCESS_KEY>_NODE_GUIDE.md` | 将业务节点、BPMN 语义、Portal 契约、运行时代码路径及验收场景逐项对应。 |
+| 节点说明 | `docs/<PROCESS_KEY>_NODE_GUIDE.md` | 将业务节点、BPMN 语义、Portal 契约、运行时代码路径及验收场景逐项对应；必须包含与 BPMN 一致的 Mermaid 流程图。 |
 | Java 监听器 | 仅按需放在 `yudao-bpm/.../listener/<domain>/` | 不是默认产物；见“监听器决策”。 |
 
 ## 建模与 Portal 契约
@@ -60,14 +60,22 @@ description: 根据自然语言业务流程生成或改造本项目 Flowable 8 H
 
 创建前确认：触发节点、幂等键、失败/重试策略、审计责任方和外部接口契约。没有这些信息时，不生成空日志 listener、TODO listener 或虚构的领域写入。BPMN 也不得保留指向不存在 Bean 的 `delegateExpression`。
 
+## 节点说明可视化
+
+- 每个新建或改造的 `docs/<PROCESS_KEY>_NODE_GUIDE.md` 必须至少包含一个 `mermaid` 代码块，优先使用 `flowchart`；图中的节点、网关分支条件、会签/或签语义和候选人策略必须能追溯到 BPMN XML。
+- 含 Call Activity 时，Mermaid 必须明确父流程与子流程的边界（例如 `subgraph`），标出调用关系和父流程恢复点；不要把独立子流程误画成内嵌 subprocess。
+- 图是文档的理解入口，不替代节点映射表。变量传递、35/70 选人时机、任务操作和运行时代码路径仍应在表格或正文中说明。
+- 不得用 Mermaid 虚构 XML 中不存在的节点、自动动作或外部副作用；复杂流程可按主路径和分支拆成多张小图，保持可读。
+
 ## 实施顺序
 
 1. 提取流程 key、表单字段、每条分支条件、节点语义、选人时机、会签方式、任务操作和真实外部副作用。
 2. 基于复杂标杆绘制完整 BPMN；逐一检查节点 ID、连线引用、策略 35/70、表达式、循环完成条件、边界事件和 BPMNDI。
 3. 生成或更新表单初始化与必要 mock 映射；严格与 Schema 初始化解耦。
 4. 仅在“监听器决策”条件满足时实现 Java listener 并绑定 BPMN；否则明确流程没有领域 listener。
-5. 编写 HTTP walkthrough：部署时按表单 code 获取实际 ID，以多组变量覆盖低风险/常规/高风险/拒绝等适用路径，并检查待办办理人、任务操作与最终状态。
-6. 运行与改动相称的验证：`xmllint --noout`、`bash -n`、相关 Maven 测试；涉及运行时时启动服务并执行 walkthrough。报告已验证与未验证的外部前提。
+5. 编写节点说明：先用 Mermaid 对齐 BPMN 的主路径、分支和父子流程边界，再补节点映射、Portal 契约、代码路径与验收断言。
+6. 编写 HTTP walkthrough：部署时按表单 code 获取实际 ID，以多组变量覆盖低风险/常规/高风险/拒绝等适用路径，并检查待办办理人、任务操作与最终状态。
+7. 运行与改动相称的验证：`xmllint --noout`、`bash -n`、相关 Maven 测试；涉及运行时时启动服务并执行 walkthrough。报告已验证与未验证的外部前提。
 
 ## 完成检查
 
@@ -75,4 +83,4 @@ description: 根据自然语言业务流程生成或改造本项目 Flowable 8 H
 - 35 与 70 的候选人来源不混用，任务办理人始终是 Portal String ID。
 - 表单初始化不污染 `init-bpm`，也不写死表单主键。
 - walkthrough 覆盖每个重要业务分支和所声明的复杂能力。
-- 节点说明能从业务场景追溯到 BPMN、Portal 参数、运行时代码和验收断言。
+- 节点说明包含与 BPMN 一致的 Mermaid 流程图，且能从业务场景追溯到 BPMN、Portal 参数、运行时代码和验收断言。

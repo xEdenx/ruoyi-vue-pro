@@ -25,6 +25,8 @@ public class LocalBpmPortalIdentityApiMock implements BpmPortalIdentityApi, BpmP
             Map.entry("portal-risk-k4m5", user("portal-risk-k4m5", "风控委员A", "portal-dept-risk", "风险管理部", Set.of("ROLE_RISK"))),
             Map.entry("portal-risk-m5n6", user("portal-risk-m5n6", "风控委员B", "portal-dept-risk", "风险管理部", Set.of("ROLE_RISK"))),
             Map.entry("portal-executive-n6p7", user("portal-executive-n6p7", "最终授权人", "portal-dept-executive", "管理层", Set.of("ROLE_EXECUTIVE"))),
+            Map.entry("portal-finance-r8s9", user("portal-finance-r8s9", "财务复核专员", "portal-dept-finance", "财务部", Set.of("ROLE_FINANCE"))),
+            Map.entry("portal-procurement-q7r8", user("portal-procurement-q7r8", "采购合规专员", "portal-dept-procurement", "采购合规部", Set.of("ROLE_PROCUREMENT"))),
             Map.entry("portal-supplier-e7f8", user("portal-supplier-e7f8", "供应商成员A", "portal-dept-supplier", "供应商部", Set.of("ROLE_SUPPLIER"))),
             Map.entry("portal-supplier-f9a0", user("portal-supplier-f9a0", "供应商成员B", "portal-dept-supplier", "供应商部", Set.of("ROLE_SUPPLIER")))
     );
@@ -42,6 +44,8 @@ public class LocalBpmPortalIdentityApiMock implements BpmPortalIdentityApi, BpmP
             Map.entry("portal-dept-legal", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-legal", "法务部")),
             Map.entry("portal-dept-risk", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-risk", "风险管理部")),
             Map.entry("portal-dept-executive", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-executive", "管理层")),
+            Map.entry("portal-dept-finance", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-finance", "财务部")),
+            Map.entry("portal-dept-procurement", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-procurement", "采购合规部")),
             Map.entry("portal-dept-supplier", new BpmPortalOrganizationApi.PortalDepartment("portal-dept-supplier", "供应商部"))
     );
 
